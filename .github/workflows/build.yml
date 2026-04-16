@@ -1,0 +1,31 @@
+name: Build Game Boy ROM
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GBDK
+        run: |
+          curl -L https://github.com/gbdk-2020/gbdk-2020/releases/download/gbdk-4.5.0/gbdk-linux-x86_64.tar.gz -o gbdk.tar.gz
+          tar -xzf gbdk.tar.gz
+          echo "$PWD/gbdk/bin" >> $GITHUB_PATH
+
+      - name: Build
+        run: |
+          make
+
+      - name: Upload ROM
+        uses: actions/upload-artifact@v4
+        with:
+          name: rom
+          path: |
+            *.gb
+            build/*.gb
