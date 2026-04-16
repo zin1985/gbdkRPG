@@ -2,99 +2,28 @@ name: Build Game Boy ROM
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
-
-permissions:
-  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      GBDK_REPO: gbdk-2020/gbdk-2020
-      GBDK_TAG: gbdk-4.5.0
 
     steps:
-      - name: Checkout
+      - name: Checkout project
         uses: actions/checkout@v4
 
-      - name: Resolve GBDK release asset
-        shell: bash
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          import sys
-          import urllib.request
+      - name: Build with GBDK Action Builder
+        uses: wujood/gbdk-2020-github-builder@1.0.8
+        with:
+          subdirectory: ./
+          source: main.c
+          output-name: gbdkRPG
 
-          repo = os.environ["GBDK_REPO"]
-          tag = os.environ["GBDK_TAG"]
-          url = f"https://api.github.com/repos/{repo}/releases/tags/{tag}"
-
-          req = urllib.request.Request(
-              url,
-              headers={
-                  "Accept": "application/vnd.github+json",
-                  "User-Agent": "gbdk-actions"
-              }
-          )
-
-          with urllib.request.urlopen(req) as resp:
-              release = json.load(resp)
-
-          assets = release.get("assets", [])
-          chosen = None
-
-          # Linux向け tar.gz を優先して探す
-          for asset in assets:
-              name = asset["name"].lower()
-              if "linux" in name and name.endswith((".tar.gz", ".tgz")):
-                  chosen = asset
-                  break
-
-          if chosen is None:
-              print("Linux asset not found", file=sys.stderr)
-              for asset in assets:
-                  print(asset["name"], file=sys.stderr)
-              sys.exit(1)
-
-          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
-              f.write(f"GBDK_ASSET_URL={chosen['browser_download_url']}\\n")
-              f.write(f"GBDK_ASSET_NAME={chosen['name']}\\n")
-          PY
-
-      - name: Download and extract GBDK
-        shell: bash
-        run: |
-          mkdir -p "$RUNNER_TEMP/gbdk"
-          curl -L "$GBDK_ASSET_URL" -o "$RUNNER_TEMP/gbdk.tar.gz"
-          file "$RUNNER_TEMP/gbdk.tar.gz"
-          tar -xzf "$RUNNER_TEMP/gbdk.tar.gz" -C "$RUNNER_TEMP/gbdk" --strip-components=1
-          echo "$RUNNER_TEMP/gbdk/bin" >> "$GITHUB_PATH"
-
-      - name: Show toolchain version
-        shell: bash
-        run: |
-          lcc --version || true
-
-      - name: Build
-        shell: bash
-        run: |
-          make clean || true
-          make all
-
-      - name: Upload ROM
+      - name: Upload ROM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rom
+          name: gbdkRPG-rom
           path: |
-            *.gb
-            build/*.gb
-            *.map
-            build/*.map
-            *.noi
-            build/*.noi
-            *.sym
-            build/*.sym
-          if-no-files-found: error
+            ./*.gb
+            ./**/*.gb
