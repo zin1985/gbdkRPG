@@ -1,6 +1,5 @@
 
 #include <gb/gb.h>
-#include "audio.h"
 #include "dialogue.h"
 #include "messages.h"
 #include "jpfont.h"
@@ -712,12 +711,12 @@ static UINT8 update_camera_for_player(void) {
 
 static UINT8 wait_choice_ab(void) {
     UINT8 keys;
-    audio_waitpadup();
+    waitpadup();
     while (1) {
         keys = joypad();
-        if (keys & J_A) { audio_waitpadup(); return 1u; }
-        if (keys & J_B) { audio_waitpadup(); return 0u; }
-        audio_wait_vbl();
+        if (keys & J_A) { waitpadup(); return 1u; }
+        if (keys & J_B) { waitpadup(); return 0u; }
+        wait_vbl_done();
     }
 }
 
@@ -853,7 +852,7 @@ static void open_main_menu(void) {
     SHOW_BKG;
     move_bkg(0u, 0u);
     DISPLAY_ON;
-    audio_waitpadup();
+    waitpadup();
 
     while (1) {
         screen_clear();
@@ -864,8 +863,8 @@ static void open_main_menu(void) {
         put_cursor(0u, 6u, (UINT8)(cursor == MENU_OBJECTIVE)); jp_put_bkg_text(1u, 6u, "もくてき");
         jp_put_bkg_text(0u,14u, "A けってい B もどる");
 
-        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
-        audio_waitpadup();
+        keys = waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
+        waitpadup();
 
         if (keys & J_UP) {
             if (cursor == 0u) cursor = MENU_COUNT - 1u;
@@ -889,20 +888,18 @@ static void open_main_menu(void) {
                     show_simple_page("もくてき", "まものを たおす", "つぎは まちと どうくつ");
                 }
             }
-            audio_waitpad(J_A | J_B | J_START);
-            audio_waitpadup();
+            waitpad(J_A | J_B | J_START);
+            waitpadup();
         }
     }
 
     hide_battle_enemy_sprites();
     restore_field_vram_state();
-    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
-    else audio_play_music(AUDIO_TRACK_FIELD);
 }
 
 static void wait_a_pressed(void) {
-    audio_waitpad(J_A);
-    audio_waitpadup();
+    waitpad(J_A);
+    waitpadup();
 }
 
 /* GRAPHICS HOTSPOT: draw_object_map()
@@ -1297,7 +1294,6 @@ static void enter_town_marker(void) {
      * actor_visible_in_current_area(); no actor array or sprite sheet is changed.
      */
     current_area = AREA_TOWN;
-    audio_play_music(AUDIO_TRACK_TOWN);
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
     warp_player_to_tile(2u, 13u, DIR_DOWN);
     dialogue_message("まちに\nつきました。");
@@ -1310,7 +1306,6 @@ static void leave_town_marker(void) {
      * Returning to field re-enables field-visible actors and hides town NPCs.
      */
     current_area = AREA_FIELD;
-    audio_play_music(AUDIO_TRACK_FIELD);
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
     warp_player_to_tile(13u, 2u, DIR_RIGHT);
     dialogue_message("フィールドに\nでました。");
@@ -1880,8 +1875,8 @@ static void battle_flash_enemy_sprite(UINT8 enemy_index) {
     x = battle_enemy_x_for_index(enemy_index);
 
     hide_one_battle_body(sprite_base);
-    audio_wait_vbl();
-    audio_wait_vbl();
+    wait_vbl_done();
+    wait_vbl_done();
 
     if (enemy_battles[enemy_index].hp > 0u) {
         show_one_battle_enemy_sprite(sprite_base, x, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[enemy_index]);
@@ -1941,15 +1936,15 @@ static void battle_update_dirty(void) {
         battle_move_command_cursor_obj();
     }
 
-    audio_wait_vbl();
+    wait_vbl_done();
 }
 
 static void battle_show_message(const char *text) {
     battle_set_message_dirty(text);
     battle_update_dirty();
-    audio_waitpadup();
-    audio_waitpad(J_A);
-    audio_waitpadup();
+    waitpadup();
+    waitpad(J_A);
+    waitpadup();
     battle_set_message_dirty("");
     battle_update_dirty();
 }
@@ -1980,7 +1975,7 @@ static void battle_enter_render_once(void) {
 
     battle_screen_ready = 1u;
     DISPLAY_ON;
-    audio_wait_vbl();
+    wait_vbl_done();
 }
 
 static void update_battle_status(void) {
@@ -2039,14 +2034,14 @@ static void battle_start_effect(void) {
         BGP_REG = 0x1Bu;
         OBP0_REG = 0x1Bu;
         OBP1_REG = 0x1Bu;
-        audio_wait_vbl();
-        audio_wait_vbl();
+        wait_vbl_done();
+        wait_vbl_done();
 
         BGP_REG = 0xE4u;
         OBP0_REG = 0xE4u;
         OBP1_REG = 0xE4u;
-        audio_wait_vbl();
-        audio_wait_vbl();
+        wait_vbl_done();
+        wait_vbl_done();
     }
 }
 
@@ -2055,7 +2050,6 @@ static void enter_battle_screen(void) {
      * the battle intro.  The battle screen itself is then built exactly once.
      */
     hide_all_sprites_safe();
-    audio_play_music(AUDIO_TRACK_BATTLE);
     battle_start_effect();
     battle_enter_render_once();
     battle_show_message("まものが\nあらわれた！");
@@ -2157,8 +2151,6 @@ static void return_to_map_after_battle(UINT8 won) {
         }
     }
     restore_field_vram_state();
-    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
-    else audio_play_music(AUDIO_TRACK_FIELD);
 }
 
 static void player_attack(void) {
@@ -2278,24 +2270,24 @@ static void battle_input(void) {
         if (menu_index >= 2u) menu_index = (UINT8)(menu_index - 2u);
         else menu_index = (UINT8)(menu_index + 2u);
         update_battle_menu_cursor(old_menu_index, menu_index);
-        audio_waitpadup();
+        waitpadup();
     } else if (keys & J_DOWN) {
         if (menu_index < 2u) menu_index = (UINT8)(menu_index + 2u);
         else menu_index = (UINT8)(menu_index - 2u);
         update_battle_menu_cursor(old_menu_index, menu_index);
-        audio_waitpadup();
+        waitpadup();
     } else if (keys & J_LEFT) {
         if (menu_index & 1u) menu_index--;
         else menu_index++;
         update_battle_menu_cursor(old_menu_index, menu_index);
-        audio_waitpadup();
+        waitpadup();
     } else if (keys & J_RIGHT) {
         if (menu_index & 1u) menu_index--;
         else menu_index++;
         update_battle_menu_cursor(old_menu_index, menu_index);
-        audio_waitpadup();
+        waitpadup();
     } else if (keys & J_A) {
-        audio_waitpadup();
+        waitpadup();
         switch (menu_index) {
             case CMD_ATTACK: player_attack(); break;
             case CMD_SKILL:  player_skill(); break;
@@ -2356,11 +2348,9 @@ void main(void) {
     OBP0_REG = 0xE4u;
     OBP1_REG = 0xE4u;
 
-    audio_init();
     dialogue_init();
     init_game();
     load_map_mode();
-    audio_play_music(AUDIO_TRACK_FIELD);
 
     while (1) {
         switch (game_mode) {
@@ -2404,6 +2394,6 @@ void main(void) {
                 game_mode = MODE_MAP;
                 break;
         }
-        audio_wait_vbl();
+        wait_vbl_done();
     }
 }
