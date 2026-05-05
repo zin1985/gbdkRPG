@@ -151,10 +151,6 @@ BANKREF_EXTERN(sprite_data_bank)
  * hide_actor_sprite() for inactive actors.
  */
 #define TEST_ACTOR_SPRITE_BASE 12u
-#define BATTLE_PARTY_ICON0_SPRITE 12u
-#define BATTLE_PARTY_ICON1_SPRITE 16u
-#define BATTLE_PARTY_ICON2_SPRITE 20u
-#define BATTLE_PARTY_ICON_TILE_BASE NPC0_TILE_BASE
 
 /* VRAM tile budget.
  * Actor OBJ tile sheets use 0-95.
@@ -542,9 +538,6 @@ static void battle_reset_screen_for_command(UINT8 turn_display_off);
 static void battle_prepare_intro_screen(void);
 static void battle_hide_window_and_reset_scroll(void);
 static void hide_battle_enemy_sprites(void);
-static void hide_all_sprites_safe(void);
-static void load_battle_party_icon_sprite_data(void);
-static void show_battle_party_icons(void);
 static void show_battle_enemy_sprites(void);
 static void load_battle_enemy_sprite_data(void);
 static void battle_copy_enemy_from_data(UINT8 slot);
@@ -1592,36 +1585,30 @@ static void draw_party_status_box(void) {
     UINT8 t;
     UINT8 y;
 
-    /* rpg079:
-     * Compact 3-slot display. Keep the text narrow enough to fit the whole
-     * party in one row band. Each slot uses Name / H / M, and the sprite icon
-     * is shown to the right of the M value using OBJ.
+    /* rpg077:
+     * Compact status format.  Avoid "38/38" style text because the slash and
+     * max HP consume too much horizontal space in a two-member window.
+     * This is still display-only for the second member.  No battle participant,
+     * actor, or party management system is added in this step.
      */
     draw_bkg_box(0u, 0u, 20u, 5u);
 
     t = (UINT8)(JP_FRAME_BASE + 2u);
     for (y = 1u; y <= 3u; y++) {
-        set_bkg_tiles(6u, y, 1u, 1u, &t);
-        set_bkg_tiles(12u, y, 1u, 1u, &t);
+        set_bkg_tiles(9u, y, 1u, 1u, &t);
     }
 
-    jp_put_bkg_text(1u, 1u,  "ゆうしゃ");
-    jp_put_bkg_text(1u, 2u,  "H ");
-    put_u8(3u, 2u, player_battle.hp);
-    jp_put_bkg_text(1u, 3u,  "M ");
-    put_u8(3u, 3u, 38u);
+    jp_put_bkg_text(1u, 1u, "ゆうしゃ");
+    jp_put_bkg_text(1u, 2u, "HP ");
+    put_u8(4u, 2u, player_battle.hp);
+    jp_put_bkg_text(1u, 3u, "MP ");
+    put_u8(4u, 3u, 38u);
 
-    jp_put_bkg_text(7u, 1u,  "そうりょ");
-    jp_put_bkg_text(7u, 2u,  "H ");
-    put_u8(9u, 2u, 10u);
-    jp_put_bkg_text(7u, 3u,  "M ");
-    put_u8(9u, 3u, 10u);
-
-    jp_put_bkg_text(13u, 1u, "まほう");
-    jp_put_bkg_text(13u, 2u, "H ");
-    put_u8(15u, 2u, 12u);
-    jp_put_bkg_text(13u, 3u, "M ");
-    put_u8(15u, 3u, 24u);
+    jp_put_bkg_text(10u, 1u, "そうりょ");
+    jp_put_bkg_text(10u, 2u, "HP ");
+    put_u8(13u, 2u, 10u);
+    jp_put_bkg_text(10u, 3u, "MP ");
+    put_u8(13u, 3u, 10u);
 }
 
 static void hide_battle_enemy_sprites(void) {
@@ -1630,65 +1617,6 @@ static void hide_battle_enemy_sprites(void) {
     for (i = 0u; i < 12u; i++) {
         move_sprite(i, 0u, 0u);
     }
-}
-
-static void hide_all_sprites_safe(void) {
-    UINT8 i;
-    for (i = 0u; i < 40u; i++) {
-        move_sprite(i, 0u, 0u);
-    }
-}
-
-static void load_battle_party_icon_sprite_data(void) {
-    /* rpg080: load the user-provided party display icons into NPC tile slots.
-     * NPC field tiles are restored by init_map_sprites() after battle.
-     */
-    set_banked_sprite_data(BATTLE_PARTY_ICON_TILE_BASE, 12u, battle_party_display_tiles, BANK(sprite_data_bank));
-}
-
-static void show_battle_party_icons(void) {
-    UINT8 tile_base;
-    UINT8 x;
-    UINT8 y;
-
-    load_battle_party_icon_sprite_data();
-
-    /* order shown on screen: ゆうしゃ, そうりょ, まほう */
-    tile_base = (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u);
-    x = (UINT8)(5u * 8u);
-    y = (UINT8)(2u * 8u + 8u);
-    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 0u, tile_base + 0u);
-    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 1u, tile_base + 1u);
-    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 2u, tile_base + 2u);
-    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 3u, tile_base + 3u);
-    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
-    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
-    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
-    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
-
-    tile_base = (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u);
-    x = (UINT8)(11u * 8u);
-    y = (UINT8)(2u * 8u + 8u);
-    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 0u, tile_base + 0u);
-    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 1u, tile_base + 1u);
-    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 2u, tile_base + 2u);
-    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 3u, tile_base + 3u);
-    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
-    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
-    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
-    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
-
-    tile_base = (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u);
-    x = (UINT8)(17u * 8u);
-    y = (UINT8)(2u * 8u + 8u);
-    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 0u, tile_base + 0u);
-    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 1u, tile_base + 1u);
-    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 2u, tile_base + 2u);
-    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 3u, tile_base + 3u);
-    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
-    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
-    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
-    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
 }
 
 static void load_battle_enemy_sprite_data(void) {
@@ -1718,7 +1646,6 @@ static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UI
 
 static void show_battle_enemy_sprites(void) {
     hide_battle_enemy_sprites();
-    show_battle_party_icons();
 
     if (battle_enemy_count == 0u) return;
 
@@ -1833,7 +1760,6 @@ static void battle_hide_window_and_reset_scroll(void) {
 
 static void battle_prepare_intro_screen(void) {
     DISPLAY_OFF;
-    hide_all_sprites_safe();
     battle_hide_window_and_reset_scroll();
     jp_init();
     load_battle_enemy_sprite_data();
@@ -1845,9 +1771,7 @@ static void battle_prepare_intro_screen(void) {
 }
 
 static void battle_reset_screen_for_command(UINT8 turn_display_off) {
-    (void)turn_display_off;
-    DISPLAY_OFF;
-    hide_all_sprites_safe();
+    if (turn_display_off) DISPLAY_OFF;
     battle_hide_window_and_reset_scroll();
     jp_init();
     load_battle_enemy_sprite_data();
@@ -1856,13 +1780,22 @@ static void battle_reset_screen_for_command(UINT8 turn_display_off) {
     draw_battle_menu();
     show_battle_enemy_sprites();
     battle_hide_window_and_reset_scroll();
-    DISPLAY_ON;
+    if (turn_display_off) DISPLAY_ON;
     wait_vbl_done();
 }
 
 
 static void battle_redraw_after_dialogue(void) {
-    battle_reset_screen_for_command(1u);
+    /* rpg078:
+     * Do not use DISPLAY_OFF during normal battle turns.  rpg077 did so via
+     * update_battle_status(), which caused a visible blank/white frame before
+     * enemy attacks on some emulators/frontends.
+     */
+    battle_hide_window_and_reset_scroll();
+    draw_battle_frame();
+    show_battle_enemy_sprites();
+    battle_hide_window_and_reset_scroll();
+    wait_vbl_done();
 }
 
 static void update_battle_status(void) {

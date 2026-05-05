@@ -1,5 +1,5 @@
 
-## rpg079_party: battle redraw hotfix
+## rpg078_ui: battle redraw hotfix
 
 - 敵攻撃前に白画面が出る原因になっていた通常ターン中の `DISPLAY_OFF` 再描画を停止。
 - コマンドカーソル移動時はメニュー全体ではなくカーソル位置だけ更新。
@@ -500,7 +500,3 @@ rpg071 cleans the battle screen fully before command input and adds a banked ene
 rpg072 fixes the rpg071 linker error by adding the missing battle helper function bodies to `main.c`.
 
 No new BG tiles, map actors, object kinds, or sprite sheets were added.
-
-
-## rpg080_icons
-- 戦闘パーティ表示の顔アイコンをユーザー添付画像へ差し替えました。
