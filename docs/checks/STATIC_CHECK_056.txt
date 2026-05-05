@@ -1,0 +1,12 @@
+STATIC CHECK 056
+=================
+
+- sprites.c has #pragma bank 3.
+- sprites.c has BANKREF(sprite_data_bank).
+- main.c has BANKREF_EXTERN(sprite_data_bank).
+- main.c includes banked_graphics.h.
+- main.c does not use the old direct set_bkg_data(MAP_TILE_BASE, MAP_GFX_TILE_COUNT, map_gfx_tiles) call.
+- main.c does not use the old direct set_sprite_data(..., tiles) calls.
+- banked_graphics.c provides NONBANKED wrappers.
+- build scripts include banked_graphics.c.
+- MAP_GFX_TILE_COUNT remains 17u.

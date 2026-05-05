@@ -1,0 +1,13 @@
+# STATIC_CHECK_017
+
+- [x] no DECO_TEST_SPRITE
+- [x] no init_deco
+- [x] status debug position removed
+- [x] status debug camera removed
+- [x] MAP_GFX_TILE_COUNT 13
+- [x] build.sh has -Wl-m
+- [x] build.sh has -Wl-j
+- [x] Makefile has -Wl-m
+- [x] Makefile has -Wl-j
+- [x] build.bat has -Wl-m
+- [x] build.bat has -Wl-j

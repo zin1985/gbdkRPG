@@ -1,0 +1,25 @@
+STATIC CHECK 051
+=================
+
+Base:
+- rpg049_safe_event_policy, confirmed working.
+
+Intended runtime behavior change:
+- None.
+
+Build changes:
+- build.sh logs to build.log and optionally runs romusage.
+- Makefile logs to build.log and optionally runs romusage.
+- build.bat logs to build.log and optionally runs romusage.exe.
+
+No gameplay/source-risk changes:
+- No new actor/NPC.
+- No new message string.
+- No try_interact() change.
+- No sprite data change.
+- No BG data change.
+- MAP_GFX_TILE_COUNT remains 17u.
+- No collision/object map change.
+
+Next candidate:
+- rpg052 minimal messages module compile-unit test.

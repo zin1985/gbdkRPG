@@ -1,0 +1,15 @@
+rpg008 static check
+
+- Based on rpg007 confirmed working.
+- MAP_GFX_TILE_COUNT remains 13u.
+- No new object kind was added.
+- No new actor/NPC was added.
+- No VRAM load path was changed.
+- draw_object_map() logic was not expanded with a new branch.
+- Field impassable cells now use existing object kind 2 for display.
+- Existing kind 2 graphics slot 5-8 was replaced with sharp mountain graphics.
+- Town object/collision arrays were not changed.
+
+Build note:
+- build.sh / Makefile / build.bat keep v3j-safe flags: -msm83:gb -Wl-yt0x19 -Wl-yo8
+- This environment does not currently have /opt/gbdk/bin/lcc available, so real GBDK build was not executed here.

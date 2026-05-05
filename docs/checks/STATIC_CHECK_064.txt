@@ -1,0 +1,11 @@
+STATIC CHECK 064
+=================
+
+- jpfont.c should not have #pragma bank 5.
+- jpfont.c should not have BANKREF(jpfont_bank).
+- jpfont.h public APIs should not be BANKED.
+- misakiUTF16.c remains #pragma bank 6.
+- getFontData() is BANKED.
+- jpfont.c should not call charUFT8toUTF16() / utf16_HantoZen() directly.
+- Build scripts output rpg064_jpfont_unbanked_misaki_bank.gb.
+- MAP_GFX_TILE_COUNT remains 17u.

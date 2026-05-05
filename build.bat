@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set "PROJECT=rpg069_font_cache_battle_cleanup"
+set "PROJECT=rpg070_docs_folder_cleanup"
 set "OUT=%PROJECT%.gb"
 set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c"
 set "ROM_BANKS=8"

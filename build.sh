@@ -3,7 +3,7 @@ set -eu
 
 export PATH="/opt/gbdk/bin:$PATH"
 
-OUT="rpg069_font_cache_battle_cleanup.gb"
+OUT="rpg070_docs_folder_cleanup.gb"
 MAP="${OUT%.gb}.map"
 SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c"
 LOG="build.log"

@@ -1,0 +1,9 @@
+STATIC CHECK 057
+=================
+
+- No gameplay behavior change from rpg056.
+- build.sh separates precheck_output.log / compile_output.log / build.log.
+- Makefile separates precheck_output.log / compile_output.log / build.log.
+- build.bat separates precheck_output.log / compile_output.log / build.log.
+- dangerous warning checks scan compile_output.log only.
+- prebank_check.py strips C comments before checking direct set_bkg_data()/set_sprite_data().

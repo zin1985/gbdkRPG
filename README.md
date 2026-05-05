@@ -441,3 +441,17 @@ rpg068で戦闘画面や会話に文字化けが出たため、`jpfont.c` のキ
 - マップ復帰時にもLCD OFF中に `jp_init()` してウィンドウ/キャッシュを整理
 
 新規BGタイル・スプライト・actor・object kindは追加していません。
+
+
+## Documentation folders
+
+rpg070 moved project notes and check documents into `docs/` to keep the root
+folder focused on source files and build entry points.
+
+Start here:
+
+- `docs/README_DOCS.md`
+- `docs/checks/`
+- `docs/bank/`
+- `docs/graphics_safety/`
+- `docs/features/`

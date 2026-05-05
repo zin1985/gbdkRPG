@@ -1,0 +1,26 @@
+STATIC CHECK 068
+=================
+
+Base:
+- rpg067_area_actor_visibility.
+
+Random encounter:
+- RANDOM_ENCOUNTER_RATE added.
+- RANDOM_ENCOUNTER_GRACE_STEPS added.
+- encounter_grace_steps global added.
+- field_random_encounter_should_start() added.
+- check_step_event() calls enter_random_battle() only after non-event field step.
+- enter_random_battle() uses existing ENEMY_ACTOR_INDEX stats as template.
+- current_enemy_index is set to 0xFF for random encounters.
+
+Battle effect:
+- battle_start_effect() added.
+- effect uses only palette flash.
+
+Safety:
+- No new actors.
+- No new NPCs.
+- No new BG tiles.
+- MAP_GFX_TILE_COUNT remains 17u.
+- No object kind changes.
+- No sprite sheet / VRAM load path changes.

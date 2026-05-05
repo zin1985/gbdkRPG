@@ -1,0 +1,23 @@
+STATIC CHECK 067
+=================
+
+Base:
+- rpg066_fontdata_gettable_fix.
+
+Actor visibility:
+- actor_visible_in_current_area() added.
+- draw_all_actors() checks actor visibility.
+- actor_at_tile() checks actor visibility.
+- find_talkable_actor() checks actor visibility.
+
+Graphics safety:
+- No MAP_GFX_TILE_COUNT change.
+- No new BG tiles.
+- No new sprites.
+- No new actor entry.
+- No new object kind.
+- No VRAM load path changes.
+
+OAM:
+- Existing actor OAM slots only.
+- Hidden actors use existing hide_actor_sprite().

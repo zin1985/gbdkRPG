@@ -1,0 +1,12 @@
+STATIC CHECK 046
+================
+
+- Base: rpg030.
+- TEST_ACTOR_SPRITE_BASE = 12u.
+- actors[] entries: 3.
+- New actor is active=0.
+- No new function.
+- No new direct move_sprite().
+- No new set_sprite_tile().
+- No new set_sprite_data().
+- MAP_GFX_TILE_COUNT remains 17u.

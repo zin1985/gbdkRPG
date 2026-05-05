@@ -1,0 +1,6 @@
+STATIC CHECK 060
+=================
+
+- main.c has definitions for put_ascii / put_cursor / u8_to_dec / put_u8 / put_hp_pair / screen_clear.
+- Build scripts output rpg060_helper_definition_fix.gb.
+- No BG/OAM/actor/object kind changes intended.

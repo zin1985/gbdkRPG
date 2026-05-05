@@ -1,0 +1,17 @@
+STATIC CHECK 048B
+=================
+
+- Base: rpg047 confirmed working.
+- actors[] entries: 3.
+- Third actor:
+  - active = 1
+  - solid = 0
+  - talkable = 1
+  - tx,ty = 10,8
+  - sprite_base = TEST_ACTOR_SPRITE_BASE
+  - tile_base = NPC0_TILE_BASE
+  - message = msg_common_npc
+- try_interact() was not changed.
+- No new sprite data.
+- No new BG tile data.
+- MAP_GFX_TILE_COUNT remains 17u.

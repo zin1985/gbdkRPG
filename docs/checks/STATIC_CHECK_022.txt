@@ -1,0 +1,7 @@
+Static intent check for rpg022
+- FOREST_BG_X/Y added.
+- MAP_TILE_FOREST_* aliases existing MAP_TILE_TOWN_* tiles.
+- draw_object_map() overlays one 16x16 BG marker only when AREA_FIELD.
+- MAP_GFX_TILE_COUNT remains 13u.
+- No set_sprite_data/set_sprite_tile/move_sprite additions.
+- No object16_map/collision16_map changes.

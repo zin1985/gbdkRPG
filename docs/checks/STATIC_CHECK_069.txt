@@ -1,0 +1,10 @@
+STATIC CHECK 069
+=================
+
+- jpfont.c uses charUFT8toUTF16() and utf16_HantoZen() for cache key again.
+- battle screen calls jp_init() while LCD is off before drawing battle text.
+- battle opening message redraws frame/menu after dialogue closes.
+- draw_battle_frame() no longer uses decorative ASCII border lines.
+- restore_field_vram_state() calls jp_init() while LCD is off.
+- MAP_GFX_TILE_COUNT remains 17u.
+- Actor count remains unchanged.
