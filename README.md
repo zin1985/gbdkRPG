@@ -1,5 +1,5 @@
 
-## rpg078_ui: battle redraw hotfix
+## rpg079_party: battle redraw hotfix
 
 - 敵攻撃前に白画面が出る原因になっていた通常ターン中の `DISPLAY_OFF` 再描画を停止。
 - コマンドカーソル移動時はメニュー全体ではなくカーソル位置だけ更新。
@@ -500,3 +500,27 @@ rpg071 cleans the battle screen fully before command input and adds a banked ene
 rpg072 fixes the rpg071 linker error by adding the missing battle helper function bodies to `main.c`.
 
 No new BG tiles, map actors, object kinds, or sprite sheets were added.
+
+
+## rpg080_icons
+- 戦闘パーティ表示の顔アイコンをユーザー添付画像へ差し替えました。
+
+
+## rpg081_uifix
+
+戦闘UIの残像・ズレ対策版です。
+
+- 魔物登場メッセージ時点で味方3人分のパラメータ欄を表示します。
+- 味方パラメータ欄のキャラごとの縦区切り線を削除しました。
+- 味方3人の16x16表示アイコンを、M数値右側に一段上げて配置しました。
+- フィールドプレイヤーのOAM残りを避けるため、戦闘遷移前と戦闘画面再構築時に全OAMを一度退避します。
+- 敵は毎回3体表示されるように、遭遇テーブルを3体構成へ寄せました。
+- 敵攻撃前後の長い白画面対策として、戦闘中のコマンド画面再構築では DISPLAY_OFF を使わない方針に変更しました。
+
+### rpg081の確認観点
+
+- 魔物登場時点で、上部パラメータ欄と敵スプライトが同時に出ているか。
+- 最初のコマンド画面で、BG座標が左上からずれないか。
+- フィールドプレイヤーが中央などに残っていないか。
+- 敵攻撃前後で白画面が長く挟まらないか。
+- カーソル移動時に文字全体が再描画ちらつきしないか。

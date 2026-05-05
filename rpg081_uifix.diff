@@ -1,0 +1,335 @@
+Only in .: CHECK_rpg081.md
+diff -ru /tmp/rpg080_orig/rpg080_icons/Makefile ./Makefile
+--- /tmp/rpg080_orig/rpg080_icons/Makefile	2026-05-05 13:40:01.000000000 +0000
++++ ./Makefile	2026-05-05 14:07:13.598859150 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg079_party.gb
++OUT = rpg081_uifix.gb
+ SRCS = main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ru /tmp/rpg080_orig/rpg080_icons/README.md ./README.md
+--- /tmp/rpg080_orig/rpg080_icons/README.md	2026-05-05 13:40:01.000000000 +0000
++++ ./README.md	2026-05-05 14:08:29.626586425 +0000
+@@ -504,3 +504,23 @@
+ 
+ ## rpg080_icons
+ - 戦闘パーティ表示の顔アイコンをユーザー添付画像へ差し替えました。
++
++
++## rpg081_uifix
++
++戦闘UIの残像・ズレ対策版です。
++
++- 魔物登場メッセージ時点で味方3人分のパラメータ欄を表示します。
++- 味方パラメータ欄のキャラごとの縦区切り線を削除しました。
++- 味方3人の16x16表示アイコンを、M数値右側に一段上げて配置しました。
++- フィールドプレイヤーのOAM残りを避けるため、戦闘遷移前と戦闘画面再構築時に全OAMを一度退避します。
++- 敵は毎回3体表示されるように、遭遇テーブルを3体構成へ寄せました。
++- 敵攻撃前後の長い白画面対策として、戦闘中のコマンド画面再構築では DISPLAY_OFF を使わない方針に変更しました。
++
++### rpg081の確認観点
++
++- 魔物登場時点で、上部パラメータ欄と敵スプライトが同時に出ているか。
++- 最初のコマンド画面で、BG座標が左上からずれないか。
++- フィールドプレイヤーが中央などに残っていないか。
++- 敵攻撃前後で白画面が長く挟まらないか。
++- カーソル移動時に文字全体が再描画ちらつきしないか。
+diff -ru /tmp/rpg080_orig/rpg080_icons/battle_data_bank.c ./battle_data_bank.c
+--- /tmp/rpg080_orig/rpg080_icons/battle_data_bank.c	2026-05-05 13:40:01.000000000 +0000
++++ ./battle_data_bank.c	2026-05-05 14:07:10.969387369 +0000
+@@ -32,11 +32,12 @@
+ };
+ 
+ static const BattleEncounterTemplate encounter_table[] = {
+-    {1u, 0u, 0u, 0u},
+-    {1u, 1u, 0u, 0u},
+-    {1u, 2u, 0u, 0u},
+-    {2u, 0u, 1u, 0u},
+-    {2u, 0u, 0u, 0u},
++    /* rpg081: every visible battle starts with three enemies. */
++    {3u, 0u, 0u, 0u},
++    {3u, 1u, 0u, 1u},
++    {3u, 2u, 0u, 2u},
++    {3u, 0u, 1u, 0u},
++    {3u, 0u, 0u, 2u},
+     {3u, 0u, 1u, 2u},
+     {3u, 0u, 0u, 1u}
+ };
+diff -ru /tmp/rpg080_orig/rpg080_icons/build.bat ./build.bat
+--- /tmp/rpg080_orig/rpg080_icons/build.bat	2026-05-05 13:40:01.000000000 +0000
++++ ./build.bat	2026-05-05 14:07:40.634976943 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg079_party"
++set "PROJECT=rpg081_uifix"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+diff -ru /tmp/rpg080_orig/rpg080_icons/build.log ./build.log
+--- /tmp/rpg080_orig/rpg080_icons/build.log	2026-05-05 13:40:01.000000000 +0000
++++ ./build.log	2026-05-05 14:05:05.247605824 +0000
+@@ -1,8 +1,8 @@
+-Building rpg077_battle.gb ...
++Building rpg079_party.gb ...
+ Sources: main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ 
+ ===== prebank_check.py =====
+-main.c bytes: 71141
++main.c bytes: 76023
+ [OK] no direct set_bkg_data() call found in main.c code
+ [OK] no direct set_sprite_data() call found in main.c code
+ [OK] no static const char[] message definitions found in main.c code
+@@ -22,8 +22,8 @@
+ [INFO] exact bank overflow cannot be known before compile/link.
+ [INFO] final judgment must use compiler/linker output plus romusage.
+ 
+-Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg077_battle.gb main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg079_party.gb main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ 
+-build.sh: line 32: lcc: command not found
++./build.sh: 32: lcc: not found
+ 
+ [ERROR] Build failed: exit=127
+diff -ru /tmp/rpg080_orig/rpg080_icons/build.sh ./build.sh
+--- /tmp/rpg080_orig/rpg080_icons/build.sh	2026-05-05 13:40:01.000000000 +0000
++++ ./build.sh	2026-05-05 14:07:13.597492019 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg079_party.gb"
++OUT="rpg081_uifix.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+diff -ru /tmp/rpg080_orig/rpg080_icons/compile_output.log ./compile_output.log
+--- /tmp/rpg080_orig/rpg080_icons/compile_output.log	2026-05-05 13:40:01.000000000 +0000
++++ ./compile_output.log	2026-05-05 14:05:05.088423762 +0000
+@@ -1 +1 @@
+-build.sh: line 32: lcc: command not found
++./build.sh: 32: lcc: not found
+diff -ru /tmp/rpg080_orig/rpg080_icons/main.c ./main.c
+--- /tmp/rpg080_orig/rpg080_icons/main.c	2026-05-05 13:40:01.000000000 +0000
++++ ./main.c	2026-05-05 14:08:05.632513907 +0000
+@@ -133,13 +133,15 @@
+  * Keep this table updated before adding NPCs, enemies, cursors, effects, or
+  * decorative sprites. Static map objects should be BG first, not OAM.
+  *
++ * Field:
+  *  0-3   player 16x16
+  *  4-7   npc0 16x16
+  *  8-11  enemy0 16x16
+- *  12-15 reserved for UI/cursor or single 16x16 temporary test
+- *  16-23 future NPC/enemy/effects budget
+- *  24-31 future effects budget
+- *  32-39 spare / emergency hide area
++ *  12-15 reserved test actor
++ * Battle:
++ *  0-11  enemies, up to 3 bodies x 16x16
++ *  12-23 party icons, 3 members x 16x16
++ *  24-39 spare / emergency hide area
+  */
+ #define PLAYER_SPRITE_BASE 0u
+ #define NPC0_SPRITE_BASE   4u
+@@ -1589,22 +1591,17 @@
+ }
+ 
+ static void draw_party_status_box(void) {
+-    UINT8 t;
+-    UINT8 y;
+-
+-    /* rpg079:
+-     * Compact 3-slot display. Keep the text narrow enough to fit the whole
+-     * party in one row band. Each slot uses Name / H / M, and the sprite icon
+-     * is shown to the right of the M value using OBJ.
++    /* rpg081:
++     * One continuous party strip, no per-character vertical separators.
++     * Layout is intentionally compact:
++     *   name
++     *   H nn
++     *   M nn  + 16x16 OBJ icon on the right
++     * Keeping the whole party inside the top 20x5 BG area prevents the first
++     * command screen from inheriting field BG/window residue.
+      */
+     draw_bkg_box(0u, 0u, 20u, 5u);
+ 
+-    t = (UINT8)(JP_FRAME_BASE + 2u);
+-    for (y = 1u; y <= 3u; y++) {
+-        set_bkg_tiles(6u, y, 1u, 1u, &t);
+-        set_bkg_tiles(12u, y, 1u, 1u, &t);
+-    }
+-
+     jp_put_bkg_text(1u, 1u,  "ゆうしゃ");
+     jp_put_bkg_text(1u, 2u,  "H ");
+     put_u8(3u, 2u, player_battle.hp);
+@@ -1646,49 +1643,29 @@
+     set_banked_sprite_data(BATTLE_PARTY_ICON_TILE_BASE, 12u, battle_party_display_tiles, BANK(sprite_data_bank));
+ }
+ 
+-static void show_battle_party_icons(void) {
+-    UINT8 tile_base;
+-    UINT8 x;
+-    UINT8 y;
++static void show_party_icon_16(UINT8 sprite_base, UINT8 tile_base, UINT8 x, UINT8 y) {
++    set_sprite_tile(sprite_base + 0u, tile_base + 0u);
++    set_sprite_tile(sprite_base + 1u, tile_base + 1u);
++    set_sprite_tile(sprite_base + 2u, tile_base + 2u);
++    set_sprite_tile(sprite_base + 3u, tile_base + 3u);
+ 
++    move_sprite(sprite_base + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
++    move_sprite(sprite_base + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
++    move_sprite(sprite_base + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
++    move_sprite(sprite_base + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
++}
++
++static void show_battle_party_icons(void) {
+     load_battle_party_icon_sprite_data();
+ 
+-    /* order shown on screen: ゆうしゃ, そうりょ, まほう */
+-    tile_base = (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u);
+-    x = (UINT8)(5u * 8u);
+-    y = (UINT8)(2u * 8u + 8u);
+-    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 0u, tile_base + 0u);
+-    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 1u, tile_base + 1u);
+-    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 2u, tile_base + 2u);
+-    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 3u, tile_base + 3u);
+-    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
+-    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
+-    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
+-    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
+-
+-    tile_base = (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u);
+-    x = (UINT8)(11u * 8u);
+-    y = (UINT8)(2u * 8u + 8u);
+-    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 0u, tile_base + 0u);
+-    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 1u, tile_base + 1u);
+-    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 2u, tile_base + 2u);
+-    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 3u, tile_base + 3u);
+-    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
+-    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
+-    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
+-    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
+-
+-    tile_base = (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u);
+-    x = (UINT8)(17u * 8u);
+-    y = (UINT8)(2u * 8u + 8u);
+-    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 0u, tile_base + 0u);
+-    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 1u, tile_base + 1u);
+-    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 2u, tile_base + 2u);
+-    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 3u, tile_base + 3u);
+-    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
+-    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
+-    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
+-    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
++    /* order shown on screen: ゆうしゃ, そうりょ, まほう.
++     * rpg081: y=16 raises the icons by one BG row from rpg080, so the 16x16
++     * icon sits beside the H/M numeric area instead of dropping into the
++     * bottom border of the party strip.
++     */
++    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u),  40u, 16u);
++    show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
++    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u), 136u, 16u);
+ }
+ 
+ static void load_battle_enemy_sprite_data(void) {
+@@ -1837,26 +1814,34 @@
+     battle_hide_window_and_reset_scroll();
+     jp_init();
+     load_battle_enemy_sprite_data();
+-    battle_hide_window_and_reset_scroll();
+     battle_clear_bg_full();
++    draw_party_status_box();
++    draw_battle_enemy_names();
+     show_battle_enemy_sprites();
++    battle_hide_window_and_reset_scroll();
+     DISPLAY_ON;
+     wait_vbl_done();
+ }
+ 
+ static void battle_reset_screen_for_command(UINT8 turn_display_off) {
+     (void)turn_display_off;
+-    DISPLAY_OFF;
++
++    /* rpg081:
++     * Do not DISPLAY_OFF here.  rpg080 rebuilt the whole battle screen with the
++     * LCD off after every dialogue, which looked like a long white frame before
++     * and after enemy attacks.  The battle BG/OAM is now rebuilt while visible;
++     * this may redraw for a frame, but it avoids the white-screen flash.
++     */
+     hide_all_sprites_safe();
+     battle_hide_window_and_reset_scroll();
+-    jp_init();
+-    load_battle_enemy_sprite_data();
+-    battle_hide_window_and_reset_scroll();
+-    draw_battle_frame();
++    jp_reset_cache();
++    battle_clear_bg_full();
++    draw_party_status_box();
++    draw_battle_enemy_names();
+     draw_battle_menu();
++    load_battle_enemy_sprite_data();
+     show_battle_enemy_sprites();
+     battle_hide_window_and_reset_scroll();
+-    DISPLAY_ON;
+     wait_vbl_done();
+ }
+ 
+@@ -1871,6 +1856,8 @@
+ 
+ 
+ static void init_battle_from_enemy(UINT8 enemy_index) {
++    UINT8 i;
++
+     current_enemy_index = enemy_index;
+     player_battle.name = "ゆうしゃ";
+     player_battle.max_hp = player_max_hp_stat;
+@@ -1881,11 +1868,20 @@
+     player_battle.heal_power = player_heal_power_stat;
+     player_battle.agility = player_agility_stat;
+ 
+-    battle_enemy_count = 1u;
+-    battle_target_index = 0u;
++    /* rpg081: field-touch battles also use the 3-body encounter table.
++     * The touched actor is still remembered in current_enemy_index so it can be
++     * removed from the map after victory.
++     */
++    battle_data_load_random((UINT8)(enemy_index + 5u), battle_enemy_data_slots, &battle_enemy_count);
++    battle_enemy_count = 3u;
++    if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
+ 
+-    enemy_battles[0] = actors[enemy_index].stats;
+-    battle_enemy_data_slots[0].sprite_kind = 0u;
++    for (i = 0u; i < battle_enemy_count; i++) {
++        battle_copy_enemy_from_data(i);
++    }
++
++    battle_target_index = 0u;
++    battle_select_first_alive();
+ 
+     menu_index = 0u;
+     skill_uses = 3u;
+@@ -1922,6 +1918,10 @@
+ }
+ 
+ static void enter_battle_screen(void) {
++    /* Hide map OAM before the transition so the field player cannot leak into
++     * the battle intro or first command frame.
++     */
++    hide_all_sprites_safe();
+     battle_start_effect();
+ 
+     /* rpg076: keep the intro message over a blank battle BG, then build the
+diff -ru /tmp/rpg080_orig/rpg080_icons/precheck_output.log ./precheck_output.log
+--- /tmp/rpg080_orig/rpg080_icons/precheck_output.log	2026-05-05 13:40:01.000000000 +0000
++++ ./precheck_output.log	2026-05-05 14:05:04.669859324 +0000
+@@ -1,5 +1,5 @@
+ ===== prebank_check.py =====
+-main.c bytes: 71141
++main.c bytes: 76023
+ [OK] no direct set_bkg_data() call found in main.c code
+ [OK] no direct set_sprite_data() call found in main.c code
+ [OK] no static const char[] message definitions found in main.c code
+Only in .: rpg081_uifix.diff

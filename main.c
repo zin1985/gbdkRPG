@@ -133,13 +133,15 @@ BANKREF_EXTERN(sprite_data_bank)
  * Keep this table updated before adding NPCs, enemies, cursors, effects, or
  * decorative sprites. Static map objects should be BG first, not OAM.
  *
+ * Field:
  *  0-3   player 16x16
  *  4-7   npc0 16x16
  *  8-11  enemy0 16x16
- *  12-15 reserved for UI/cursor or single 16x16 temporary test
- *  16-23 future NPC/enemy/effects budget
- *  24-31 future effects budget
- *  32-39 spare / emergency hide area
+ *  12-15 reserved test actor
+ * Battle:
+ *  0-11  enemies, up to 3 bodies x 16x16
+ *  12-23 party icons, 3 members x 16x16
+ *  24-39 spare / emergency hide area
  */
 #define PLAYER_SPRITE_BASE 0u
 #define NPC0_SPRITE_BASE   4u
@@ -151,6 +153,10 @@ BANKREF_EXTERN(sprite_data_bank)
  * hide_actor_sprite() for inactive actors.
  */
 #define TEST_ACTOR_SPRITE_BASE 12u
+#define BATTLE_PARTY_ICON0_SPRITE 12u
+#define BATTLE_PARTY_ICON1_SPRITE 16u
+#define BATTLE_PARTY_ICON2_SPRITE 20u
+#define BATTLE_PARTY_ICON_TILE_BASE NPC0_TILE_BASE
 
 /* VRAM tile budget.
  * Actor OBJ tile sheets use 0-95.
@@ -538,6 +544,9 @@ static void battle_reset_screen_for_command(UINT8 turn_display_off);
 static void battle_prepare_intro_screen(void);
 static void battle_hide_window_and_reset_scroll(void);
 static void hide_battle_enemy_sprites(void);
+static void hide_all_sprites_safe(void);
+static void load_battle_party_icon_sprite_data(void);
+static void show_battle_party_icons(void);
 static void show_battle_enemy_sprites(void);
 static void load_battle_enemy_sprite_data(void);
 static void battle_copy_enemy_from_data(UINT8 slot);
@@ -1582,33 +1591,34 @@ static void draw_battle_enemy_names(void) {
 }
 
 static void draw_party_status_box(void) {
-    UINT8 t;
-    UINT8 y;
-
-    /* rpg077:
-     * Compact status format.  Avoid "38/38" style text because the slash and
-     * max HP consume too much horizontal space in a two-member window.
-     * This is still display-only for the second member.  No battle participant,
-     * actor, or party management system is added in this step.
+    /* rpg081:
+     * One continuous party strip, no per-character vertical separators.
+     * Layout is intentionally compact:
+     *   name
+     *   H nn
+     *   M nn  + 16x16 OBJ icon on the right
+     * Keeping the whole party inside the top 20x5 BG area prevents the first
+     * command screen from inheriting field BG/window residue.
      */
     draw_bkg_box(0u, 0u, 20u, 5u);
 
-    t = (UINT8)(JP_FRAME_BASE + 2u);
-    for (y = 1u; y <= 3u; y++) {
-        set_bkg_tiles(9u, y, 1u, 1u, &t);
-    }
+    jp_put_bkg_text(1u, 1u,  "ゆうしゃ");
+    jp_put_bkg_text(1u, 2u,  "H ");
+    put_u8(3u, 2u, player_battle.hp);
+    jp_put_bkg_text(1u, 3u,  "M ");
+    put_u8(3u, 3u, 38u);
 
-    jp_put_bkg_text(1u, 1u, "ゆうしゃ");
-    jp_put_bkg_text(1u, 2u, "HP ");
-    put_u8(4u, 2u, player_battle.hp);
-    jp_put_bkg_text(1u, 3u, "MP ");
-    put_u8(4u, 3u, 38u);
+    jp_put_bkg_text(7u, 1u,  "そうりょ");
+    jp_put_bkg_text(7u, 2u,  "H ");
+    put_u8(9u, 2u, 10u);
+    jp_put_bkg_text(7u, 3u,  "M ");
+    put_u8(9u, 3u, 10u);
 
-    jp_put_bkg_text(10u, 1u, "そうりょ");
-    jp_put_bkg_text(10u, 2u, "HP ");
-    put_u8(13u, 2u, 10u);
-    jp_put_bkg_text(10u, 3u, "MP ");
-    put_u8(13u, 3u, 10u);
+    jp_put_bkg_text(13u, 1u, "まほう");
+    jp_put_bkg_text(13u, 2u, "H ");
+    put_u8(15u, 2u, 12u);
+    jp_put_bkg_text(13u, 3u, "M ");
+    put_u8(15u, 3u, 24u);
 }
 
 static void hide_battle_enemy_sprites(void) {
@@ -1617,6 +1627,45 @@ static void hide_battle_enemy_sprites(void) {
     for (i = 0u; i < 12u; i++) {
         move_sprite(i, 0u, 0u);
     }
+}
+
+static void hide_all_sprites_safe(void) {
+    UINT8 i;
+    for (i = 0u; i < 40u; i++) {
+        move_sprite(i, 0u, 0u);
+    }
+}
+
+static void load_battle_party_icon_sprite_data(void) {
+    /* rpg080: load the user-provided party display icons into NPC tile slots.
+     * NPC field tiles are restored by init_map_sprites() after battle.
+     */
+    set_banked_sprite_data(BATTLE_PARTY_ICON_TILE_BASE, 12u, battle_party_display_tiles, BANK(sprite_data_bank));
+}
+
+static void show_party_icon_16(UINT8 sprite_base, UINT8 tile_base, UINT8 x, UINT8 y) {
+    set_sprite_tile(sprite_base + 0u, tile_base + 0u);
+    set_sprite_tile(sprite_base + 1u, tile_base + 1u);
+    set_sprite_tile(sprite_base + 2u, tile_base + 2u);
+    set_sprite_tile(sprite_base + 3u, tile_base + 3u);
+
+    move_sprite(sprite_base + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
+    move_sprite(sprite_base + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
+    move_sprite(sprite_base + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
+    move_sprite(sprite_base + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
+}
+
+static void show_battle_party_icons(void) {
+    load_battle_party_icon_sprite_data();
+
+    /* order shown on screen: ゆうしゃ, そうりょ, まほう.
+     * rpg081: y=16 raises the icons by one BG row from rpg080, so the 16x16
+     * icon sits beside the H/M numeric area instead of dropping into the
+     * bottom border of the party strip.
+     */
+    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u),  40u, 16u);
+    show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
+    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u), 136u, 16u);
 }
 
 static void load_battle_enemy_sprite_data(void) {
@@ -1646,6 +1695,7 @@ static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UI
 
 static void show_battle_enemy_sprites(void) {
     hide_battle_enemy_sprites();
+    show_battle_party_icons();
 
     if (battle_enemy_count == 0u) return;
 
@@ -1760,42 +1810,44 @@ static void battle_hide_window_and_reset_scroll(void) {
 
 static void battle_prepare_intro_screen(void) {
     DISPLAY_OFF;
+    hide_all_sprites_safe();
     battle_hide_window_and_reset_scroll();
     jp_init();
     load_battle_enemy_sprite_data();
-    battle_hide_window_and_reset_scroll();
     battle_clear_bg_full();
+    draw_party_status_box();
+    draw_battle_enemy_names();
     show_battle_enemy_sprites();
+    battle_hide_window_and_reset_scroll();
     DISPLAY_ON;
     wait_vbl_done();
 }
 
 static void battle_reset_screen_for_command(UINT8 turn_display_off) {
-    if (turn_display_off) DISPLAY_OFF;
+    (void)turn_display_off;
+
+    /* rpg081:
+     * Do not DISPLAY_OFF here.  rpg080 rebuilt the whole battle screen with the
+     * LCD off after every dialogue, which looked like a long white frame before
+     * and after enemy attacks.  The battle BG/OAM is now rebuilt while visible;
+     * this may redraw for a frame, but it avoids the white-screen flash.
+     */
+    hide_all_sprites_safe();
     battle_hide_window_and_reset_scroll();
-    jp_init();
-    load_battle_enemy_sprite_data();
-    battle_hide_window_and_reset_scroll();
-    draw_battle_frame();
+    jp_reset_cache();
+    battle_clear_bg_full();
+    draw_party_status_box();
+    draw_battle_enemy_names();
     draw_battle_menu();
+    load_battle_enemy_sprite_data();
     show_battle_enemy_sprites();
     battle_hide_window_and_reset_scroll();
-    if (turn_display_off) DISPLAY_ON;
     wait_vbl_done();
 }
 
 
 static void battle_redraw_after_dialogue(void) {
-    /* rpg078:
-     * Do not use DISPLAY_OFF during normal battle turns.  rpg077 did so via
-     * update_battle_status(), which caused a visible blank/white frame before
-     * enemy attacks on some emulators/frontends.
-     */
-    battle_hide_window_and_reset_scroll();
-    draw_battle_frame();
-    show_battle_enemy_sprites();
-    battle_hide_window_and_reset_scroll();
-    wait_vbl_done();
+    battle_reset_screen_for_command(1u);
 }
 
 static void update_battle_status(void) {
@@ -1804,6 +1856,8 @@ static void update_battle_status(void) {
 
 
 static void init_battle_from_enemy(UINT8 enemy_index) {
+    UINT8 i;
+
     current_enemy_index = enemy_index;
     player_battle.name = "ゆうしゃ";
     player_battle.max_hp = player_max_hp_stat;
@@ -1814,11 +1868,20 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     player_battle.heal_power = player_heal_power_stat;
     player_battle.agility = player_agility_stat;
 
-    battle_enemy_count = 1u;
-    battle_target_index = 0u;
+    /* rpg081: field-touch battles also use the 3-body encounter table.
+     * The touched actor is still remembered in current_enemy_index so it can be
+     * removed from the map after victory.
+     */
+    battle_data_load_random((UINT8)(enemy_index + 5u), battle_enemy_data_slots, &battle_enemy_count);
+    battle_enemy_count = 3u;
+    if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
 
-    enemy_battles[0] = actors[enemy_index].stats;
-    battle_enemy_data_slots[0].sprite_kind = 0u;
+    for (i = 0u; i < battle_enemy_count; i++) {
+        battle_copy_enemy_from_data(i);
+    }
+
+    battle_target_index = 0u;
+    battle_select_first_alive();
 
     menu_index = 0u;
     skill_uses = 3u;
@@ -1855,6 +1918,10 @@ static void battle_start_effect(void) {
 }
 
 static void enter_battle_screen(void) {
+    /* Hide map OAM before the transition so the field player cannot leak into
+     * the battle intro or first command frame.
+     */
+    hide_all_sprites_safe();
     battle_start_effect();
 
     /* rpg076: keep the intro message over a blank battle BG, then build the

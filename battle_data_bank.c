@@ -32,11 +32,12 @@ static const BattleEnemyTemplate enemy_table[] = {
 };
 
 static const BattleEncounterTemplate encounter_table[] = {
-    {1u, 0u, 0u, 0u},
-    {1u, 1u, 0u, 0u},
-    {1u, 2u, 0u, 0u},
-    {2u, 0u, 1u, 0u},
-    {2u, 0u, 0u, 0u},
+    /* rpg081: every visible battle starts with three enemies. */
+    {3u, 0u, 0u, 0u},
+    {3u, 1u, 0u, 1u},
+    {3u, 2u, 0u, 2u},
+    {3u, 0u, 1u, 0u},
+    {3u, 0u, 0u, 2u},
     {3u, 0u, 1u, 2u},
     {3u, 0u, 0u, 1u}
 };
