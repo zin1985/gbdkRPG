@@ -1,5 +1,5 @@
 
-## rpg078_ui: battle redraw hotfix
+## rpg079_party: battle redraw hotfix
 
 - 敵攻撃前に白画面が出る原因になっていた通常ターン中の `DISPLAY_OFF` 再描画を停止。
 - コマンドカーソル移動時はメニュー全体ではなくカーソル位置だけ更新。
