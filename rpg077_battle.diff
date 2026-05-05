@@ -1,0 +1,1152 @@
+diff -ruN /mnt/data/rpg076_ui/CHECK_rpg077.md /mnt/data/rpg077_battle/CHECK_rpg077.md
+--- /mnt/data/rpg076_ui/CHECK_rpg077.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg077_battle/CHECK_rpg077.md	2026-05-05 11:38:40.238584822 +0000
+@@ -0,0 +1,33 @@
++# CHECK_rpg077_battle
++
++<details open>
++<summary>VBA確認チェック</summary>
++
++- [ ] 起動して白画面にならない
++- [ ] フィールドBGが表示される
++- [ ] プレイヤーが表示される
++- [ ] 移動できる
++- [ ] NPC会話がフリーズしない
++- [ ] ランダムエンカウントする
++- [ ] 戦闘開始エフェクトが出る
++- [ ] 戦闘開始メッセージ後、初回コマンド画面が乱れない
++- [ ] 左上パーティ欄が `ゆうしゃ そうりょ / HP 数値 / MP 数値` 形式で表示される
++- [ ] HP/MP表示に `/` が出ない
++- [ ] 敵が最大3体表示される
++- [ ] 3体出現時に敵スプライトが3つ横並びで出る
++- [ ] 敵名が左下に最大3行表示される
++- [ ] コマンドカーソルが上下左右に移動する
++- [ ] Aボタンで選択したコマンドが実行される
++- [ ] 戦闘後にフィールドへ戻れる
++- [ ] 戦闘後に敵スプライトが残らない
++
++</details>
++
++<details>
++<summary>戻し確認</summary>
++
++- [ ] rpg077で乱れる場合は、まず `load_battle_enemy_sprite_data()` の呼び出しを止める
++- [ ] 次に `BATTLE_DATA_MAX_ENEMIES` を `2u` へ戻す
++- [ ] 最後に `draw_party_status_box()` のみ残してUI単独で確認する
++
++</details>
+diff -ruN /mnt/data/rpg076_ui/Makefile /mnt/data/rpg077_battle/Makefile
+--- /mnt/data/rpg076_ui/Makefile	2026-05-05 11:25:59.062172487 +0000
++++ /mnt/data/rpg077_battle/Makefile	2026-05-05 11:36:48.548967769 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg076_ui.gb
++OUT = rpg077_battle.gb
+ SRCS = main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ruN /mnt/data/rpg076_ui/README.md /mnt/data/rpg077_battle/README.md
+--- /mnt/data/rpg076_ui/README.md	2026-05-05 11:27:25.855811590 +0000
++++ /mnt/data/rpg077_battle/README.md	2026-05-05 11:38:40.238107658 +0000
+@@ -1,31 +1,18 @@
+-# rpg076_ui
+-> 最新版: `rpg076_ui` では、戦闘1ターン目のコマンド選択時に残りやすいWindow/BG状態をさらに抑えるため、Windowの画面外退避、初回コマンド前の再構築、左上パーティ枠の幅修正を行っています。
+-
+-
+-
+-<details open>
+-<summary>rpg076_ui の要点</summary>
+-
+-- rpg074_ui の `main.c:1689: error 12: called object is not a function` を修正。
+-- 原因は `display_off` という引数名が GBDK の `DISPLAY_OFF` マクロ展開内の `display_off()` と衝突したこと。
+-- 引数名を `turn_display_off` に変更して衝突を回避。
+-- rpg074で入れた2人分パーティ枠、敵名長18、初回コマンド前再描画は維持。
+-
+-</details>
++# rpg077_battle
++> 最新版: `rpg077_battle` では、戦闘UIの横幅圧迫を減らすため味方パラメータ表示から `/最大値` を外し、敵を最大3体表示へ拡張し、戦闘用の新しい敵OBJスプライト3種を追加しました。戦闘コマンドカーソルは上下左右で2x2移動できます。
+ 
+ > **長期目標:** GBDK/Game Boyの制約内で、SaGa風戦闘、ランダム成長、技ひらめき、魔法、属性、状態異常、町・村・ダンジョン、チャンク制フィールド、最終的に5000x5000相当の世界設計へ段階拡張する。巨大配列常駐ではなく、チャンク制・セクター制・ROMバンク分割・必要範囲だけのロード/描画・メタタイル圧縮を前提にする。
+ 
+-## rpg076今回の要点
+-
+ <details open>
+-<summary>今回の変更</summary>
++<summary>rpg077_battle の要点</summary>
+ 
+-- 戦闘左上UIを `ゆうしゃ` + `そうりょ` の2枠表示へ拡張。
+-- `そうりょ` は表示だけの仮枠で、戦闘参加・仲間処理は未実装。
+-- 敵名バッファを `18u` に拡張。
+-- 敵名コピーをUTF-8途中切れしにくい処理に変更。
+-- 初回コマンド前の戦闘画面再構築を `battle_reset_screen_for_command()` に集約。
+-- 新規BGタイル、MAP_GFX_TILE_COUNT、新規actor、新規object kind、VRAMロード経路は変更なし。
++- 味方パラメータ表示を `HP 38` / `MP 38` 形式へ変更し、`38/38` 形式を廃止。
++- `そうりょ` は引き続き表示だけの仮枠。戦闘参加・actor追加はなし。
++- 敵同時出現数を最大3体へ拡張。
++- 敵OBJスプライトをスライム風・こうもり風・けもの風の3種類へ差し替え。
++- 戦闘中のみ敵OBJタイル先頭12枚をロードし、フィールド復帰時は `init_map_sprites()` で通常状態へ戻す。
++- 戦闘コマンドカーソルを上下左右移動可能に変更。
++- 新規BGタイル、MAP_GFX_TILE_COUNT、新規actor/NPC、新規object kindは変更なし。
+ 
+ </details>
+ 
+diff -ruN /mnt/data/rpg076_ui/battle_data.h /mnt/data/rpg077_battle/battle_data.h
+--- /mnt/data/rpg076_ui/battle_data.h	2026-05-05 10:51:49.000000000 +0000
++++ /mnt/data/rpg077_battle/battle_data.h	2026-05-05 11:36:48.545537850 +0000
+@@ -3,7 +3,7 @@
+ 
+ #include <gb/gb.h>
+ 
+-#define BATTLE_DATA_MAX_ENEMIES 2u
++#define BATTLE_DATA_MAX_ENEMIES 3u
+ #define BATTLE_NAME_LEN 18u
+ 
+ typedef struct BattleEnemyData {
+diff -ruN /mnt/data/rpg076_ui/battle_data_bank.c /mnt/data/rpg077_battle/battle_data_bank.c
+--- /mnt/data/rpg076_ui/battle_data_bank.c	2026-05-05 10:51:49.000000000 +0000
++++ /mnt/data/rpg077_battle/battle_data_bank.c	2026-05-05 11:36:48.546352248 +0000
+@@ -18,6 +18,7 @@
+     UINT8 count;
+     UINT8 enemy0;
+     UINT8 enemy1;
++    UINT8 enemy2;
+ } BattleEncounterTemplate;
+ 
+ static const char name_slime[] = "スライム";
+@@ -26,16 +27,18 @@
+ 
+ static const BattleEnemyTemplate enemy_table[] = {
+     {name_slime, 20u, 5u, 2u, 5u, 0u},
+-    {name_bat,   14u, 4u, 1u, 8u, 0u},
+-    {name_beast, 28u, 7u, 3u, 4u, 0u}
++    {name_bat,   14u, 4u, 1u, 8u, 1u},
++    {name_beast, 28u, 7u, 3u, 4u, 2u}
+ };
+ 
+ static const BattleEncounterTemplate encounter_table[] = {
+-    {1u, 0u, 0u},
+-    {1u, 1u, 0u},
+-    {1u, 2u, 0u},
+-    {2u, 0u, 1u},
+-    {2u, 0u, 0u}
++    {1u, 0u, 0u, 0u},
++    {1u, 1u, 0u, 0u},
++    {1u, 2u, 0u, 0u},
++    {2u, 0u, 1u, 0u},
++    {2u, 0u, 0u, 0u},
++    {3u, 0u, 1u, 2u},
++    {3u, 0u, 0u, 1u}
+ };
+ 
+ #define ENEMY_TABLE_COUNT ((UINT8)(sizeof(enemy_table) / sizeof(enemy_table[0])))
+@@ -102,4 +105,7 @@
+     if (*count > 1u) {
+         battle_data_copy_enemy_bank(enc.enemy1, &out[1]);
+     }
++    if (*count > 2u) {
++        battle_data_copy_enemy_bank(enc.enemy2, &out[2]);
++    }
+ }
+diff -ruN /mnt/data/rpg076_ui/build.bat /mnt/data/rpg077_battle/build.bat
+--- /mnt/data/rpg076_ui/build.bat	2026-05-05 11:25:59.062680845 +0000
++++ /mnt/data/rpg077_battle/build.bat	2026-05-05 11:36:48.548338361 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg076_ui"
++set "PROJECT=rpg077_battle"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+diff -ruN /mnt/data/rpg076_ui/build.log /mnt/data/rpg077_battle/build.log
+--- /mnt/data/rpg076_ui/build.log	2026-05-05 10:52:35.000000000 +0000
++++ /mnt/data/rpg077_battle/build.log	2026-05-05 11:39:13.836118703 +0000
+@@ -1,8 +1,8 @@
+-Building rpg074_ui.gb ...
++Building rpg077_battle.gb ...
+ Sources: main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ 
+ ===== prebank_check.py =====
+-main.c bytes: 68216
++main.c bytes: 71141
+ [OK] no direct set_bkg_data() call found in main.c code
+ [OK] no direct set_sprite_data() call found in main.c code
+ [OK] no static const char[] message definitions found in main.c code
+@@ -22,8 +22,8 @@
+ [INFO] exact bank overflow cannot be known before compile/link.
+ [INFO] final judgment must use compiler/linker output plus romusage.
+ 
+-Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg074_ui.gb main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg077_battle.gb main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ 
+-./build.sh: 32: lcc: not found
++build.sh: line 32: lcc: command not found
+ 
+ [ERROR] Build failed: exit=127
+diff -ruN /mnt/data/rpg076_ui/build.sh /mnt/data/rpg077_battle/build.sh
+--- /mnt/data/rpg076_ui/build.sh	2026-05-05 11:25:59.061759713 +0000
++++ /mnt/data/rpg077_battle/build.sh	2026-05-05 11:36:48.547158627 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg076_ui.gb"
++OUT="rpg077_battle.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+diff -ruN /mnt/data/rpg076_ui/compile_output.log /mnt/data/rpg077_battle/compile_output.log
+--- /mnt/data/rpg076_ui/compile_output.log	2026-05-05 10:53:30.000000000 +0000
++++ /mnt/data/rpg077_battle/compile_output.log	2026-05-05 11:39:13.650572701 +0000
+@@ -1 +1 @@
+-lcc not found in this environment. build.sh precheck passed, compile was not executed here.
++build.sh: line 32: lcc: command not found
+diff -ruN /mnt/data/rpg076_ui/docs/changelog/CHANGELOG.md /mnt/data/rpg077_battle/docs/changelog/CHANGELOG.md
+--- /mnt/data/rpg076_ui/docs/changelog/CHANGELOG.md	2026-05-05 11:24:57.957817764 +0000
++++ /mnt/data/rpg077_battle/docs/changelog/CHANGELOG.md	2026-05-05 11:38:40.334885853 +0000
+@@ -1,3 +1,17 @@
++# CHANGELOG
++
++## rpg077_battle
++
++<details open>
++<summary>変更</summary>
++
++- 味方パラメータ表示を省スペース化。
++- 敵最大3体出現へ拡張。
++- 戦闘用敵スプライト3種を追加。
++- コマンドカーソルを上下左右移動可能化。
++
++</details>
++
+ # rpg075_fix
+ 
+ <details open>
+diff -ruN /mnt/data/rpg076_ui/docs/checks/CHECK_077_BATTLE.md /mnt/data/rpg077_battle/docs/checks/CHECK_077_BATTLE.md
+--- /mnt/data/rpg076_ui/docs/checks/CHECK_077_BATTLE.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg077_battle/docs/checks/CHECK_077_BATTLE.md	2026-05-05 11:38:40.332865264 +0000
+@@ -0,0 +1,33 @@
++# CHECK_rpg077_battle
++
++<details open>
++<summary>VBA確認チェック</summary>
++
++- [ ] 起動して白画面にならない
++- [ ] フィールドBGが表示される
++- [ ] プレイヤーが表示される
++- [ ] 移動できる
++- [ ] NPC会話がフリーズしない
++- [ ] ランダムエンカウントする
++- [ ] 戦闘開始エフェクトが出る
++- [ ] 戦闘開始メッセージ後、初回コマンド画面が乱れない
++- [ ] 左上パーティ欄が `ゆうしゃ そうりょ / HP 数値 / MP 数値` 形式で表示される
++- [ ] HP/MP表示に `/` が出ない
++- [ ] 敵が最大3体表示される
++- [ ] 3体出現時に敵スプライトが3つ横並びで出る
++- [ ] 敵名が左下に最大3行表示される
++- [ ] コマンドカーソルが上下左右に移動する
++- [ ] Aボタンで選択したコマンドが実行される
++- [ ] 戦闘後にフィールドへ戻れる
++- [ ] 戦闘後に敵スプライトが残らない
++
++</details>
++
++<details>
++<summary>戻し確認</summary>
++
++- [ ] rpg077で乱れる場合は、まず `load_battle_enemy_sprite_data()` の呼び出しを止める
++- [ ] 次に `BATTLE_DATA_MAX_ENEMIES` を `2u` へ戻す
++- [ ] 最後に `draw_party_status_box()` のみ残してUI単独で確認する
++
++</details>
+diff -ruN /mnt/data/rpg076_ui/docs/features/RPG077_BATTLE.md /mnt/data/rpg077_battle/docs/features/RPG077_BATTLE.md
+--- /mnt/data/rpg076_ui/docs/features/RPG077_BATTLE.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg077_battle/docs/features/RPG077_BATTLE.md	2026-05-05 11:38:40.240031499 +0000
+@@ -0,0 +1,22 @@
++# RPG077_BATTLE
++
++<details open>
++<summary>追加内容</summary>
++
++- 味方パラメータ表示を省スペース化しました。
++- 敵同時出現数を最大3体へ拡張しました。
++- 戦闘用敵OBJスプライト3種を `enemy_tiles` の先頭12タイルに配置しました。
++- 戦闘コマンドカーソルを上下左右移動可能にしました。
++
++</details>
++
++<details>
++<summary>安全方針</summary>
++
++- 新規BGタイルは追加していません。
++- `MAP_GFX_TILE_COUNT` は変更していません。
++- 新規actor/NPC/object kindは追加していません。
++- 敵スプライトロードは戦闘中のみ `ENEMY0_TILE_BASE` の先頭12タイルに限定しています。
++- フィールド復帰時は既存の `restore_field_vram_state()` → `init_map_sprites()` で戻します。
++
++</details>
+diff -ruN /mnt/data/rpg076_ui/docs/handover/HANDOVER_077.md /mnt/data/rpg077_battle/docs/handover/HANDOVER_077.md
+--- /mnt/data/rpg076_ui/docs/handover/HANDOVER_077.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg077_battle/docs/handover/HANDOVER_077.md	2026-05-05 11:38:40.333536957 +0000
+@@ -0,0 +1,31 @@
++# HANDOVER_077
++
++## 最新ZIP
++
++- `rpg077_battle.zip`
++
++## 変更概要
++
++- 味方パラメータ表示を `/最大値` なしの省スペース表示へ変更。
++- 敵同時出現数を最大3体へ拡張。
++- 戦闘用敵スプライト3種を追加。
++- コマンドカーソルを上下左右移動へ変更。
++
++## 次に見る場所
++
++- `main.c`
++  - `draw_party_status_box()`
++  - `load_battle_enemy_sprite_data()`
++  - `show_battle_enemy_sprites()`
++  - `battle_input()`
++- `battle_data.h`
++  - `BATTLE_DATA_MAX_ENEMIES`
++- `battle_data_bank.c`
++  - `BattleEncounterTemplate`
++  - `encounter_table`
++- `sprites.c`
++  - `enemy_tiles`
++
++## 注意
++
++3体表示ではOAM 0-11を使います。フィールド復帰時は必ず `restore_field_vram_state()` が通ることを確認してください。
+diff -ruN /mnt/data/rpg076_ui/main.c /mnt/data/rpg077_battle/main.c
+--- /mnt/data/rpg076_ui/main.c	2026-05-05 11:25:59.060666270 +0000
++++ /mnt/data/rpg077_battle/main.c	2026-05-05 11:40:12.155365631 +0000
+@@ -200,7 +200,7 @@
+  * - Battle command UI uses BG box tiles, matching the message-window style.
+  * - Existing enemy OBJ tile sheet is reused for battle enemy sprites.
+  * - Enemy data/encounter table lives in battle_data_bank.c bank 7.
+- * - Supports up to 2 enemies at once, without adding map actors or OAM slots.
++ * - Supports up to 3 enemies at once, without adding map actors or map object kinds.
+  * - No new BG tiles, MAP_GFX_TILE_COUNT change, object kind, map switch, or
+  *   sprite sheet path change.
+  * ============================================================================
+@@ -209,6 +209,7 @@
+ #define BATTLE_MAX_ENEMY_COUNT BATTLE_DATA_MAX_ENEMIES
+ #define BATTLE_ENEMY0_SPRITE_BASE 0u
+ #define BATTLE_ENEMY1_SPRITE_BASE 4u
++#define BATTLE_ENEMY2_SPRITE_BASE 8u
+ #define BATTLE_ENEMY_SPRITE_Y 40u
+ 
+ 
+@@ -397,6 +398,7 @@
+ static Fighter player_battle;
+ static Fighter enemy_battles[BATTLE_MAX_ENEMY_COUNT];
+ static BattleEnemyData battle_enemy_data_slots[BATTLE_MAX_ENEMY_COUNT];
++static UINT8 battle_enemy_sprite_kinds[BATTLE_MAX_ENEMY_COUNT];
+ static UINT8 battle_enemy_count;
+ static UINT8 battle_target_index;
+ #define enemy_battle (enemy_battles[battle_target_index])
+@@ -537,6 +539,7 @@
+ static void battle_hide_window_and_reset_scroll(void);
+ static void hide_battle_enemy_sprites(void);
+ static void show_battle_enemy_sprites(void);
++static void load_battle_enemy_sprite_data(void);
+ static void battle_copy_enemy_from_data(UINT8 slot);
+ static UINT8 battle_select_first_alive(void);
+ static UINT8 battle_alive_count(void);
+@@ -1580,13 +1583,11 @@
+     UINT8 t;
+     UINT8 y;
+ 
+-    /* rpg076:
+-     * Use a full-width 20 tile party window.  The rpg074 15-tile box allowed
+-     * the second slot HP/MP text to overwrite the right border, which looked
+-     * like first-turn BG corruption on real/VBA display.
+-     *
+-     * Slot 1 is still display-only.  No actor, party member, OAM, or battle
+-     * participant is added in this step.
++    /* rpg077:
++     * Compact status format.  Avoid "38/38" style text because the slash and
++     * max HP consume too much horizontal space in a two-member window.
++     * This is still display-only for the second member.  No battle participant,
++     * actor, or party management system is added in this step.
+      */
+     draw_bkg_box(0u, 0u, 20u, 5u);
+ 
+@@ -1596,31 +1597,44 @@
+     }
+ 
+     jp_put_bkg_text(1u, 1u, "ゆうしゃ");
+-    jp_put_bkg_text(1u, 2u, "HP");
+-    put_hp_pair(3u, 2u, player_battle.hp, player_battle.max_hp);
+-    jp_put_bkg_text(1u, 3u, "MP");
+-    jp_put_bkg_text(3u, 3u, "10/10 ");
++    jp_put_bkg_text(1u, 2u, "HP ");
++    put_u8(4u, 2u, player_battle.hp);
++    jp_put_bkg_text(1u, 3u, "MP ");
++    put_u8(4u, 3u, 38u);
+ 
+     jp_put_bkg_text(10u, 1u, "そうりょ");
+-    jp_put_bkg_text(10u, 2u, "HP");
+-    jp_put_bkg_text(12u, 2u, "10/10 ");
+-    jp_put_bkg_text(10u, 3u, "MP");
+-    jp_put_bkg_text(12u, 3u, "10/10 ");
++    jp_put_bkg_text(10u, 2u, "HP ");
++    put_u8(13u, 2u, 10u);
++    jp_put_bkg_text(10u, 3u, "MP ");
++    put_u8(13u, 3u, 10u);
+ }
+ 
+ static void hide_battle_enemy_sprites(void) {
+     UINT8 i;
+ 
+-    for (i = 0u; i < 8u; i++) {
++    for (i = 0u; i < 12u; i++) {
+         move_sprite(i, 0u, 0u);
+     }
+ }
+ 
+-static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y) {
+-    set_sprite_tile(sprite_base + 0u, ENEMY0_TILE_BASE + 0u);
+-    set_sprite_tile(sprite_base + 1u, ENEMY0_TILE_BASE + 1u);
+-    set_sprite_tile(sprite_base + 2u, ENEMY0_TILE_BASE + 2u);
+-    set_sprite_tile(sprite_base + 3u, ENEMY0_TILE_BASE + 3u);
++static void load_battle_enemy_sprite_data(void) {
++    /* rpg077: battle-only load of the first 12 enemy OBJ tiles.
++     * Map return still calls init_map_sprites(), so normal field sprite state is
++     * restored after battle.  This keeps the new 3-type battle sprites isolated.
++     */
++    set_banked_sprite_data(ENEMY0_TILE_BASE, 12u, enemy_tiles, BANK(sprite_data_bank));
++}
++
++static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UINT8 sprite_kind) {
++    UINT8 tile_base;
++
++    if (sprite_kind > 2u) sprite_kind = 0u;
++    tile_base = (UINT8)(ENEMY0_TILE_BASE + (UINT8)(sprite_kind * 4u));
++
++    set_sprite_tile(sprite_base + 0u, tile_base + 0u);
++    set_sprite_tile(sprite_base + 1u, tile_base + 1u);
++    set_sprite_tile(sprite_base + 2u, tile_base + 2u);
++    set_sprite_tile(sprite_base + 3u, tile_base + 3u);
+ 
+     move_sprite(sprite_base + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
+     move_sprite(sprite_base + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
+@@ -1635,14 +1649,24 @@
+ 
+     if (battle_enemy_count == 1u) {
+         if (enemy_battles[0].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y);
++            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
++        }
++    } else if (battle_enemy_count == 2u) {
++        if (enemy_battles[0].hp > 0u) {
++            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
++        }
++        if (enemy_battles[1].hp > 0u) {
++            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
+         }
+     } else {
+         if (enemy_battles[0].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y);
++            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 36u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+         }
+         if (enemy_battles[1].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y);
++            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 76u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
++        }
++        if (enemy_battles[2].hp > 0u) {
++            show_one_battle_enemy_sprite(BATTLE_ENEMY2_SPRITE_BASE, 116u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[2]);
+         }
+     }
+ }
+@@ -1656,6 +1680,8 @@
+     enemy_battles[slot].skill_power = 0u;
+     enemy_battles[slot].heal_power = 0u;
+     enemy_battles[slot].agility = battle_enemy_data_slots[slot].agility;
++    battle_enemy_sprite_kinds[slot] = battle_enemy_data_slots[slot].sprite_kind;
++    if (battle_enemy_sprite_kinds[slot] > 2u) battle_enemy_sprite_kinds[slot] = 0u;
+ }
+ 
+ static UINT8 battle_select_first_alive(void) {
+@@ -1711,6 +1737,7 @@
+     DISPLAY_OFF;
+     battle_hide_window_and_reset_scroll();
+     jp_init();
++    load_battle_enemy_sprite_data();
+     battle_hide_window_and_reset_scroll();
+     battle_clear_bg_full();
+     show_battle_enemy_sprites();
+@@ -1722,6 +1749,7 @@
+     if (turn_display_off) DISPLAY_OFF;
+     battle_hide_window_and_reset_scroll();
+     jp_init();
++    load_battle_enemy_sprite_data();
+     battle_hide_window_and_reset_scroll();
+     draw_battle_frame();
+     draw_battle_menu();
+@@ -2008,14 +2036,25 @@
+ static void battle_input(void) {
+     UINT8 keys;
+     keys = joypad();
++
+     if (keys & J_UP) {
+-        if (menu_index == 0u) menu_index = CMD_COUNT - 1u;
+-        else menu_index--;
++        if (menu_index >= 2u) menu_index = (UINT8)(menu_index - 2u);
++        else menu_index = (UINT8)(menu_index + 2u);
+         draw_battle_menu();
+         waitpadup();
+     } else if (keys & J_DOWN) {
+-        menu_index++;
+-        if (menu_index >= CMD_COUNT) menu_index = 0u;
++        if (menu_index < 2u) menu_index = (UINT8)(menu_index + 2u);
++        else menu_index = (UINT8)(menu_index - 2u);
++        draw_battle_menu();
++        waitpadup();
++    } else if (keys & J_LEFT) {
++        if (menu_index & 1u) menu_index--;
++        else menu_index++;
++        draw_battle_menu();
++        waitpadup();
++    } else if (keys & J_RIGHT) {
++        if (menu_index & 1u) menu_index--;
++        else menu_index++;
+         draw_battle_menu();
+         waitpadup();
+     } else if (keys & J_A) {
+@@ -2059,7 +2098,7 @@
+     camera_py = 0u;
+     camera_target_px = 0u;
+     camera_target_py = 0u;
+-    player_max_hp_stat = 32u;
++    player_max_hp_stat = 38u;
+     player_attack_stat = 7u;
+     player_defense_stat = 3u;
+     player_skill_power_stat = 8u;
+diff -ruN /mnt/data/rpg076_ui/precheck_output.log /mnt/data/rpg077_battle/precheck_output.log
+--- /mnt/data/rpg076_ui/precheck_output.log	2026-05-05 11:26:18.947996147 +0000
++++ /mnt/data/rpg077_battle/precheck_output.log	2026-05-05 11:40:21.845714420 +0000
+@@ -1,5 +1,5 @@
+ ===== prebank_check.py =====
+-main.c bytes: 69299
++main.c bytes: 71141
+ [OK] no direct set_bkg_data() call found in main.c code
+ [OK] no direct set_sprite_data() call found in main.c code
+ [OK] no static const char[] message definitions found in main.c code
+diff -ruN /mnt/data/rpg076_ui/rpg077_battle.diff /mnt/data/rpg077_battle/rpg077_battle.diff
+--- /mnt/data/rpg076_ui/rpg077_battle.diff	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg077_battle/rpg077_battle.diff	2026-05-05 11:40:22.841136285 +0000
+@@ -0,0 +1,538 @@
++diff -ruN /mnt/data/rpg076_ui/CHECK_rpg077.md /mnt/data/rpg077_battle/CHECK_rpg077.md
++--- /mnt/data/rpg076_ui/CHECK_rpg077.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg077_battle/CHECK_rpg077.md	2026-05-05 11:38:40.238584822 +0000
++@@ -0,0 +1,33 @@
+++# CHECK_rpg077_battle
+++
+++<details open>
+++<summary>VBA確認チェック</summary>
+++
+++- [ ] 起動して白画面にならない
+++- [ ] フィールドBGが表示される
+++- [ ] プレイヤーが表示される
+++- [ ] 移動できる
+++- [ ] NPC会話がフリーズしない
+++- [ ] ランダムエンカウントする
+++- [ ] 戦闘開始エフェクトが出る
+++- [ ] 戦闘開始メッセージ後、初回コマンド画面が乱れない
+++- [ ] 左上パーティ欄が `ゆうしゃ そうりょ / HP 数値 / MP 数値` 形式で表示される
+++- [ ] HP/MP表示に `/` が出ない
+++- [ ] 敵が最大3体表示される
+++- [ ] 3体出現時に敵スプライトが3つ横並びで出る
+++- [ ] 敵名が左下に最大3行表示される
+++- [ ] コマンドカーソルが上下左右に移動する
+++- [ ] Aボタンで選択したコマンドが実行される
+++- [ ] 戦闘後にフィールドへ戻れる
+++- [ ] 戦闘後に敵スプライトが残らない
+++
+++</details>
+++
+++<details>
+++<summary>戻し確認</summary>
+++
+++- [ ] rpg077で乱れる場合は、まず `load_battle_enemy_sprite_data()` の呼び出しを止める
+++- [ ] 次に `BATTLE_DATA_MAX_ENEMIES` を `2u` へ戻す
+++- [ ] 最後に `draw_party_status_box()` のみ残してUI単独で確認する
+++
+++</details>
++diff -ruN /mnt/data/rpg076_ui/Makefile /mnt/data/rpg077_battle/Makefile
++--- /mnt/data/rpg076_ui/Makefile	2026-05-05 11:25:59.062172487 +0000
+++++ /mnt/data/rpg077_battle/Makefile	2026-05-05 11:36:48.548967769 +0000
++@@ -1,4 +1,4 @@
++-OUT = rpg076_ui.gb
+++OUT = rpg077_battle.gb
++ SRCS = main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ GBDK_PATH ?= /opt/gbdk/bin
++ LCC = $(GBDK_PATH)/lcc
++diff -ruN /mnt/data/rpg076_ui/README.md /mnt/data/rpg077_battle/README.md
++--- /mnt/data/rpg076_ui/README.md	2026-05-05 11:27:25.855811590 +0000
+++++ /mnt/data/rpg077_battle/README.md	2026-05-05 11:38:40.238107658 +0000
++@@ -1,31 +1,18 @@
++-# rpg076_ui
++-> 最新版: `rpg076_ui` では、戦闘1ターン目のコマンド選択時に残りやすいWindow/BG状態をさらに抑えるため、Windowの画面外退避、初回コマンド前の再構築、左上パーティ枠の幅修正を行っています。
++-
++-
++-
++-<details open>
++-<summary>rpg076_ui の要点</summary>
++-
++-- rpg074_ui の `main.c:1689: error 12: called object is not a function` を修正。
++-- 原因は `display_off` という引数名が GBDK の `DISPLAY_OFF` マクロ展開内の `display_off()` と衝突したこと。
++-- 引数名を `turn_display_off` に変更して衝突を回避。
++-- rpg074で入れた2人分パーティ枠、敵名長18、初回コマンド前再描画は維持。
++-
++-</details>
+++# rpg077_battle
+++> 最新版: `rpg077_battle` では、戦闘UIの横幅圧迫を減らすため味方パラメータ表示から `/最大値` を外し、敵を最大3体表示へ拡張し、戦闘用の新しい敵OBJスプライト3種を追加しました。戦闘コマンドカーソルは上下左右で2x2移動できます。
++ 
++ > **長期目標:** GBDK/Game Boyの制約内で、SaGa風戦闘、ランダム成長、技ひらめき、魔法、属性、状態異常、町・村・ダンジョン、チャンク制フィールド、最終的に5000x5000相当の世界設計へ段階拡張する。巨大配列常駐ではなく、チャンク制・セクター制・ROMバンク分割・必要範囲だけのロード/描画・メタタイル圧縮を前提にする。
++ 
++-## rpg076今回の要点
++-
++ <details open>
++-<summary>今回の変更</summary>
+++<summary>rpg077_battle の要点</summary>
++ 
++-- 戦闘左上UIを `ゆうしゃ` + `そうりょ` の2枠表示へ拡張。
++-- `そうりょ` は表示だけの仮枠で、戦闘参加・仲間処理は未実装。
++-- 敵名バッファを `18u` に拡張。
++-- 敵名コピーをUTF-8途中切れしにくい処理に変更。
++-- 初回コマンド前の戦闘画面再構築を `battle_reset_screen_for_command()` に集約。
++-- 新規BGタイル、MAP_GFX_TILE_COUNT、新規actor、新規object kind、VRAMロード経路は変更なし。
+++- 味方パラメータ表示を `HP 38` / `MP 38` 形式へ変更し、`38/38` 形式を廃止。
+++- `そうりょ` は引き続き表示だけの仮枠。戦闘参加・actor追加はなし。
+++- 敵同時出現数を最大3体へ拡張。
+++- 敵OBJスプライトをスライム風・こうもり風・けもの風の3種類へ差し替え。
+++- 戦闘中のみ敵OBJタイル先頭12枚をロードし、フィールド復帰時は `init_map_sprites()` で通常状態へ戻す。
+++- 戦闘コマンドカーソルを上下左右移動可能に変更。
+++- 新規BGタイル、MAP_GFX_TILE_COUNT、新規actor/NPC、新規object kindは変更なし。
++ 
++ </details>
++ 
++diff -ruN /mnt/data/rpg076_ui/battle_data.h /mnt/data/rpg077_battle/battle_data.h
++--- /mnt/data/rpg076_ui/battle_data.h	2026-05-05 10:51:49.000000000 +0000
+++++ /mnt/data/rpg077_battle/battle_data.h	2026-05-05 11:36:48.545537850 +0000
++@@ -3,7 +3,7 @@
++ 
++ #include <gb/gb.h>
++ 
++-#define BATTLE_DATA_MAX_ENEMIES 2u
+++#define BATTLE_DATA_MAX_ENEMIES 3u
++ #define BATTLE_NAME_LEN 18u
++ 
++ typedef struct BattleEnemyData {
++diff -ruN /mnt/data/rpg076_ui/battle_data_bank.c /mnt/data/rpg077_battle/battle_data_bank.c
++--- /mnt/data/rpg076_ui/battle_data_bank.c	2026-05-05 10:51:49.000000000 +0000
+++++ /mnt/data/rpg077_battle/battle_data_bank.c	2026-05-05 11:36:48.546352248 +0000
++@@ -18,6 +18,7 @@
++     UINT8 count;
++     UINT8 enemy0;
++     UINT8 enemy1;
+++    UINT8 enemy2;
++ } BattleEncounterTemplate;
++ 
++ static const char name_slime[] = "スライム";
++@@ -26,16 +27,18 @@
++ 
++ static const BattleEnemyTemplate enemy_table[] = {
++     {name_slime, 20u, 5u, 2u, 5u, 0u},
++-    {name_bat,   14u, 4u, 1u, 8u, 0u},
++-    {name_beast, 28u, 7u, 3u, 4u, 0u}
+++    {name_bat,   14u, 4u, 1u, 8u, 1u},
+++    {name_beast, 28u, 7u, 3u, 4u, 2u}
++ };
++ 
++ static const BattleEncounterTemplate encounter_table[] = {
++-    {1u, 0u, 0u},
++-    {1u, 1u, 0u},
++-    {1u, 2u, 0u},
++-    {2u, 0u, 1u},
++-    {2u, 0u, 0u}
+++    {1u, 0u, 0u, 0u},
+++    {1u, 1u, 0u, 0u},
+++    {1u, 2u, 0u, 0u},
+++    {2u, 0u, 1u, 0u},
+++    {2u, 0u, 0u, 0u},
+++    {3u, 0u, 1u, 2u},
+++    {3u, 0u, 0u, 1u}
++ };
++ 
++ #define ENEMY_TABLE_COUNT ((UINT8)(sizeof(enemy_table) / sizeof(enemy_table[0])))
++@@ -102,4 +105,7 @@
++     if (*count > 1u) {
++         battle_data_copy_enemy_bank(enc.enemy1, &out[1]);
++     }
+++    if (*count > 2u) {
+++        battle_data_copy_enemy_bank(enc.enemy2, &out[2]);
+++    }
++ }
++diff -ruN /mnt/data/rpg076_ui/build.bat /mnt/data/rpg077_battle/build.bat
++--- /mnt/data/rpg076_ui/build.bat	2026-05-05 11:25:59.062680845 +0000
+++++ /mnt/data/rpg077_battle/build.bat	2026-05-05 11:36:48.548338361 +0000
++@@ -1,7 +1,7 @@
++ @echo off
++ setlocal
++ 
++-set "PROJECT=rpg076_ui"
+++set "PROJECT=rpg077_battle"
++ set "OUT=%PROJECT%.gb"
++ set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ set "ROM_BANKS=8"
++diff -ruN /mnt/data/rpg076_ui/build.log /mnt/data/rpg077_battle/build.log
++--- /mnt/data/rpg076_ui/build.log	2026-05-05 10:52:35.000000000 +0000
+++++ /mnt/data/rpg077_battle/build.log	2026-05-05 11:39:13.836118703 +0000
++@@ -1,8 +1,8 @@
++-Building rpg074_ui.gb ...
+++Building rpg077_battle.gb ...
++ Sources: main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ 
++ ===== prebank_check.py =====
++-main.c bytes: 68216
+++main.c bytes: 71141
++ [OK] no direct set_bkg_data() call found in main.c code
++ [OK] no direct set_sprite_data() call found in main.c code
++ [OK] no static const char[] message definitions found in main.c code
++@@ -22,8 +22,8 @@
++ [INFO] exact bank overflow cannot be known before compile/link.
++ [INFO] final judgment must use compiler/linker output plus romusage.
++ 
++-Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg074_ui.gb main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+++Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg077_battle.gb main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ 
++-./build.sh: 32: lcc: not found
+++build.sh: line 32: lcc: command not found
++ 
++ [ERROR] Build failed: exit=127
++diff -ruN /mnt/data/rpg076_ui/build.sh /mnt/data/rpg077_battle/build.sh
++--- /mnt/data/rpg076_ui/build.sh	2026-05-05 11:25:59.061759713 +0000
+++++ /mnt/data/rpg077_battle/build.sh	2026-05-05 11:36:48.547158627 +0000
++@@ -3,7 +3,7 @@
++ 
++ export PATH="/opt/gbdk/bin:$PATH"
++ 
++-OUT="rpg076_ui.gb"
+++OUT="rpg077_battle.gb"
++ MAP="${OUT%.gb}.map"
++ SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ LOG="build.log"
++diff -ruN /mnt/data/rpg076_ui/compile_output.log /mnt/data/rpg077_battle/compile_output.log
++--- /mnt/data/rpg076_ui/compile_output.log	2026-05-05 10:53:30.000000000 +0000
+++++ /mnt/data/rpg077_battle/compile_output.log	2026-05-05 11:39:13.650572701 +0000
++@@ -1 +1 @@
++-lcc not found in this environment. build.sh precheck passed, compile was not executed here.
+++build.sh: line 32: lcc: command not found
++diff -ruN /mnt/data/rpg076_ui/docs/changelog/CHANGELOG.md /mnt/data/rpg077_battle/docs/changelog/CHANGELOG.md
++--- /mnt/data/rpg076_ui/docs/changelog/CHANGELOG.md	2026-05-05 11:24:57.957817764 +0000
+++++ /mnt/data/rpg077_battle/docs/changelog/CHANGELOG.md	2026-05-05 11:38:40.334885853 +0000
++@@ -1,3 +1,17 @@
+++# CHANGELOG
+++
+++## rpg077_battle
+++
+++<details open>
+++<summary>変更</summary>
+++
+++- 味方パラメータ表示を省スペース化。
+++- 敵最大3体出現へ拡張。
+++- 戦闘用敵スプライト3種を追加。
+++- コマンドカーソルを上下左右移動可能化。
+++
+++</details>
+++
++ # rpg075_fix
++ 
++ <details open>
++diff -ruN /mnt/data/rpg076_ui/docs/checks/CHECK_077_BATTLE.md /mnt/data/rpg077_battle/docs/checks/CHECK_077_BATTLE.md
++--- /mnt/data/rpg076_ui/docs/checks/CHECK_077_BATTLE.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg077_battle/docs/checks/CHECK_077_BATTLE.md	2026-05-05 11:38:40.332865264 +0000
++@@ -0,0 +1,33 @@
+++# CHECK_rpg077_battle
+++
+++<details open>
+++<summary>VBA確認チェック</summary>
+++
+++- [ ] 起動して白画面にならない
+++- [ ] フィールドBGが表示される
+++- [ ] プレイヤーが表示される
+++- [ ] 移動できる
+++- [ ] NPC会話がフリーズしない
+++- [ ] ランダムエンカウントする
+++- [ ] 戦闘開始エフェクトが出る
+++- [ ] 戦闘開始メッセージ後、初回コマンド画面が乱れない
+++- [ ] 左上パーティ欄が `ゆうしゃ そうりょ / HP 数値 / MP 数値` 形式で表示される
+++- [ ] HP/MP表示に `/` が出ない
+++- [ ] 敵が最大3体表示される
+++- [ ] 3体出現時に敵スプライトが3つ横並びで出る
+++- [ ] 敵名が左下に最大3行表示される
+++- [ ] コマンドカーソルが上下左右に移動する
+++- [ ] Aボタンで選択したコマンドが実行される
+++- [ ] 戦闘後にフィールドへ戻れる
+++- [ ] 戦闘後に敵スプライトが残らない
+++
+++</details>
+++
+++<details>
+++<summary>戻し確認</summary>
+++
+++- [ ] rpg077で乱れる場合は、まず `load_battle_enemy_sprite_data()` の呼び出しを止める
+++- [ ] 次に `BATTLE_DATA_MAX_ENEMIES` を `2u` へ戻す
+++- [ ] 最後に `draw_party_status_box()` のみ残してUI単独で確認する
+++
+++</details>
++diff -ruN /mnt/data/rpg076_ui/docs/features/RPG077_BATTLE.md /mnt/data/rpg077_battle/docs/features/RPG077_BATTLE.md
++--- /mnt/data/rpg076_ui/docs/features/RPG077_BATTLE.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg077_battle/docs/features/RPG077_BATTLE.md	2026-05-05 11:38:40.240031499 +0000
++@@ -0,0 +1,22 @@
+++# RPG077_BATTLE
+++
+++<details open>
+++<summary>追加内容</summary>
+++
+++- 味方パラメータ表示を省スペース化しました。
+++- 敵同時出現数を最大3体へ拡張しました。
+++- 戦闘用敵OBJスプライト3種を `enemy_tiles` の先頭12タイルに配置しました。
+++- 戦闘コマンドカーソルを上下左右移動可能にしました。
+++
+++</details>
+++
+++<details>
+++<summary>安全方針</summary>
+++
+++- 新規BGタイルは追加していません。
+++- `MAP_GFX_TILE_COUNT` は変更していません。
+++- 新規actor/NPC/object kindは追加していません。
+++- 敵スプライトロードは戦闘中のみ `ENEMY0_TILE_BASE` の先頭12タイルに限定しています。
+++- フィールド復帰時は既存の `restore_field_vram_state()` → `init_map_sprites()` で戻します。
+++
+++</details>
++diff -ruN /mnt/data/rpg076_ui/docs/handover/HANDOVER_077.md /mnt/data/rpg077_battle/docs/handover/HANDOVER_077.md
++--- /mnt/data/rpg076_ui/docs/handover/HANDOVER_077.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg077_battle/docs/handover/HANDOVER_077.md	2026-05-05 11:38:40.333536957 +0000
++@@ -0,0 +1,31 @@
+++# HANDOVER_077
+++
+++## 最新ZIP
+++
+++- `rpg077_battle.zip`
+++
+++## 変更概要
+++
+++- 味方パラメータ表示を `/最大値` なしの省スペース表示へ変更。
+++- 敵同時出現数を最大3体へ拡張。
+++- 戦闘用敵スプライト3種を追加。
+++- コマンドカーソルを上下左右移動へ変更。
+++
+++## 次に見る場所
+++
+++- `main.c`
+++  - `draw_party_status_box()`
+++  - `load_battle_enemy_sprite_data()`
+++  - `show_battle_enemy_sprites()`
+++  - `battle_input()`
+++- `battle_data.h`
+++  - `BATTLE_DATA_MAX_ENEMIES`
+++- `battle_data_bank.c`
+++  - `BattleEncounterTemplate`
+++  - `encounter_table`
+++- `sprites.c`
+++  - `enemy_tiles`
+++
+++## 注意
+++
+++3体表示ではOAM 0-11を使います。フィールド復帰時は必ず `restore_field_vram_state()` が通ることを確認してください。
++diff -ruN /mnt/data/rpg076_ui/main.c /mnt/data/rpg077_battle/main.c
++--- /mnt/data/rpg076_ui/main.c	2026-05-05 11:25:59.060666270 +0000
+++++ /mnt/data/rpg077_battle/main.c	2026-05-05 11:40:12.155365631 +0000
++@@ -200,7 +200,7 @@
++  * - Battle command UI uses BG box tiles, matching the message-window style.
++  * - Existing enemy OBJ tile sheet is reused for battle enemy sprites.
++  * - Enemy data/encounter table lives in battle_data_bank.c bank 7.
++- * - Supports up to 2 enemies at once, without adding map actors or OAM slots.
+++ * - Supports up to 3 enemies at once, without adding map actors or map object kinds.
++  * - No new BG tiles, MAP_GFX_TILE_COUNT change, object kind, map switch, or
++  *   sprite sheet path change.
++  * ============================================================================
++@@ -209,6 +209,7 @@
++ #define BATTLE_MAX_ENEMY_COUNT BATTLE_DATA_MAX_ENEMIES
++ #define BATTLE_ENEMY0_SPRITE_BASE 0u
++ #define BATTLE_ENEMY1_SPRITE_BASE 4u
+++#define BATTLE_ENEMY2_SPRITE_BASE 8u
++ #define BATTLE_ENEMY_SPRITE_Y 40u
++ 
++ 
++@@ -397,6 +398,7 @@
++ static Fighter player_battle;
++ static Fighter enemy_battles[BATTLE_MAX_ENEMY_COUNT];
++ static BattleEnemyData battle_enemy_data_slots[BATTLE_MAX_ENEMY_COUNT];
+++static UINT8 battle_enemy_sprite_kinds[BATTLE_MAX_ENEMY_COUNT];
++ static UINT8 battle_enemy_count;
++ static UINT8 battle_target_index;
++ #define enemy_battle (enemy_battles[battle_target_index])
++@@ -537,6 +539,7 @@
++ static void battle_hide_window_and_reset_scroll(void);
++ static void hide_battle_enemy_sprites(void);
++ static void show_battle_enemy_sprites(void);
+++static void load_battle_enemy_sprite_data(void);
++ static void battle_copy_enemy_from_data(UINT8 slot);
++ static UINT8 battle_select_first_alive(void);
++ static UINT8 battle_alive_count(void);
++@@ -1580,13 +1583,11 @@
++     UINT8 t;
++     UINT8 y;
++ 
++-    /* rpg076:
++-     * Use a full-width 20 tile party window.  The rpg074 15-tile box allowed
++-     * the second slot HP/MP text to overwrite the right border, which looked
++-     * like first-turn BG corruption on real/VBA display.
++-     *
++-     * Slot 1 is still display-only.  No actor, party member, OAM, or battle
++-     * participant is added in this step.
+++    /* rpg077:
+++     * Compact status format.  Avoid "38/38" style text because the slash and
+++     * max HP consume too much horizontal space in a two-member window.
+++     * This is still display-only for the second member.  No battle participant,
+++     * actor, or party management system is added in this step.
++      */
++     draw_bkg_box(0u, 0u, 20u, 5u);
++ 
++@@ -1596,31 +1597,44 @@
++     }
++ 
++     jp_put_bkg_text(1u, 1u, "ゆうしゃ");
++-    jp_put_bkg_text(1u, 2u, "HP");
++-    put_hp_pair(3u, 2u, player_battle.hp, player_battle.max_hp);
++-    jp_put_bkg_text(1u, 3u, "MP");
++-    jp_put_bkg_text(3u, 3u, "10/10 ");
+++    jp_put_bkg_text(1u, 2u, "HP ");
+++    put_u8(4u, 2u, player_battle.hp);
+++    jp_put_bkg_text(1u, 3u, "MP ");
+++    put_u8(4u, 3u, 38u);
++ 
++     jp_put_bkg_text(10u, 1u, "そうりょ");
++-    jp_put_bkg_text(10u, 2u, "HP");
++-    jp_put_bkg_text(12u, 2u, "10/10 ");
++-    jp_put_bkg_text(10u, 3u, "MP");
++-    jp_put_bkg_text(12u, 3u, "10/10 ");
+++    jp_put_bkg_text(10u, 2u, "HP ");
+++    put_u8(13u, 2u, 10u);
+++    jp_put_bkg_text(10u, 3u, "MP ");
+++    put_u8(13u, 3u, 10u);
++ }
++ 
++ static void hide_battle_enemy_sprites(void) {
++     UINT8 i;
++ 
++-    for (i = 0u; i < 8u; i++) {
+++    for (i = 0u; i < 12u; i++) {
++         move_sprite(i, 0u, 0u);
++     }
++ }
++ 
++-static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y) {
++-    set_sprite_tile(sprite_base + 0u, ENEMY0_TILE_BASE + 0u);
++-    set_sprite_tile(sprite_base + 1u, ENEMY0_TILE_BASE + 1u);
++-    set_sprite_tile(sprite_base + 2u, ENEMY0_TILE_BASE + 2u);
++-    set_sprite_tile(sprite_base + 3u, ENEMY0_TILE_BASE + 3u);
+++static void load_battle_enemy_sprite_data(void) {
+++    /* rpg077: battle-only load of the first 12 enemy OBJ tiles.
+++     * Map return still calls init_map_sprites(), so normal field sprite state is
+++     * restored after battle.  This keeps the new 3-type battle sprites isolated.
+++     */
+++    set_banked_sprite_data(ENEMY0_TILE_BASE, 12u, enemy_tiles, BANK(sprite_data_bank));
+++}
+++
+++static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UINT8 sprite_kind) {
+++    UINT8 tile_base;
+++
+++    if (sprite_kind > 2u) sprite_kind = 0u;
+++    tile_base = (UINT8)(ENEMY0_TILE_BASE + (UINT8)(sprite_kind * 4u));
+++
+++    set_sprite_tile(sprite_base + 0u, tile_base + 0u);
+++    set_sprite_tile(sprite_base + 1u, tile_base + 1u);
+++    set_sprite_tile(sprite_base + 2u, tile_base + 2u);
+++    set_sprite_tile(sprite_base + 3u, tile_base + 3u);
++ 
++     move_sprite(sprite_base + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
++     move_sprite(sprite_base + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
++@@ -1635,14 +1649,24 @@
++ 
++     if (battle_enemy_count == 1u) {
++         if (enemy_battles[0].hp > 0u) {
++-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y);
+++            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+++        }
+++    } else if (battle_enemy_count == 2u) {
+++        if (enemy_battles[0].hp > 0u) {
+++            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+++        }
+++        if (enemy_battles[1].hp > 0u) {
+++            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
++         }
++     } else {
++         if (enemy_battles[0].hp > 0u) {
++-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y);
+++            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 36u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
++         }
++         if (enemy_battles[1].hp > 0u) {
++-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y);
+++            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 76u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
+++        }
+++        if (enemy_battles[2].hp > 0u) {
+++            show_one_battle_enemy_sprite(BATTLE_ENEMY2_SPRITE_BASE, 116u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[2]);
++         }
++     }
++ }
++@@ -1656,6 +1680,8 @@
++     enemy_battles[slot].skill_power = 0u;
++     enemy_battles[slot].heal_power = 0u;
++     enemy_battles[slot].agility = battle_enemy_data_slots[slot].agility;
+++    battle_enemy_sprite_kinds[slot] = battle_enemy_data_slots[slot].sprite_kind;
+++    if (battle_enemy_sprite_kinds[slot] > 2u) battle_enemy_sprite_kinds[slot] = 0u;
++ }
++ 
++ static UINT8 battle_select_first_alive(void) {
++@@ -1711,6 +1737,7 @@
++     DISPLAY_OFF;
++     battle_hide_window_and_reset_scroll();
++     jp_init();
+++    load_battle_enemy_sprite_data();
++     battle_hide_window_and_reset_scroll();
++     battle_clear_bg_full();
++     show_battle_enemy_sprites();
++@@ -1722,6 +1749,7 @@
++     if (turn_display_off) DISPLAY_OFF;
++     battle_hide_window_and_reset_scroll();
++     jp_init();
+++    load_battle_enemy_sprite_data();
++     battle_hide_window_and_reset_scroll();
++     draw_battle_frame();
++     draw_battle_menu();
++@@ -2008,14 +2036,25 @@
++ static void battle_input(void) {
++     UINT8 keys;
++     keys = joypad();
+++
++     if (keys & J_UP) {
++-        if (menu_index == 0u) menu_index = CMD_COUNT - 1u;
++-        else menu_index--;
+++        if (menu_index >= 2u) menu_index = (UINT8)(menu_index - 2u);
+++        else menu_index = (UINT8)(menu_index + 2u);
++         draw_battle_menu();
++         waitpadup();
++     } else if (keys & J_DOWN) {
++-        menu_index++;
++-        if (menu_index >= CMD_COUNT) menu_index = 0u;
+++        if (menu_index < 2u) menu_index = (UINT8)(menu_index + 2u);
+++        else menu_index = (UINT8)(menu_index - 2u);
+++        draw_battle_menu();
+++        waitpadup();
+++    } else if (keys & J_LEFT) {
+++        if (menu_index & 1u) menu_index--;
+++        else menu_index++;
+++        draw_battle_menu();
+++        waitpadup();
+++    } else if (keys & J_RIGHT) {
+++        if (menu_index & 1u) menu_index--;
+++        else menu_index++;
++         draw_battle_menu();
++         waitpadup();
++     } else if (keys & J_A) {
++@@ -2059,7 +2098,7 @@
++     camera_py = 0u;
++     camera_target_px = 0u;
++     camera_target_py = 0u;
++-    player_max_hp_stat = 32u;
+++    player_max_hp_stat = 38u;
++     player_attack_stat = 7u;
++     player_defense_stat = 3u;
++     player_skill_power_stat = 8u;
++diff -ruN /mnt/data/rpg076_ui/precheck_output.log /mnt/data/rpg077_battle/precheck_output.log
++--- /mnt/data/rpg076_ui/precheck_output.log	2026-05-05 11:26:18.947996147 +0000
+++++ /mnt/data/rpg077_battle/precheck_output.log	2026-05-05 11:40:21.845714420 +0000
++@@ -1,5 +1,5 @@
++ ===== prebank_check.py =====
++-main.c bytes: 69299
+++main.c bytes: 71141
++ [OK] no direct set_bkg_data() call found in main.c code
++ [OK] no direct set_sprite_data() call found in main.c code
++ [OK] no static const char[] message definitions found in main.c code
+diff -ruN /mnt/data/rpg076_ui/sprites.c /mnt/data/rpg077_battle/sprites.c
+--- /mnt/data/rpg076_ui/sprites.c	2026-05-05 08:37:46.000000000 +0000
++++ /mnt/data/rpg077_battle/sprites.c	2026-05-05 11:37:17.041568242 +0000
+@@ -151,36 +151,36 @@
+ };
+ 
+ const unsigned char enemy_tiles[ACTOR_TOTAL_TILES * 16u] = {
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x1F, 0x1F, 0x3F, 0x3F, 0x79, 0x79, 0x79, 0x79,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, 0xE0, 0xF8, 0xF8, 0xFC, 0xFC, 0x9E, 0x9E, 0x9E, 0x9E,
+-    0x7F, 0x7F, 0x7F, 0x7F, 0x38, 0x38, 0x1F, 0x1F, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0xFE, 0xFE, 0xFE, 0xFE, 0x1C, 0x1C, 0xF8, 0xF8, 0xE0, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x1F, 0x1F, 0x3F, 0x3F, 0x79, 0x79, 0x79, 0x79,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, 0xE0, 0xF8, 0xF8, 0xFC, 0xFC, 0x9E, 0x9E, 0x9E, 0x9E,
+-    0x7F, 0x7F, 0x7F, 0x7F, 0x38, 0x38, 0x1F, 0x1F, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0xFE, 0xFE, 0xFE, 0xFE, 0x1C, 0x1C, 0xF8, 0xF8, 0xE0, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x1F, 0x1F, 0x3F, 0x3F, 0x79, 0x79, 0x79, 0x79,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, 0xE0, 0xF8, 0xF8, 0xFC, 0xFC, 0x9E, 0x9E, 0x9E, 0x9E,
+-    0x7F, 0x7F, 0x7F, 0x7F, 0x38, 0x38, 0x1F, 0x1F, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0xFE, 0xFE, 0xFE, 0xFE, 0x1C, 0x1C, 0xF8, 0xF8, 0xE0, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x1F, 0x1F, 0x3F, 0x3F, 0x79, 0x79, 0x79, 0x79,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, 0xE0, 0xF8, 0xF8, 0xFC, 0xFC, 0x9E, 0x9E, 0x9E, 0x9E,
+-    0x7F, 0x7F, 0x7F, 0x7F, 0x38, 0x38, 0x1F, 0x1F, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0xFE, 0xFE, 0xFE, 0xFE, 0x1C, 0x1C, 0xF8, 0xF8, 0xE0, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x1F, 0x1F, 0x3F, 0x3F, 0x79, 0x79, 0x79, 0x79,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, 0xE0, 0xF8, 0xF8, 0xFC, 0xFC, 0x9E, 0x9E, 0x9E, 0x9E,
+-    0x7F, 0x7F, 0x7F, 0x7F, 0x38, 0x38, 0x1F, 0x1F, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0xFE, 0xFE, 0xFE, 0xFE, 0x1C, 0x1C, 0xF8, 0xF8, 0xE0, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x1F, 0x1F, 0x3F, 0x3F, 0x79, 0x79, 0x79, 0x79,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, 0xE0, 0xF8, 0xF8, 0xFC, 0xFC, 0x9E, 0x9E, 0x9E, 0x9E,
+-    0x7F, 0x7F, 0x7F, 0x7F, 0x38, 0x38, 0x1F, 0x1F, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0xFE, 0xFE, 0xFE, 0xFE, 0x1C, 0x1C, 0xF8, 0xF8, 0xE0, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x1F, 0x1F, 0x3F, 0x3F, 0x79, 0x79, 0x79, 0x79,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, 0xE0, 0xF8, 0xF8, 0xFC, 0xFC, 0x9E, 0x9E, 0x9E, 0x9E,
+-    0x7F, 0x7F, 0x7F, 0x7F, 0x38, 0x38, 0x1F, 0x1F, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0xFE, 0xFE, 0xFE, 0xFE, 0x1C, 0x1C, 0xF8, 0xF8, 0xE0, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x1F, 0x1F, 0x3F, 0x3F, 0x79, 0x79, 0x79, 0x79,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, 0xE0, 0xF8, 0xF8, 0xFC, 0xFC, 0x9E, 0x9E, 0x9E, 0x9E,
+-    0x7F, 0x7F, 0x7F, 0x7F, 0x38, 0x38, 0x1F, 0x1F, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0xFE, 0xFE, 0xFE, 0xFE, 0x1C, 0x1C, 0xF8, 0xF8, 0xE0, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
++    0x00, 0x00, 0x03, 0x03, 0x0F, 0x0F, 0x1F, 0x1F, 0x39, 0x39, 0x3F, 0x3F, 0x3B, 0x3B, 0x1F, 0x1F,
++    0x00, 0x00, 0xC0, 0xC0, 0xF0, 0xF0, 0xF8, 0xF8, 0x9C, 0x9C, 0xFC, 0xFC, 0xDC, 0xDC, 0xF8, 0xF8,
++    0x1F, 0x1F, 0x3F, 0x3F, 0x7F, 0x7F, 0x6F, 0x6F, 0x3F, 0x3F, 0x0F, 0x0F, 0x03, 0x03, 0x00, 0x00,
++    0xF8, 0xF8, 0xFC, 0xFC, 0xFE, 0xFE, 0xF6, 0xF6, 0xFC, 0xFC, 0xF0, 0xF0, 0xC0, 0xC0, 0x00, 0x00,
++    0x00, 0x00, 0x60, 0x60, 0xF0, 0xF0, 0xFC, 0xFC, 0xFF, 0xFF, 0x3F, 0x3F, 0x1D, 0x1D, 0x0F, 0x0F,
++    0x00, 0x00, 0x06, 0x06, 0x0F, 0x0F, 0x3F, 0x3F, 0xFF, 0xFF, 0xFC, 0xFC, 0xB8, 0xB8, 0xF0, 0xF0,
++    0x0F, 0x0F, 0x1F, 0x1F, 0x3D, 0x3D, 0x79, 0x79, 0x61, 0x61, 0x01, 0x01, 0x03, 0x03, 0x00, 0x00,
++    0xF0, 0xF0, 0xF8, 0xF8, 0xBC, 0xBC, 0x9E, 0x9E, 0x86, 0x86, 0x80, 0x80, 0xC0, 0xC0, 0x00, 0x00,
++    0x00, 0x00, 0x1C, 0x1C, 0x3E, 0x3E, 0x7F, 0x7F, 0xFF, 0xFF, 0xE7, 0xE7, 0xFF, 0xFF, 0x79, 0x79,
++    0x00, 0x00, 0x38, 0x38, 0x7C, 0x7C, 0xFE, 0xFE, 0xFF, 0xFF, 0xE7, 0xE7, 0xFF, 0xFF, 0x9E, 0x9E,
++    0x3F, 0x3F, 0x7F, 0x7F, 0xF3, 0xF3, 0xE1, 0xE1, 0x63, 0x63, 0x03, 0x03, 0x07, 0x07, 0x00, 0x00,
++    0xFC, 0xFC, 0xFE, 0xFE, 0xCF, 0xCF, 0x87, 0x87, 0xC6, 0xC6, 0xC0, 0xC0, 0xE0, 0xE0, 0x00, 0x00,
++    0x00, 0x00, 0x03, 0x03, 0x0F, 0x0F, 0x1F, 0x1F, 0x39, 0x39, 0x3F, 0x3F, 0x3B, 0x3B, 0x1F, 0x1F,
++    0x00, 0x00, 0xC0, 0xC0, 0xF0, 0xF0, 0xF8, 0xF8, 0x9C, 0x9C, 0xFC, 0xFC, 0xDC, 0xDC, 0xF8, 0xF8,
++    0x1F, 0x1F, 0x3F, 0x3F, 0x7F, 0x7F, 0x6F, 0x6F, 0x3F, 0x3F, 0x0F, 0x0F, 0x03, 0x03, 0x00, 0x00,
++    0xF8, 0xF8, 0xFC, 0xFC, 0xFE, 0xFE, 0xF6, 0xF6, 0xFC, 0xFC, 0xF0, 0xF0, 0xC0, 0xC0, 0x00, 0x00,
++    0x00, 0x00, 0x60, 0x60, 0xF0, 0xF0, 0xFC, 0xFC, 0xFF, 0xFF, 0x3F, 0x3F, 0x1D, 0x1D, 0x0F, 0x0F,
++    0x00, 0x00, 0x06, 0x06, 0x0F, 0x0F, 0x3F, 0x3F, 0xFF, 0xFF, 0xFC, 0xFC, 0xB8, 0xB8, 0xF0, 0xF0,
++    0x0F, 0x0F, 0x1F, 0x1F, 0x3D, 0x3D, 0x79, 0x79, 0x61, 0x61, 0x01, 0x01, 0x03, 0x03, 0x00, 0x00,
++    0xF0, 0xF0, 0xF8, 0xF8, 0xBC, 0xBC, 0x9E, 0x9E, 0x86, 0x86, 0x80, 0x80, 0xC0, 0xC0, 0x00, 0x00,
++    0x00, 0x00, 0x1C, 0x1C, 0x3E, 0x3E, 0x7F, 0x7F, 0xFF, 0xFF, 0xE7, 0xE7, 0xFF, 0xFF, 0x79, 0x79,
++    0x00, 0x00, 0x38, 0x38, 0x7C, 0x7C, 0xFE, 0xFE, 0xFF, 0xFF, 0xE7, 0xE7, 0xFF, 0xFF, 0x9E, 0x9E,
++    0x3F, 0x3F, 0x7F, 0x7F, 0xF3, 0xF3, 0xE1, 0xE1, 0x63, 0x63, 0x03, 0x03, 0x07, 0x07, 0x00, 0x00,
++    0xFC, 0xFC, 0xFE, 0xFE, 0xCF, 0xCF, 0x87, 0x87, 0xC6, 0xC6, 0xC0, 0xC0, 0xE0, 0xE0, 0x00, 0x00,
++    0x00, 0x00, 0x03, 0x03, 0x0F, 0x0F, 0x1F, 0x1F, 0x39, 0x39, 0x3F, 0x3F, 0x3B, 0x3B, 0x1F, 0x1F,
++    0x00, 0x00, 0xC0, 0xC0, 0xF0, 0xF0, 0xF8, 0xF8, 0x9C, 0x9C, 0xFC, 0xFC, 0xDC, 0xDC, 0xF8, 0xF8,
++    0x1F, 0x1F, 0x3F, 0x3F, 0x7F, 0x7F, 0x6F, 0x6F, 0x3F, 0x3F, 0x0F, 0x0F, 0x03, 0x03, 0x00, 0x00,
++    0xF8, 0xF8, 0xFC, 0xFC, 0xFE, 0xFE, 0xF6, 0xF6, 0xFC, 0xFC, 0xF0, 0xF0, 0xC0, 0xC0, 0x00, 0x00,
++    0x00, 0x00, 0x60, 0x60, 0xF0, 0xF0, 0xFC, 0xFC, 0xFF, 0xFF, 0x3F, 0x3F, 0x1D, 0x1D, 0x0F, 0x0F,
++    0x00, 0x00, 0x06, 0x06, 0x0F, 0x0F, 0x3F, 0x3F, 0xFF, 0xFF, 0xFC, 0xFC, 0xB8, 0xB8, 0xF0, 0xF0,
++    0x0F, 0x0F, 0x1F, 0x1F, 0x3D, 0x3D, 0x79, 0x79, 0x61, 0x61, 0x01, 0x01, 0x03, 0x03, 0x00, 0x00,
++    0xF0, 0xF0, 0xF8, 0xF8, 0xBC, 0xBC, 0x9E, 0x9E, 0x86, 0x86, 0x80, 0x80, 0xC0, 0xC0, 0x00, 0x00,
+ };

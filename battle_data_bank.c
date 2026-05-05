@@ -18,6 +18,7 @@ typedef struct BattleEncounterTemplate {
     UINT8 count;
     UINT8 enemy0;
     UINT8 enemy1;
+    UINT8 enemy2;
 } BattleEncounterTemplate;
 
 static const char name_slime[] = "スライム";
@@ -26,16 +27,18 @@ static const char name_beast[] = "けもの";
 
 static const BattleEnemyTemplate enemy_table[] = {
     {name_slime, 20u, 5u, 2u, 5u, 0u},
-    {name_bat,   14u, 4u, 1u, 8u, 0u},
-    {name_beast, 28u, 7u, 3u, 4u, 0u}
+    {name_bat,   14u, 4u, 1u, 8u, 1u},
+    {name_beast, 28u, 7u, 3u, 4u, 2u}
 };
 
 static const BattleEncounterTemplate encounter_table[] = {
-    {1u, 0u, 0u},
-    {1u, 1u, 0u},
-    {1u, 2u, 0u},
-    {2u, 0u, 1u},
-    {2u, 0u, 0u}
+    {1u, 0u, 0u, 0u},
+    {1u, 1u, 0u, 0u},
+    {1u, 2u, 0u, 0u},
+    {2u, 0u, 1u, 0u},
+    {2u, 0u, 0u, 0u},
+    {3u, 0u, 1u, 2u},
+    {3u, 0u, 0u, 1u}
 };
 
 #define ENEMY_TABLE_COUNT ((UINT8)(sizeof(enemy_table) / sizeof(enemy_table[0])))
@@ -101,5 +104,8 @@ void battle_data_load_encounter_bank(UINT8 encounter_id, BattleEnemyData *out, U
     battle_data_copy_enemy_bank(enc.enemy0, &out[0]);
     if (*count > 1u) {
         battle_data_copy_enemy_bank(enc.enemy1, &out[1]);
+    }
+    if (*count > 2u) {
+        battle_data_copy_enemy_bank(enc.enemy2, &out[2]);
     }
 }

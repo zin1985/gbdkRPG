@@ -1,3 +1,17 @@
+# CHANGELOG
+
+## rpg077_battle
+
+<details open>
+<summary>変更</summary>
+
+- 味方パラメータ表示を省スペース化。
+- 敵最大3体出現へ拡張。
+- 戦闘用敵スプライト3種を追加。
+- コマンドカーソルを上下左右移動可能化。
+
+</details>
+
 # rpg075_fix
 
 <details open>
@@ -310,3 +324,10 @@
 - No MAP_GFX_TILE_COUNT change.
 - No new actors/NPCs.
 - No object kind changes.
+
+## rpg076_ui
+
+- 戦闘初回コマンド画面のWindow残り対策を追加。
+- Windowを非表示に加えて画面外へ退避。
+- 戦闘開始メッセージ前は空の戦闘BGにし、コマンドUIはメッセージ後に初回構築。
+- 左上パーティ枠を20タイル幅へ拡張し、2人目HP/MPが枠線を上書きしないよう修正。

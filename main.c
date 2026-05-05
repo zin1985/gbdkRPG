@@ -200,7 +200,7 @@ BANKREF_EXTERN(sprite_data_bank)
  * - Battle command UI uses BG box tiles, matching the message-window style.
  * - Existing enemy OBJ tile sheet is reused for battle enemy sprites.
  * - Enemy data/encounter table lives in battle_data_bank.c bank 7.
- * - Supports up to 2 enemies at once, without adding map actors or OAM slots.
+ * - Supports up to 3 enemies at once, without adding map actors or map object kinds.
  * - No new BG tiles, MAP_GFX_TILE_COUNT change, object kind, map switch, or
  *   sprite sheet path change.
  * ============================================================================
@@ -209,6 +209,7 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_MAX_ENEMY_COUNT BATTLE_DATA_MAX_ENEMIES
 #define BATTLE_ENEMY0_SPRITE_BASE 0u
 #define BATTLE_ENEMY1_SPRITE_BASE 4u
+#define BATTLE_ENEMY2_SPRITE_BASE 8u
 #define BATTLE_ENEMY_SPRITE_Y 40u
 
 
@@ -397,6 +398,7 @@ static UINT8 camera_target_py;
 static Fighter player_battle;
 static Fighter enemy_battles[BATTLE_MAX_ENEMY_COUNT];
 static BattleEnemyData battle_enemy_data_slots[BATTLE_MAX_ENEMY_COUNT];
+static UINT8 battle_enemy_sprite_kinds[BATTLE_MAX_ENEMY_COUNT];
 static UINT8 battle_enemy_count;
 static UINT8 battle_target_index;
 #define enemy_battle (enemy_battles[battle_target_index])
@@ -533,8 +535,11 @@ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
 static void draw_battle_enemy_names(void);
 static void draw_party_status_box(void);
 static void battle_reset_screen_for_command(UINT8 turn_display_off);
+static void battle_prepare_intro_screen(void);
+static void battle_hide_window_and_reset_scroll(void);
 static void hide_battle_enemy_sprites(void);
 static void show_battle_enemy_sprites(void);
+static void load_battle_enemy_sprite_data(void);
 static void battle_copy_enemy_from_data(UINT8 slot);
 static UINT8 battle_select_first_alive(void);
 static UINT8 battle_alive_count(void);
@@ -1575,38 +1580,61 @@ static void draw_battle_enemy_names(void) {
 }
 
 static void draw_party_status_box(void) {
-    /* rpg074: two-slot layout scaffold.
-     * Slot 0 is the real hero data.  Slot 1 is display-only for the next step;
-     * no new actor, party member, battle participant, or OAM sprite is added.
+    UINT8 t;
+    UINT8 y;
+
+    /* rpg077:
+     * Compact status format.  Avoid "38/38" style text because the slash and
+     * max HP consume too much horizontal space in a two-member window.
+     * This is still display-only for the second member.  No battle participant,
+     * actor, or party management system is added in this step.
      */
-    draw_bkg_box(0u, 0u, 15u, 5u);
+    draw_bkg_box(0u, 0u, 20u, 5u);
+
+    t = (UINT8)(JP_FRAME_BASE + 2u);
+    for (y = 1u; y <= 3u; y++) {
+        set_bkg_tiles(9u, y, 1u, 1u, &t);
+    }
 
     jp_put_bkg_text(1u, 1u, "ゆうしゃ");
-    jp_put_bkg_text(1u, 2u, "HP");
-    put_hp_pair(3u, 2u, player_battle.hp, player_battle.max_hp);
-    jp_put_bkg_text(1u, 3u, "MP");
-    jp_put_bkg_text(3u, 3u, "10/10");
+    jp_put_bkg_text(1u, 2u, "HP ");
+    put_u8(4u, 2u, player_battle.hp);
+    jp_put_bkg_text(1u, 3u, "MP ");
+    put_u8(4u, 3u, 38u);
 
-    jp_put_bkg_text(8u, 1u, "そうりょ");
-    jp_put_bkg_text(8u, 2u, "HP");
-    jp_put_bkg_text(10u, 2u, "10/10");
-    jp_put_bkg_text(8u, 3u, "MP");
-    jp_put_bkg_text(10u, 3u, "10/10");
+    jp_put_bkg_text(10u, 1u, "そうりょ");
+    jp_put_bkg_text(10u, 2u, "HP ");
+    put_u8(13u, 2u, 10u);
+    jp_put_bkg_text(10u, 3u, "MP ");
+    put_u8(13u, 3u, 10u);
 }
 
 static void hide_battle_enemy_sprites(void) {
     UINT8 i;
 
-    for (i = 0u; i < 8u; i++) {
+    for (i = 0u; i < 12u; i++) {
         move_sprite(i, 0u, 0u);
     }
 }
 
-static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y) {
-    set_sprite_tile(sprite_base + 0u, ENEMY0_TILE_BASE + 0u);
-    set_sprite_tile(sprite_base + 1u, ENEMY0_TILE_BASE + 1u);
-    set_sprite_tile(sprite_base + 2u, ENEMY0_TILE_BASE + 2u);
-    set_sprite_tile(sprite_base + 3u, ENEMY0_TILE_BASE + 3u);
+static void load_battle_enemy_sprite_data(void) {
+    /* rpg077: battle-only load of the first 12 enemy OBJ tiles.
+     * Map return still calls init_map_sprites(), so normal field sprite state is
+     * restored after battle.  This keeps the new 3-type battle sprites isolated.
+     */
+    set_banked_sprite_data(ENEMY0_TILE_BASE, 12u, enemy_tiles, BANK(sprite_data_bank));
+}
+
+static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UINT8 sprite_kind) {
+    UINT8 tile_base;
+
+    if (sprite_kind > 2u) sprite_kind = 0u;
+    tile_base = (UINT8)(ENEMY0_TILE_BASE + (UINT8)(sprite_kind * 4u));
+
+    set_sprite_tile(sprite_base + 0u, tile_base + 0u);
+    set_sprite_tile(sprite_base + 1u, tile_base + 1u);
+    set_sprite_tile(sprite_base + 2u, tile_base + 2u);
+    set_sprite_tile(sprite_base + 3u, tile_base + 3u);
 
     move_sprite(sprite_base + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
     move_sprite(sprite_base + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
@@ -1621,14 +1649,24 @@ static void show_battle_enemy_sprites(void) {
 
     if (battle_enemy_count == 1u) {
         if (enemy_battles[0].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y);
+            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+        }
+    } else if (battle_enemy_count == 2u) {
+        if (enemy_battles[0].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+        }
+        if (enemy_battles[1].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
         }
     } else {
         if (enemy_battles[0].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y);
+            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 36u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
         }
         if (enemy_battles[1].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y);
+            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 76u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
+        }
+        if (enemy_battles[2].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY2_SPRITE_BASE, 116u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[2]);
         }
     }
 }
@@ -1642,6 +1680,8 @@ static void battle_copy_enemy_from_data(UINT8 slot) {
     enemy_battles[slot].skill_power = 0u;
     enemy_battles[slot].heal_power = 0u;
     enemy_battles[slot].agility = battle_enemy_data_slots[slot].agility;
+    battle_enemy_sprite_kinds[slot] = battle_enemy_data_slots[slot].sprite_kind;
+    if (battle_enemy_sprite_kinds[slot] > 2u) battle_enemy_sprite_kinds[slot] = 0u;
 }
 
 static UINT8 battle_select_first_alive(void) {
@@ -1685,22 +1725,43 @@ static void draw_battle_menu(void) {
     jp_put_bkg_text(16u, 14u, "かい"); put_u8(18u, 14u, heal_uses);
 }
 
-static void battle_reset_screen_for_command(UINT8 turn_display_off) {
-    if (turn_display_off) DISPLAY_OFF;
+static void battle_hide_window_and_reset_scroll(void) {
     HIDE_WIN;
+    move_win(JP_WIN_X, 144u);
+    move_bkg(0u, 0u);
     SHOW_BKG;
     SHOW_SPRITES;
-    move_bkg(0u, 0u);
+}
+
+static void battle_prepare_intro_screen(void) {
+    DISPLAY_OFF;
+    battle_hide_window_and_reset_scroll();
     jp_init();
+    load_battle_enemy_sprite_data();
+    battle_hide_window_and_reset_scroll();
+    battle_clear_bg_full();
+    show_battle_enemy_sprites();
+    DISPLAY_ON;
+    wait_vbl_done();
+}
+
+static void battle_reset_screen_for_command(UINT8 turn_display_off) {
+    if (turn_display_off) DISPLAY_OFF;
+    battle_hide_window_and_reset_scroll();
+    jp_init();
+    load_battle_enemy_sprite_data();
+    battle_hide_window_and_reset_scroll();
     draw_battle_frame();
     draw_battle_menu();
     show_battle_enemy_sprites();
+    battle_hide_window_and_reset_scroll();
     if (turn_display_off) DISPLAY_ON;
+    wait_vbl_done();
 }
 
 
 static void update_battle_status(void) {
-    battle_reset_screen_for_command(0u);
+    battle_reset_screen_for_command(1u);
 }
 
 
@@ -1758,13 +1819,14 @@ static void battle_start_effect(void) {
 static void enter_battle_screen(void) {
     battle_start_effect();
 
-    battle_reset_screen_for_command(1u);
-
+    /* rpg076: keep the intro message over a blank battle BG, then build the
+     * command UI only after the dialogue window is fully hidden/offscreen.
+     */
+    battle_prepare_intro_screen();
     dialogue_message("まものが\nあらわれた！");
 
-    /* rpg074: rebuild once after the dialogue window closes.
-     * This is the critical first-command screen where BG/window state used to
-     * leave residue.
+    /* First command screen: force BG-only, reset scroll, rebuild font cache,
+     * clear BG, redraw party/enemy/menu, and keep the window layer offscreen.
      */
     battle_reset_screen_for_command(1u);
 }
@@ -1974,14 +2036,25 @@ static void enemy_turn(void) {
 static void battle_input(void) {
     UINT8 keys;
     keys = joypad();
+
     if (keys & J_UP) {
-        if (menu_index == 0u) menu_index = CMD_COUNT - 1u;
-        else menu_index--;
+        if (menu_index >= 2u) menu_index = (UINT8)(menu_index - 2u);
+        else menu_index = (UINT8)(menu_index + 2u);
         draw_battle_menu();
         waitpadup();
     } else if (keys & J_DOWN) {
-        menu_index++;
-        if (menu_index >= CMD_COUNT) menu_index = 0u;
+        if (menu_index < 2u) menu_index = (UINT8)(menu_index + 2u);
+        else menu_index = (UINT8)(menu_index - 2u);
+        draw_battle_menu();
+        waitpadup();
+    } else if (keys & J_LEFT) {
+        if (menu_index & 1u) menu_index--;
+        else menu_index++;
+        draw_battle_menu();
+        waitpadup();
+    } else if (keys & J_RIGHT) {
+        if (menu_index & 1u) menu_index--;
+        else menu_index++;
         draw_battle_menu();
         waitpadup();
     } else if (keys & J_A) {
@@ -2025,7 +2098,7 @@ static void init_game(void) {
     camera_py = 0u;
     camera_target_px = 0u;
     camera_target_py = 0u;
-    player_max_hp_stat = 32u;
+    player_max_hp_stat = 38u;
     player_attack_stat = 7u;
     player_defense_stat = 3u;
     player_skill_power_stat = 8u;
