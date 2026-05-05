@@ -65,5 +65,6 @@ extern const unsigned char map_gfx_tiles[MAP_GFX_TILE_COUNT * 16u];
 extern const unsigned char player_tiles[ACTOR_TOTAL_TILES * 16u];
 extern const unsigned char npc_tiles[ACTOR_TOTAL_TILES * 16u];
 extern const unsigned char enemy_tiles[ACTOR_TOTAL_TILES * 16u];
+extern const unsigned char battle_party_display_tiles[12u * 16u];
 
 #endif

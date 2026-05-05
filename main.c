@@ -152,8 +152,9 @@ BANKREF_EXTERN(sprite_data_bank)
  */
 #define TEST_ACTOR_SPRITE_BASE 12u
 #define BATTLE_PARTY_ICON0_SPRITE 12u
-#define BATTLE_PARTY_ICON1_SPRITE 13u
-#define BATTLE_PARTY_ICON2_SPRITE 14u
+#define BATTLE_PARTY_ICON1_SPRITE 16u
+#define BATTLE_PARTY_ICON2_SPRITE 20u
+#define BATTLE_PARTY_ICON_TILE_BASE NPC0_TILE_BASE
 
 /* VRAM tile budget.
  * Actor OBJ tile sheets use 0-95.
@@ -542,6 +543,7 @@ static void battle_prepare_intro_screen(void);
 static void battle_hide_window_and_reset_scroll(void);
 static void hide_battle_enemy_sprites(void);
 static void hide_all_sprites_safe(void);
+static void load_battle_party_icon_sprite_data(void);
 static void show_battle_party_icons(void);
 static void show_battle_enemy_sprites(void);
 static void load_battle_enemy_sprite_data(void);
@@ -1637,17 +1639,56 @@ static void hide_all_sprites_safe(void) {
     }
 }
 
-static void show_battle_party_icons(void) {
-    /* Display-only party icons using existing player sprite tiles.
-     * One 8x8 tile per slot keeps OAM use low and avoids new tile data.
+static void load_battle_party_icon_sprite_data(void) {
+    /* rpg080: load the user-provided party display icons into NPC tile slots.
+     * NPC field tiles are restored by init_map_sprites() after battle.
      */
-    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE, PLAYER_TILE_BASE + 0u);
-    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE, PLAYER_TILE_BASE + 8u);
-    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE, PLAYER_TILE_BASE + 16u);
+    set_banked_sprite_data(BATTLE_PARTY_ICON_TILE_BASE, 12u, battle_party_display_tiles, BANK(sprite_data_bank));
+}
 
-    move_sprite(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(5u * 8u + 8u),  (UINT8)(3u * 8u + 16u));
-    move_sprite(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(11u * 8u + 8u), (UINT8)(3u * 8u + 16u));
-    move_sprite(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(17u * 8u + 8u), (UINT8)(3u * 8u + 16u));
+static void show_battle_party_icons(void) {
+    UINT8 tile_base;
+    UINT8 x;
+    UINT8 y;
+
+    load_battle_party_icon_sprite_data();
+
+    /* order shown on screen: ゆうしゃ, そうりょ, まほう */
+    tile_base = (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u);
+    x = (UINT8)(5u * 8u);
+    y = (UINT8)(2u * 8u + 8u);
+    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 0u, tile_base + 0u);
+    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 1u, tile_base + 1u);
+    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 2u, tile_base + 2u);
+    set_sprite_tile(BATTLE_PARTY_ICON0_SPRITE + 3u, tile_base + 3u);
+    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
+    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
+    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
+    move_sprite(BATTLE_PARTY_ICON0_SPRITE + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
+
+    tile_base = (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u);
+    x = (UINT8)(11u * 8u);
+    y = (UINT8)(2u * 8u + 8u);
+    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 0u, tile_base + 0u);
+    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 1u, tile_base + 1u);
+    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 2u, tile_base + 2u);
+    set_sprite_tile(BATTLE_PARTY_ICON1_SPRITE + 3u, tile_base + 3u);
+    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
+    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
+    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
+    move_sprite(BATTLE_PARTY_ICON1_SPRITE + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
+
+    tile_base = (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u);
+    x = (UINT8)(17u * 8u);
+    y = (UINT8)(2u * 8u + 8u);
+    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 0u, tile_base + 0u);
+    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 1u, tile_base + 1u);
+    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 2u, tile_base + 2u);
+    set_sprite_tile(BATTLE_PARTY_ICON2_SPRITE + 3u, tile_base + 3u);
+    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
+    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
+    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
+    move_sprite(BATTLE_PARTY_ICON2_SPRITE + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
 }
 
 static void load_battle_enemy_sprite_data(void) {
