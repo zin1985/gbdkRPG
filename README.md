@@ -1,3 +1,32 @@
+# rpg075_fix
+
+
+<details open>
+<summary>rpg075_fix の要点</summary>
+
+- rpg074_ui の `main.c:1689: error 12: called object is not a function` を修正。
+- 原因は `display_off` という引数名が GBDK の `DISPLAY_OFF` マクロ展開内の `display_off()` と衝突したこと。
+- 引数名を `turn_display_off` に変更して衝突を回避。
+- rpg074で入れた2人分パーティ枠、敵名長18、初回コマンド前再描画は維持。
+
+</details>
+
+> **長期目標:** GBDK/Game Boyの制約内で、SaGa風戦闘、ランダム成長、技ひらめき、魔法、属性、状態異常、町・村・ダンジョン、チャンク制フィールド、最終的に5000x5000相当の世界設計へ段階拡張する。巨大配列常駐ではなく、チャンク制・セクター制・ROMバンク分割・必要範囲だけのロード/描画・メタタイル圧縮を前提にする。
+
+## rpg075今回の要点
+
+<details open>
+<summary>今回の変更</summary>
+
+- 戦闘左上UIを `ゆうしゃ` + `そうりょ` の2枠表示へ拡張。
+- `そうりょ` は表示だけの仮枠で、戦闘参加・仲間処理は未実装。
+- 敵名バッファを `18u` に拡張。
+- 敵名コピーをUTF-8途中切れしにくい処理に変更。
+- 初回コマンド前の戦闘画面再構築を `battle_reset_screen_for_command()` に集約。
+- 新規BGタイル、MAP_GFX_TILE_COUNT、新規actor、新規object kind、VRAMロード経路は変更なし。
+
+</details>
+
 # rpg017
 
 ## 方針

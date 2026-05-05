@@ -531,6 +531,8 @@ static void draw_battle_frame(void);
 static void battle_clear_bg_full(void);
 static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
 static void draw_battle_enemy_names(void);
+static void draw_party_status_box(void);
+static void battle_reset_screen_for_command(UINT8 turn_display_off);
 static void hide_battle_enemy_sprites(void);
 static void show_battle_enemy_sprites(void);
 static void battle_copy_enemy_from_data(UINT8 slot);
@@ -1515,10 +1517,10 @@ static UINT8 calc_damage(UINT8 power, UINT8 atk, UINT8 def) {
 }
 
 /*
- * rpg072:
- * rpg071 declared the battle helper functions and called them, but the helper
- * bodies were not emitted into main.c.  Keep them immediately before the battle
- * drawing functions so future battle UI changes have one safe checkpoint.
+ * rpg074:
+ * Keep battle UI updates in this small helper zone.  Do not add BG tiles or
+ * change VRAM load order here.  The goal is to stabilize the first command
+ * screen, then expand party/status display one visible slot at a time.
  */
 static void battle_clear_bg_full(void) {
     static UINT8 bg[BG_DRAW_W * BG_DRAW_H];
@@ -1570,6 +1572,26 @@ static void draw_battle_enemy_names(void) {
             jp_put_bkg_text(1u, (UINT8)(12u + i), enemy_battles[i].name);
         }
     }
+}
+
+static void draw_party_status_box(void) {
+    /* rpg074: two-slot layout scaffold.
+     * Slot 0 is the real hero data.  Slot 1 is display-only for the next step;
+     * no new actor, party member, battle participant, or OAM sprite is added.
+     */
+    draw_bkg_box(0u, 0u, 15u, 5u);
+
+    jp_put_bkg_text(1u, 1u, "ゆうしゃ");
+    jp_put_bkg_text(1u, 2u, "HP");
+    put_hp_pair(3u, 2u, player_battle.hp, player_battle.max_hp);
+    jp_put_bkg_text(1u, 3u, "MP");
+    jp_put_bkg_text(3u, 3u, "10/10");
+
+    jp_put_bkg_text(8u, 1u, "そうりょ");
+    jp_put_bkg_text(8u, 2u, "HP");
+    jp_put_bkg_text(10u, 2u, "10/10");
+    jp_put_bkg_text(8u, 3u, "MP");
+    jp_put_bkg_text(10u, 3u, "10/10");
 }
 
 static void hide_battle_enemy_sprites(void) {
@@ -1646,10 +1668,7 @@ static UINT8 battle_alive_count(void) {
 
 static void draw_battle_frame(void) {
     battle_clear_bg_full();
-
-    jp_put_bkg_text(0u, 0u, "ゆうしゃ");
-    jp_put_bkg_text(0u, 1u, "HP"); put_hp_pair(4u, 1u, player_battle.hp, player_battle.max_hp);
-
+    draw_party_status_box();
     draw_battle_enemy_names();
 }
 
@@ -1663,14 +1682,25 @@ static void draw_battle_menu(void) {
     put_cursor(15u, 13u, (UINT8)(menu_index == CMD_RUN));    jp_put_bkg_text(16u, 13u, "にげる");
 
     jp_put_bkg_text(10u, 14u, "とく"); put_u8(15u, 14u, skill_uses);
-    jp_put_bkg_text(16u, 14u, "く");   put_u8(18u, 14u, heal_uses);
+    jp_put_bkg_text(16u, 14u, "かい"); put_u8(18u, 14u, heal_uses);
+}
+
+static void battle_reset_screen_for_command(UINT8 turn_display_off) {
+    if (turn_display_off) DISPLAY_OFF;
+    HIDE_WIN;
+    SHOW_BKG;
+    SHOW_SPRITES;
+    move_bkg(0u, 0u);
+    jp_init();
+    draw_battle_frame();
+    draw_battle_menu();
+    show_battle_enemy_sprites();
+    if (turn_display_off) DISPLAY_ON;
 }
 
 
 static void update_battle_status(void) {
-    draw_battle_frame();
-    draw_battle_menu();
-    show_battle_enemy_sprites();
+    battle_reset_screen_for_command(0u);
 }
 
 
@@ -1728,30 +1758,15 @@ static void battle_start_effect(void) {
 static void enter_battle_screen(void) {
     battle_start_effect();
 
-    DISPLAY_OFF;
-    HIDE_WIN;
-    SHOW_BKG;
-    SHOW_SPRITES;
-    move_bkg(0u, 0u);
-
-    jp_init();
-    draw_battle_frame();
-    draw_battle_menu();
-    show_battle_enemy_sprites();
-    DISPLAY_ON;
+    battle_reset_screen_for_command(1u);
 
     dialogue_message("まものが\nあらわれた！");
 
-    DISPLAY_OFF;
-    HIDE_WIN;
-    SHOW_BKG;
-    SHOW_SPRITES;
-    move_bkg(0u, 0u);
-    jp_init();
-    draw_battle_frame();
-    draw_battle_menu();
-    show_battle_enemy_sprites();
-    DISPLAY_ON;
+    /* rpg074: rebuild once after the dialogue window closes.
+     * This is the critical first-command screen where BG/window state used to
+     * leave residue.
+     */
+    battle_reset_screen_for_command(1u);
 }
 
 
@@ -2049,7 +2064,7 @@ void main(void) {
                         draw_battle_menu();
                         break;
                     case BSTATE_WIN:
-                        dialogue_message("スライムを\nたおした！");
+                        dialogue_message("まものを\nたおした！");
                         return_to_map_after_battle(1u);
                         break;
                     case BSTATE_LOSE:

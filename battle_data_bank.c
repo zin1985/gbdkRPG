@@ -46,17 +46,34 @@ UINT8 battle_data_encounter_count_bank(void) {
 }
 
 void battle_data_copy_name_bank(UINT8 enemy_id, char *dst, UINT8 max_len) {
-    UINT8 i;
-    const char *src;
+    UINT8 si;
+    UINT8 di;
+    UINT8 step;
+    UINT8 k;
+    const unsigned char *src;
 
     if (enemy_id >= ENEMY_TABLE_COUNT) enemy_id = 0u;
-    src = enemy_table[enemy_id].name;
+    src = (const unsigned char *)enemy_table[enemy_id].name;
 
-    for (i = 0u; i < (UINT8)(max_len - 1u); i++) {
-        dst[i] = src[i];
-        if (src[i] == '\0') break;
+    if (max_len == 0u) return;
+
+    si = 0u;
+    di = 0u;
+    while (src[si] != '\0') {
+        if ((src[si] & 0x80u) == 0u) step = 1u;
+        else if ((src[si] & 0xE0u) == 0xC0u) step = 2u;
+        else if ((src[si] & 0xF0u) == 0xE0u) step = 3u;
+        else step = 1u;
+
+        if ((UINT8)(di + step) >= max_len) break;
+
+        for (k = 0u; k < step; k++) {
+            dst[di] = (char)src[si];
+            di++;
+            si++;
+        }
     }
-    dst[(UINT8)(max_len - 1u)] = '\0';
+    dst[di] = '\0';
 }
 
 void battle_data_copy_enemy_bank(UINT8 enemy_id, BattleEnemyData *out) {

@@ -1,0 +1,285 @@
+Only in /mnt/data/rpg074_ui: CHECK_rpg074.md
+diff -ru /mnt/data/rpg073_battle_first_turn_ui_fix/Makefile /mnt/data/rpg074_ui/Makefile
+--- /mnt/data/rpg073_battle_first_turn_ui_fix/Makefile	2026-05-05 08:37:48.000000000 +0000
++++ /mnt/data/rpg074_ui/Makefile	2026-05-05 10:52:01.657955386 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg072_battle_helper_definition_fix.gb
++OUT = rpg074_ui.gb
+ SRCS = main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ru /mnt/data/rpg073_battle_first_turn_ui_fix/README.md /mnt/data/rpg074_ui/README.md
+--- /mnt/data/rpg073_battle_first_turn_ui_fix/README.md	2026-05-05 08:37:48.000000000 +0000
++++ /mnt/data/rpg074_ui/README.md	2026-05-05 10:53:11.445196407 +0000
+@@ -1,3 +1,21 @@
++# rpg074_ui
++
++> **長期目標:** GBDK/Game Boyの制約内で、SaGa風戦闘、ランダム成長、技ひらめき、魔法、属性、状態異常、町・村・ダンジョン、チャンク制フィールド、最終的に5000x5000相当の世界設計へ段階拡張する。巨大配列常駐ではなく、チャンク制・セクター制・ROMバンク分割・必要範囲だけのロード/描画・メタタイル圧縮を前提にする。
++
++## rpg074今回の要点
++
++<details open>
++<summary>今回の変更</summary>
++
++- 戦闘左上UIを `ゆうしゃ` + `そうりょ` の2枠表示へ拡張。
++- `そうりょ` は表示だけの仮枠で、戦闘参加・仲間処理は未実装。
++- 敵名バッファを `18u` に拡張。
++- 敵名コピーをUTF-8途中切れしにくい処理に変更。
++- 初回コマンド前の戦闘画面再構築を `battle_reset_screen_for_command()` に集約。
++- 新規BGタイル、MAP_GFX_TILE_COUNT、新規actor、新規object kind、VRAMロード経路は変更なし。
++
++</details>
++
+ # rpg017
+ 
+ ## 方針
+diff -ru /mnt/data/rpg073_battle_first_turn_ui_fix/battle_data.h /mnt/data/rpg074_ui/battle_data.h
+--- /mnt/data/rpg073_battle_first_turn_ui_fix/battle_data.h	2026-05-05 08:37:46.000000000 +0000
++++ /mnt/data/rpg074_ui/battle_data.h	2026-05-05 10:51:49.759047007 +0000
+@@ -4,7 +4,7 @@
+ #include <gb/gb.h>
+ 
+ #define BATTLE_DATA_MAX_ENEMIES 2u
+-#define BATTLE_NAME_LEN 12u
++#define BATTLE_NAME_LEN 18u
+ 
+ typedef struct BattleEnemyData {
+     char name[BATTLE_NAME_LEN];
+diff -ru /mnt/data/rpg073_battle_first_turn_ui_fix/battle_data_bank.c /mnt/data/rpg074_ui/battle_data_bank.c
+--- /mnt/data/rpg073_battle_first_turn_ui_fix/battle_data_bank.c	2026-05-05 08:37:46.000000000 +0000
++++ /mnt/data/rpg074_ui/battle_data_bank.c	2026-05-05 10:51:49.759775920 +0000
+@@ -46,17 +46,34 @@
+ }
+ 
+ void battle_data_copy_name_bank(UINT8 enemy_id, char *dst, UINT8 max_len) {
+-    UINT8 i;
+-    const char *src;
++    UINT8 si;
++    UINT8 di;
++    UINT8 step;
++    UINT8 k;
++    const unsigned char *src;
+ 
+     if (enemy_id >= ENEMY_TABLE_COUNT) enemy_id = 0u;
+-    src = enemy_table[enemy_id].name;
++    src = (const unsigned char *)enemy_table[enemy_id].name;
+ 
+-    for (i = 0u; i < (UINT8)(max_len - 1u); i++) {
+-        dst[i] = src[i];
+-        if (src[i] == '\0') break;
++    if (max_len == 0u) return;
++
++    si = 0u;
++    di = 0u;
++    while (src[si] != '\0') {
++        if ((src[si] & 0x80u) == 0u) step = 1u;
++        else if ((src[si] & 0xE0u) == 0xC0u) step = 2u;
++        else if ((src[si] & 0xF0u) == 0xE0u) step = 3u;
++        else step = 1u;
++
++        if ((UINT8)(di + step) >= max_len) break;
++
++        for (k = 0u; k < step; k++) {
++            dst[di] = (char)src[si];
++            di++;
++            si++;
++        }
+     }
+-    dst[(UINT8)(max_len - 1u)] = '\0';
++    dst[di] = '\0';
+ }
+ 
+ void battle_data_copy_enemy_bank(UINT8 enemy_id, BattleEnemyData *out) {
+diff -ru /mnt/data/rpg073_battle_first_turn_ui_fix/build.bat /mnt/data/rpg074_ui/build.bat
+--- /mnt/data/rpg073_battle_first_turn_ui_fix/build.bat	2026-05-05 08:37:48.000000000 +0000
++++ /mnt/data/rpg074_ui/build.bat	2026-05-05 10:52:01.657201619 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg072_battle_helper_definition_fix"
++set "PROJECT=rpg074_ui"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+Only in /mnt/data/rpg074_ui: build.log
+diff -ru /mnt/data/rpg073_battle_first_turn_ui_fix/build.sh /mnt/data/rpg074_ui/build.sh
+--- /mnt/data/rpg073_battle_first_turn_ui_fix/build.sh	2026-05-05 08:37:48.000000000 +0000
++++ /mnt/data/rpg074_ui/build.sh	2026-05-05 10:52:01.656207979 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg072_battle_helper_definition_fix.gb"
++OUT="rpg074_ui.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+Only in /mnt/data/rpg074_ui: compile_output.log
+diff -ru /mnt/data/rpg073_battle_first_turn_ui_fix/docs/changelog/CHANGELOG.md /mnt/data/rpg074_ui/docs/changelog/CHANGELOG.md
+--- /mnt/data/rpg073_battle_first_turn_ui_fix/docs/changelog/CHANGELOG.md	2026-05-05 08:37:46.000000000 +0000
++++ /mnt/data/rpg074_ui/docs/changelog/CHANGELOG.md	2026-05-05 10:53:15.533765810 +0000
+@@ -1,3 +1,16 @@
++# rpg074_ui
++
++<details open>
++<summary>変更概要</summary>
++
++- 左上パーティ欄を2枠表示へ拡張。
++- 敵名バッファを18byteへ拡張。
++- bank 7の敵名コピーをUTF-8境界を意識した処理に変更。
++- 初回コマンド前の戦闘画面再構築を専用関数に集約。
++- ZIP名を短縮し、`rpg074_ui.zip` とした。
++
++</details>
++
+ # CHANGELOG
+ 
+ ## rpg017
+Only in /mnt/data/rpg074_ui/docs/checks: CHECK_074_UI.md
+Only in /mnt/data/rpg074_ui/docs/features: RPG074_UI.md
+Only in /mnt/data/rpg074_ui/docs: handover
+Only in /mnt/data/rpg074_ui/docs: project
+diff -ru /mnt/data/rpg073_battle_first_turn_ui_fix/main.c /mnt/data/rpg074_ui/main.c
+--- /mnt/data/rpg073_battle_first_turn_ui_fix/main.c	2026-05-05 08:37:48.000000000 +0000
++++ /mnt/data/rpg074_ui/main.c	2026-05-05 10:51:49.758468345 +0000
+@@ -531,6 +531,8 @@
+ static void battle_clear_bg_full(void);
+ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
+ static void draw_battle_enemy_names(void);
++static void draw_party_status_box(void);
++static void battle_reset_screen_for_command(UINT8 display_off);
+ static void hide_battle_enemy_sprites(void);
+ static void show_battle_enemy_sprites(void);
+ static void battle_copy_enemy_from_data(UINT8 slot);
+@@ -1515,10 +1517,10 @@
+ }
+ 
+ /*
+- * rpg072:
+- * rpg071 declared the battle helper functions and called them, but the helper
+- * bodies were not emitted into main.c.  Keep them immediately before the battle
+- * drawing functions so future battle UI changes have one safe checkpoint.
++ * rpg074:
++ * Keep battle UI updates in this small helper zone.  Do not add BG tiles or
++ * change VRAM load order here.  The goal is to stabilize the first command
++ * screen, then expand party/status display one visible slot at a time.
+  */
+ static void battle_clear_bg_full(void) {
+     static UINT8 bg[BG_DRAW_W * BG_DRAW_H];
+@@ -1572,6 +1574,26 @@
+     }
+ }
+ 
++static void draw_party_status_box(void) {
++    /* rpg074: two-slot layout scaffold.
++     * Slot 0 is the real hero data.  Slot 1 is display-only for the next step;
++     * no new actor, party member, battle participant, or OAM sprite is added.
++     */
++    draw_bkg_box(0u, 0u, 15u, 5u);
++
++    jp_put_bkg_text(1u, 1u, "ゆうしゃ");
++    jp_put_bkg_text(1u, 2u, "HP");
++    put_hp_pair(3u, 2u, player_battle.hp, player_battle.max_hp);
++    jp_put_bkg_text(1u, 3u, "MP");
++    jp_put_bkg_text(3u, 3u, "10/10");
++
++    jp_put_bkg_text(8u, 1u, "そうりょ");
++    jp_put_bkg_text(8u, 2u, "HP");
++    jp_put_bkg_text(10u, 2u, "10/10");
++    jp_put_bkg_text(8u, 3u, "MP");
++    jp_put_bkg_text(10u, 3u, "10/10");
++}
++
+ static void hide_battle_enemy_sprites(void) {
+     UINT8 i;
+ 
+@@ -1646,10 +1668,7 @@
+ 
+ static void draw_battle_frame(void) {
+     battle_clear_bg_full();
+-
+-    jp_put_bkg_text(0u, 0u, "ゆうしゃ");
+-    jp_put_bkg_text(0u, 1u, "HP"); put_hp_pair(4u, 1u, player_battle.hp, player_battle.max_hp);
+-
++    draw_party_status_box();
+     draw_battle_enemy_names();
+ }
+ 
+@@ -1663,14 +1682,25 @@
+     put_cursor(15u, 13u, (UINT8)(menu_index == CMD_RUN));    jp_put_bkg_text(16u, 13u, "にげる");
+ 
+     jp_put_bkg_text(10u, 14u, "とく"); put_u8(15u, 14u, skill_uses);
+-    jp_put_bkg_text(16u, 14u, "く");   put_u8(18u, 14u, heal_uses);
++    jp_put_bkg_text(16u, 14u, "かい"); put_u8(18u, 14u, heal_uses);
+ }
+ 
+-
+-static void update_battle_status(void) {
++static void battle_reset_screen_for_command(UINT8 display_off) {
++    if (display_off) DISPLAY_OFF;
++    HIDE_WIN;
++    SHOW_BKG;
++    SHOW_SPRITES;
++    move_bkg(0u, 0u);
++    jp_init();
+     draw_battle_frame();
+     draw_battle_menu();
+     show_battle_enemy_sprites();
++    if (display_off) DISPLAY_ON;
++}
++
++
++static void update_battle_status(void) {
++    battle_reset_screen_for_command(0u);
+ }
+ 
+ 
+@@ -1728,30 +1758,15 @@
+ static void enter_battle_screen(void) {
+     battle_start_effect();
+ 
+-    DISPLAY_OFF;
+-    HIDE_WIN;
+-    SHOW_BKG;
+-    SHOW_SPRITES;
+-    move_bkg(0u, 0u);
+-
+-    jp_init();
+-    draw_battle_frame();
+-    draw_battle_menu();
+-    show_battle_enemy_sprites();
+-    DISPLAY_ON;
++    battle_reset_screen_for_command(1u);
+ 
+     dialogue_message("まものが\nあらわれた！");
+ 
+-    DISPLAY_OFF;
+-    HIDE_WIN;
+-    SHOW_BKG;
+-    SHOW_SPRITES;
+-    move_bkg(0u, 0u);
+-    jp_init();
+-    draw_battle_frame();
+-    draw_battle_menu();
+-    show_battle_enemy_sprites();
+-    DISPLAY_ON;
++    /* rpg074: rebuild once after the dialogue window closes.
++     * This is the critical first-command screen where BG/window state used to
++     * leave residue.
++     */
++    battle_reset_screen_for_command(1u);
+ }
+ 
+ 
+@@ -2049,7 +2064,7 @@
+                         draw_battle_menu();
+                         break;
+                     case BSTATE_WIN:
+-                        dialogue_message("スライムを\nたおした！");
++                        dialogue_message("まものを\nたおした！");
+                         return_to_map_after_battle(1u);
+                         break;
+                     case BSTATE_LOSE:
+Only in /mnt/data/rpg074_ui: precheck_output.log
+Only in /mnt/data/rpg074_ui: rpg074_ui.diff

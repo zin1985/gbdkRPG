@@ -1,0 +1,896 @@
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/CHECK_rpg074.md /mnt/data/rpg075_fix/CHECK_rpg074.md
+--- /mnt/data/rpg074_work/rpg074_ui/CHECK_rpg074.md	2026-05-05 10:53:08.000000000 +0000
++++ /mnt/data/rpg075_fix/CHECK_rpg074.md	1970-01-01 00:00:00.000000000 +0000
+@@ -1,16 +0,0 @@
+-# CHECK rpg074_ui
+-
+-- [ ] 起動して白画面にならない
+-- [ ] フィールドBGが表示される
+-- [ ] プレイヤーが表示される
+-- [ ] 移動できる
+-- [ ] NPC会話がフリーズしない
+-- [ ] ランダムエンカウントする
+-- [ ] 戦闘開始エフェクトが出る
+-- [ ] 初回コマンド画面でBG/Window位置が崩れない
+-- [ ] 左上に `ゆうしゃ` と `そうりょ` の2枠が表示される
+-- [ ] 敵名末尾が化けない
+-- [ ] コマンド欄下段にゴミ文字が残らない
+-- [ ] 敵スプライトが表示される
+-- [ ] 戦闘後にフィールドへ戻れる
+-- [ ] 敵スプライトが残らない
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/CHECK_rpg075.md /mnt/data/rpg075_fix/CHECK_rpg075.md
+--- /mnt/data/rpg074_work/rpg074_ui/CHECK_rpg075.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg075_fix/CHECK_rpg075.md	2026-05-05 11:03:19.166426578 +0000
+@@ -0,0 +1,16 @@
++# CHECK rpg075_fix
++
++- [ ] 起動して白画面にならない
++- [ ] フィールドBGが表示される
++- [ ] プレイヤーが表示される
++- [ ] 移動できる
++- [ ] NPC会話がフリーズしない
++- [ ] ランダムエンカウントする
++- [ ] 戦闘開始エフェクトが出る
++- [ ] 初回コマンド画面でBG/Window位置が崩れない
++- [ ] 左上に `ゆうしゃ` と `そうりょ` の2枠が表示される
++- [ ] 敵名末尾が化けない
++- [ ] コマンド欄下段にゴミ文字が残らない
++- [ ] 敵スプライトが表示される
++- [ ] 戦闘後にフィールドへ戻れる
++- [ ] 敵スプライトが残らない
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/Makefile /mnt/data/rpg075_fix/Makefile
+--- /mnt/data/rpg074_work/rpg074_ui/Makefile	2026-05-05 10:52:01.000000000 +0000
++++ /mnt/data/rpg075_fix/Makefile	2026-05-05 11:03:19.165534555 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg074_ui.gb
++OUT = rpg075_fix.gb
+ SRCS = main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/README.md /mnt/data/rpg075_fix/README.md
+--- /mnt/data/rpg074_work/rpg074_ui/README.md	2026-05-05 10:53:11.000000000 +0000
++++ /mnt/data/rpg075_fix/README.md	2026-05-05 11:03:25.860787285 +0000
+@@ -1,8 +1,19 @@
+-# rpg074_ui
++# rpg075_fix
++
++
++<details open>
++<summary>rpg075_fix の要点</summary>
++
++- rpg074_ui の `main.c:1689: error 12: called object is not a function` を修正。
++- 原因は `display_off` という引数名が GBDK の `DISPLAY_OFF` マクロ展開内の `display_off()` と衝突したこと。
++- 引数名を `turn_display_off` に変更して衝突を回避。
++- rpg074で入れた2人分パーティ枠、敵名長18、初回コマンド前再描画は維持。
++
++</details>
+ 
+ > **長期目標:** GBDK/Game Boyの制約内で、SaGa風戦闘、ランダム成長、技ひらめき、魔法、属性、状態異常、町・村・ダンジョン、チャンク制フィールド、最終的に5000x5000相当の世界設計へ段階拡張する。巨大配列常駐ではなく、チャンク制・セクター制・ROMバンク分割・必要範囲だけのロード/描画・メタタイル圧縮を前提にする。
+ 
+-## rpg074今回の要点
++## rpg075今回の要点
+ 
+ <details open>
+ <summary>今回の変更</summary>
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/build.bat /mnt/data/rpg075_fix/build.bat
+--- /mnt/data/rpg074_work/rpg074_ui/build.bat	2026-05-05 10:52:01.000000000 +0000
++++ /mnt/data/rpg075_fix/build.bat	2026-05-05 11:03:19.165118386 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg074_ui"
++set "PROJECT=rpg075_fix"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/build.sh /mnt/data/rpg075_fix/build.sh
+--- /mnt/data/rpg074_work/rpg074_ui/build.sh	2026-05-05 10:52:01.000000000 +0000
++++ /mnt/data/rpg075_fix/build.sh	2026-05-05 11:03:19.164649192 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg074_ui.gb"
++OUT="rpg075_fix.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/changelog/CHANGELOG.md /mnt/data/rpg075_fix/docs/changelog/CHANGELOG.md
+--- /mnt/data/rpg074_work/rpg074_ui/docs/changelog/CHANGELOG.md	2026-05-05 10:53:15.000000000 +0000
++++ /mnt/data/rpg075_fix/docs/changelog/CHANGELOG.md	2026-05-05 11:03:22.978520758 +0000
+@@ -1,4 +1,15 @@
+-# rpg074_ui
++# rpg075_fix
++
++<details open>
++<summary>2026-05-05 rpg075_fix</summary>
++
++- rpg074_ui の `main.c:1689` ビルドエラーを修正。
++- `display_off` 引数名が GBDK の `DISPLAY_OFF` マクロ展開と衝突していたため、`turn_display_off` に変更。
++- ZIP名を `rpg075_fix.zip` に短縮。
++
++</details>
++
++# rpg075_fix
+ 
+ <details open>
+ <summary>変更概要</summary>
+@@ -7,7 +18,7 @@
+ - 敵名バッファを18byteへ拡張。
+ - bank 7の敵名コピーをUTF-8境界を意識した処理に変更。
+ - 初回コマンド前の戦闘画面再構築を専用関数に集約。
+-- ZIP名を短縮し、`rpg074_ui.zip` とした。
++- ZIP名を短縮し、`rpg075_fix.zip` とした。
+ 
+ </details>
+ 
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_074_UI.md /mnt/data/rpg075_fix/docs/checks/CHECK_074_UI.md
+--- /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_074_UI.md	2026-05-05 10:53:08.000000000 +0000
++++ /mnt/data/rpg075_fix/docs/checks/CHECK_074_UI.md	1970-01-01 00:00:00.000000000 +0000
+@@ -1,34 +0,0 @@
+-# CHECK rpg074_ui
+-
+-<details open>
+-<summary>最重要確認</summary>
+-
+-- [ ] 起動して白画面にならない
+-- [ ] フィールドBGが表示される
+-- [ ] プレイヤーが表示される
+-- [ ] 移動できる
+-- [ ] NPC会話がフリーズしない
+-- [ ] ランダムエンカウントする
+-- [ ] 戦闘開始エフェクトが出る
+-- [ ] 戦闘開始メッセージ後、初回コマンド画面でBG/Window位置が崩れない
+-- [ ] 左上に `ゆうしゃ` と `そうりょ` の2枠が表示される
+-- [ ] 敵名の最後の文字が化けない
+-- [ ] コマンド欄下段にゴミ文字が残らない
+-- [ ] 敵スプライトが表示される
+-- [ ] 戦闘後にフィールドへ戻れる
+-- [ ] 敵スプライトがフィールドに残らない
+-
+-</details>
+-
+-<details>
+-<summary>今回まだ見ない項目</summary>
+-
+-- [ ] そうりょが実際に戦闘参加すること
+-- [ ] 仲間加入処理
+-- [ ] 技ひらめき
+-- [ ] 魔法
+-- [ ] 状態異常
+-- [ ] 連携技
+-- [ ] 広域マップ/チャンク制
+-
+-</details>
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_075_FIX.md /mnt/data/rpg075_fix/docs/checks/CHECK_075_FIX.md
+--- /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_075_FIX.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg075_fix/docs/checks/CHECK_075_FIX.md	2026-05-05 11:03:19.476409665 +0000
+@@ -0,0 +1,29 @@
++# CHECK rpg075_fix
++
++<details open>
++<summary>ビルド確認</summary>
++
++- [ ] `./build.sh` で `main.c:1689` のエラーが解消している。
++- [ ] `rpg075_fix.gb` が作成される。
++- [ ] undefined global が出ない。
++- [ ] bank overflow が出ない。
++
++</details>
++
++<details>
++<summary>VBA表示確認</summary>
++
++- [ ] 起動して白画面にならない。
++- [ ] フィールドBGが表示される。
++- [ ] プレイヤーが表示される。
++- [ ] 移動できる。
++- [ ] NPC会話がフリーズしない。
++- [ ] ランダムエンカウントする。
++- [ ] 戦闘開始エフェクトが出る。
++- [ ] 初回コマンド画面でBG/Window位置が崩れない。
++- [ ] 左上に `ゆうしゃ` と `そうりょ` の仮枠が表示される。
++- [ ] 敵名末尾が化けない。
++- [ ] コマンド欄下段にゴミ文字が残らない。
++- [ ] 戦闘後にフィールドへ戻れる。
++
++</details>
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_075_UI.md /mnt/data/rpg075_fix/docs/checks/CHECK_075_UI.md
+--- /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_075_UI.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg075_fix/docs/checks/CHECK_075_UI.md	2026-05-05 11:03:19.178893182 +0000
+@@ -0,0 +1,34 @@
++# CHECK rpg075_fix
++
++<details open>
++<summary>最重要確認</summary>
++
++- [ ] 起動して白画面にならない
++- [ ] フィールドBGが表示される
++- [ ] プレイヤーが表示される
++- [ ] 移動できる
++- [ ] NPC会話がフリーズしない
++- [ ] ランダムエンカウントする
++- [ ] 戦闘開始エフェクトが出る
++- [ ] 戦闘開始メッセージ後、初回コマンド画面でBG/Window位置が崩れない
++- [ ] 左上に `ゆうしゃ` と `そうりょ` の2枠が表示される
++- [ ] 敵名の最後の文字が化けない
++- [ ] コマンド欄下段にゴミ文字が残らない
++- [ ] 敵スプライトが表示される
++- [ ] 戦闘後にフィールドへ戻れる
++- [ ] 敵スプライトがフィールドに残らない
++
++</details>
++
++<details>
++<summary>今回まだ見ない項目</summary>
++
++- [ ] そうりょが実際に戦闘参加すること
++- [ ] 仲間加入処理
++- [ ] 技ひらめき
++- [ ] 魔法
++- [ ] 状態異常
++- [ ] 連携技
++- [ ] 広域マップ/チャンク制
++
++</details>
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG074_UI.md /mnt/data/rpg075_fix/docs/features/RPG074_UI.md
+--- /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG074_UI.md	2026-05-05 10:53:08.000000000 +0000
++++ /mnt/data/rpg075_fix/docs/features/RPG074_UI.md	1970-01-01 00:00:00.000000000 +0000
+@@ -1,38 +0,0 @@
+-# rpg074_ui
+-
+-## 目的
+-rpg073の戦闘初回UI安定化方針を実コード側に寄せ、戦闘画面の左上パーティ欄を2枠レイアウトへ拡張する。
+-
+-## 実装内容
+-
+-<details>
+-<summary>戦闘UI</summary>
+-
+-- `draw_party_status_box()` を追加。
+-- 左上に `ゆうしゃ` と `そうりょ` の2枠を表示。
+-- `そうりょ` は表示だけの仮枠で、戦闘参加処理・仲間配列・新規actorは未追加。
+-- `draw_battle_frame()` は full BG clear → party box → enemy name box の順に整理。
+-- `battle_reset_screen_for_command()` を追加し、戦闘開始メッセージ後の初回コマンド画面を再構築。
+-
+-</details>
+-
+-<details>
+-<summary>敵名文字化け対策</summary>
+-
+-- `BATTLE_NAME_LEN` を `18u` に拡張。
+-- `battle_data_copy_name_bank()` をUTF-8境界を意識したコピーに変更。
+-- 日本語敵名が途中のbyteで切れにくいようにした。
+-
+-</details>
+-
+-<details>
+-<summary>安全制約</summary>
+-
+-- 新規BGタイル追加なし。
+-- `MAP_GFX_TILE_COUNT` 変更なし。
+-- 新規actor/NPC追加なし。
+-- 新規object kind追加なし。
+-- VRAMロード経路の大幅変更なし。
+-- `jpfont.c` / `misakiUTF16.c` のBANKED化なし。
+-
+-</details>
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG075_FIX.md /mnt/data/rpg075_fix/docs/features/RPG075_FIX.md
+--- /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG075_FIX.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg075_fix/docs/features/RPG075_FIX.md	2026-05-05 11:03:19.463897488 +0000
+@@ -0,0 +1,37 @@
++# rpg075_fix
++
++<details open>
++<summary>概要</summary>
++
++rpg074_ui のビルドエラー修正版です。
++
++`main.c:1689: error 12: called object is not a function` の原因は、
++`battle_reset_screen_for_command(UINT8 display_off)` の引数名 `display_off` が、
++GBDK側の `DISPLAY_OFF` マクロ展開で呼ばれる `display_off()` と衝突していたためです。
++
++rpg075_fix では引数名を `turn_display_off` に変更し、マクロ衝突を避けました。
++
++</details>
++
++<details>
++<summary>修正内容</summary>
++
++- `battle_reset_screen_for_command(UINT8 display_off)` を `battle_reset_screen_for_command(UINT8 turn_display_off)` に変更。
++- 関数内の `if (display_off)` を `if (turn_display_off)` に変更。
++- ビルド出力名を `rpg075_fix.gb` に変更。
++- rpg074で追加した左上2人分パーティUI、敵名長18、初回コマンド前再描画処理は維持。
++
++</details>
++
++<details>
++<summary>修正していない箇所</summary>
++
++- 新規BGタイル追加なし。
++- `MAP_GFX_TILE_COUNT` 変更なし。
++- 新規actor/NPC追加なし。
++- 新規object kind追加なし。
++- VRAMロード経路変更なし。
++- `jpfont.c` のBANKED化なし。
++- `misakiUTF16.c` のBANKED化なし。
++
++</details>
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG075_UI.md /mnt/data/rpg075_fix/docs/features/RPG075_UI.md
+--- /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG075_UI.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg075_fix/docs/features/RPG075_UI.md	2026-05-05 11:03:19.211942908 +0000
+@@ -0,0 +1,38 @@
++# rpg075_fix
++
++## 目的
++rpg073の戦闘初回UI安定化方針を実コード側に寄せ、戦闘画面の左上パーティ欄を2枠レイアウトへ拡張する。
++
++## 実装内容
++
++<details>
++<summary>戦闘UI</summary>
++
++- `draw_party_status_box()` を追加。
++- 左上に `ゆうしゃ` と `そうりょ` の2枠を表示。
++- `そうりょ` は表示だけの仮枠で、戦闘参加処理・仲間配列・新規actorは未追加。
++- `draw_battle_frame()` は full BG clear → party box → enemy name box の順に整理。
++- `battle_reset_screen_for_command()` を追加し、戦闘開始メッセージ後の初回コマンド画面を再構築。
++
++</details>
++
++<details>
++<summary>敵名文字化け対策</summary>
++
++- `BATTLE_NAME_LEN` を `18u` に拡張。
++- `battle_data_copy_name_bank()` をUTF-8境界を意識したコピーに変更。
++- 日本語敵名が途中のbyteで切れにくいようにした。
++
++</details>
++
++<details>
++<summary>安全制約</summary>
++
++- 新規BGタイル追加なし。
++- `MAP_GFX_TILE_COUNT` 変更なし。
++- 新規actor/NPC追加なし。
++- 新規object kind追加なし。
++- VRAMロード経路の大幅変更なし。
++- `jpfont.c` / `misakiUTF16.c` のBANKED化なし。
++
++</details>
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/handover/HANDOVER_074.md /mnt/data/rpg075_fix/docs/handover/HANDOVER_074.md
+--- /mnt/data/rpg074_work/rpg074_ui/docs/handover/HANDOVER_074.md	2026-05-05 10:53:08.000000000 +0000
++++ /mnt/data/rpg075_fix/docs/handover/HANDOVER_074.md	1970-01-01 00:00:00.000000000 +0000
+@@ -1,23 +0,0 @@
+-# HANDOVER rpg074_ui
+-
+-## 基準
+-rpg073_battle_first_turn_ui_fix を基準に、実コード側の戦闘UI安定化を進めた版。
+-
+-## 今回の主変更
+-- ZIP名を短縮方針に変更: `rpg074_ui.zip`
+-- `BATTLE_NAME_LEN` を18へ拡張
+-- UTF-8境界を意識した敵名コピーへ変更
+-- 左上パーティ枠を2枠表示へ拡張
+-- `battle_reset_screen_for_command()` で初回コマンド前の再描画処理を集約
+-
+-## まだ未実装
+-- そうりょの実ステータス管理
+-- そうりょの戦闘参加
+-- 仲間加入/離脱
+-- 技/魔法/属性/状態異常
+-- 5000x5000相当フィールド設計の実装
+-
+-## 次回候補
+-rpg075_party_stub
+-- 表示専用のそうりょ枠を、データ構造上の仮パーティメンバーへ分離
+-- ただしactor追加・OAM追加・新規BGタイル追加はしない
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/handover/HANDOVER_075.md /mnt/data/rpg075_fix/docs/handover/HANDOVER_075.md
+--- /mnt/data/rpg074_work/rpg074_ui/docs/handover/HANDOVER_075.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg075_fix/docs/handover/HANDOVER_075.md	2026-05-05 11:03:19.488745251 +0000
+@@ -0,0 +1,22 @@
++# HANDOVER rpg075_fix
++
++<details open>
++<summary>今回の位置づけ</summary>
++
++rpg075_fix は rpg074_ui のビルドエラー修正版です。
++
++rpg074_ui で `main.c:1689: error 12: called object is not a function` が発生しました。
++原因は `battle_reset_screen_for_command(UINT8 display_off)` の引数名が、GBDKの `DISPLAY_OFF` マクロ展開で使われる `display_off()` と衝突したことです。
++
++</details>
++
++<details>
++<summary>次回候補</summary>
++
++次は `rpg076_party.zip` 候補です。
++
++- 表示だけの `そうりょ` を仮パーティデータ構造に分離。
++- まだ戦闘参加はさせない。
++- actor/NPC/OAM追加はしない。
++
++</details>
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/main.c /mnt/data/rpg075_fix/main.c
+--- /mnt/data/rpg074_work/rpg074_ui/main.c	2026-05-05 10:51:49.000000000 +0000
++++ /mnt/data/rpg075_fix/main.c	2026-05-05 11:03:19.164046533 +0000
+@@ -532,7 +532,7 @@
+ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
+ static void draw_battle_enemy_names(void);
+ static void draw_party_status_box(void);
+-static void battle_reset_screen_for_command(UINT8 display_off);
++static void battle_reset_screen_for_command(UINT8 turn_display_off);
+ static void hide_battle_enemy_sprites(void);
+ static void show_battle_enemy_sprites(void);
+ static void battle_copy_enemy_from_data(UINT8 slot);
+@@ -1685,8 +1685,8 @@
+     jp_put_bkg_text(16u, 14u, "かい"); put_u8(18u, 14u, heal_uses);
+ }
+ 
+-static void battle_reset_screen_for_command(UINT8 display_off) {
+-    if (display_off) DISPLAY_OFF;
++static void battle_reset_screen_for_command(UINT8 turn_display_off) {
++    if (turn_display_off) DISPLAY_OFF;
+     HIDE_WIN;
+     SHOW_BKG;
+     SHOW_SPRITES;
+@@ -1695,7 +1695,7 @@
+     draw_battle_frame();
+     draw_battle_menu();
+     show_battle_enemy_sprites();
+-    if (display_off) DISPLAY_ON;
++    if (turn_display_off) DISPLAY_ON;
+ }
+ 
+ 
+diff -ruN /mnt/data/rpg074_work/rpg074_ui/rpg075_fix.diff /mnt/data/rpg075_fix/rpg075_fix.diff
+--- /mnt/data/rpg074_work/rpg074_ui/rpg075_fix.diff	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg075_fix/rpg075_fix.diff	2026-05-05 11:03:26.237418236 +0000
+@@ -0,0 +1,446 @@
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/CHECK_rpg074.md /mnt/data/rpg075_fix/CHECK_rpg074.md
++--- /mnt/data/rpg074_work/rpg074_ui/CHECK_rpg074.md	2026-05-05 10:53:08.000000000 +0000
+++++ /mnt/data/rpg075_fix/CHECK_rpg074.md	1970-01-01 00:00:00.000000000 +0000
++@@ -1,16 +0,0 @@
++-# CHECK rpg074_ui
++-
++-- [ ] 起動して白画面にならない
++-- [ ] フィールドBGが表示される
++-- [ ] プレイヤーが表示される
++-- [ ] 移動できる
++-- [ ] NPC会話がフリーズしない
++-- [ ] ランダムエンカウントする
++-- [ ] 戦闘開始エフェクトが出る
++-- [ ] 初回コマンド画面でBG/Window位置が崩れない
++-- [ ] 左上に `ゆうしゃ` と `そうりょ` の2枠が表示される
++-- [ ] 敵名末尾が化けない
++-- [ ] コマンド欄下段にゴミ文字が残らない
++-- [ ] 敵スプライトが表示される
++-- [ ] 戦闘後にフィールドへ戻れる
++-- [ ] 敵スプライトが残らない
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/CHECK_rpg075.md /mnt/data/rpg075_fix/CHECK_rpg075.md
++--- /mnt/data/rpg074_work/rpg074_ui/CHECK_rpg075.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg075_fix/CHECK_rpg075.md	2026-05-05 11:03:19.166426578 +0000
++@@ -0,0 +1,16 @@
+++# CHECK rpg075_fix
+++
+++- [ ] 起動して白画面にならない
+++- [ ] フィールドBGが表示される
+++- [ ] プレイヤーが表示される
+++- [ ] 移動できる
+++- [ ] NPC会話がフリーズしない
+++- [ ] ランダムエンカウントする
+++- [ ] 戦闘開始エフェクトが出る
+++- [ ] 初回コマンド画面でBG/Window位置が崩れない
+++- [ ] 左上に `ゆうしゃ` と `そうりょ` の2枠が表示される
+++- [ ] 敵名末尾が化けない
+++- [ ] コマンド欄下段にゴミ文字が残らない
+++- [ ] 敵スプライトが表示される
+++- [ ] 戦闘後にフィールドへ戻れる
+++- [ ] 敵スプライトが残らない
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/Makefile /mnt/data/rpg075_fix/Makefile
++--- /mnt/data/rpg074_work/rpg074_ui/Makefile	2026-05-05 10:52:01.000000000 +0000
+++++ /mnt/data/rpg075_fix/Makefile	2026-05-05 11:03:19.165534555 +0000
++@@ -1,4 +1,4 @@
++-OUT = rpg074_ui.gb
+++OUT = rpg075_fix.gb
++ SRCS = main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ GBDK_PATH ?= /opt/gbdk/bin
++ LCC = $(GBDK_PATH)/lcc
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/README.md /mnt/data/rpg075_fix/README.md
++--- /mnt/data/rpg074_work/rpg074_ui/README.md	2026-05-05 10:53:11.000000000 +0000
+++++ /mnt/data/rpg075_fix/README.md	2026-05-05 11:03:25.860787285 +0000
++@@ -1,8 +1,19 @@
++-# rpg074_ui
+++# rpg075_fix
+++
+++
+++<details open>
+++<summary>rpg075_fix の要点</summary>
+++
+++- rpg074_ui の `main.c:1689: error 12: called object is not a function` を修正。
+++- 原因は `display_off` という引数名が GBDK の `DISPLAY_OFF` マクロ展開内の `display_off()` と衝突したこと。
+++- 引数名を `turn_display_off` に変更して衝突を回避。
+++- rpg074で入れた2人分パーティ枠、敵名長18、初回コマンド前再描画は維持。
+++
+++</details>
++ 
++ > **長期目標:** GBDK/Game Boyの制約内で、SaGa風戦闘、ランダム成長、技ひらめき、魔法、属性、状態異常、町・村・ダンジョン、チャンク制フィールド、最終的に5000x5000相当の世界設計へ段階拡張する。巨大配列常駐ではなく、チャンク制・セクター制・ROMバンク分割・必要範囲だけのロード/描画・メタタイル圧縮を前提にする。
++ 
++-## rpg074今回の要点
+++## rpg075今回の要点
++ 
++ <details open>
++ <summary>今回の変更</summary>
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/build.bat /mnt/data/rpg075_fix/build.bat
++--- /mnt/data/rpg074_work/rpg074_ui/build.bat	2026-05-05 10:52:01.000000000 +0000
+++++ /mnt/data/rpg075_fix/build.bat	2026-05-05 11:03:19.165118386 +0000
++@@ -1,7 +1,7 @@
++ @echo off
++ setlocal
++ 
++-set "PROJECT=rpg074_ui"
+++set "PROJECT=rpg075_fix"
++ set "OUT=%PROJECT%.gb"
++ set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ set "ROM_BANKS=8"
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/build.sh /mnt/data/rpg075_fix/build.sh
++--- /mnt/data/rpg074_work/rpg074_ui/build.sh	2026-05-05 10:52:01.000000000 +0000
+++++ /mnt/data/rpg075_fix/build.sh	2026-05-05 11:03:19.164649192 +0000
++@@ -3,7 +3,7 @@
++ 
++ export PATH="/opt/gbdk/bin:$PATH"
++ 
++-OUT="rpg074_ui.gb"
+++OUT="rpg075_fix.gb"
++ MAP="${OUT%.gb}.map"
++ SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ LOG="build.log"
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/changelog/CHANGELOG.md /mnt/data/rpg075_fix/docs/changelog/CHANGELOG.md
++--- /mnt/data/rpg074_work/rpg074_ui/docs/changelog/CHANGELOG.md	2026-05-05 10:53:15.000000000 +0000
+++++ /mnt/data/rpg075_fix/docs/changelog/CHANGELOG.md	2026-05-05 11:03:22.978520758 +0000
++@@ -1,4 +1,15 @@
++-# rpg074_ui
+++# rpg075_fix
+++
+++<details open>
+++<summary>2026-05-05 rpg075_fix</summary>
+++
+++- rpg074_ui の `main.c:1689` ビルドエラーを修正。
+++- `display_off` 引数名が GBDK の `DISPLAY_OFF` マクロ展開と衝突していたため、`turn_display_off` に変更。
+++- ZIP名を `rpg075_fix.zip` に短縮。
+++
+++</details>
+++
+++# rpg075_fix
++ 
++ <details open>
++ <summary>変更概要</summary>
++@@ -7,7 +18,7 @@
++ - 敵名バッファを18byteへ拡張。
++ - bank 7の敵名コピーをUTF-8境界を意識した処理に変更。
++ - 初回コマンド前の戦闘画面再構築を専用関数に集約。
++-- ZIP名を短縮し、`rpg074_ui.zip` とした。
+++- ZIP名を短縮し、`rpg075_fix.zip` とした。
++ 
++ </details>
++ 
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_074_UI.md /mnt/data/rpg075_fix/docs/checks/CHECK_074_UI.md
++--- /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_074_UI.md	2026-05-05 10:53:08.000000000 +0000
+++++ /mnt/data/rpg075_fix/docs/checks/CHECK_074_UI.md	1970-01-01 00:00:00.000000000 +0000
++@@ -1,34 +0,0 @@
++-# CHECK rpg074_ui
++-
++-<details open>
++-<summary>最重要確認</summary>
++-
++-- [ ] 起動して白画面にならない
++-- [ ] フィールドBGが表示される
++-- [ ] プレイヤーが表示される
++-- [ ] 移動できる
++-- [ ] NPC会話がフリーズしない
++-- [ ] ランダムエンカウントする
++-- [ ] 戦闘開始エフェクトが出る
++-- [ ] 戦闘開始メッセージ後、初回コマンド画面でBG/Window位置が崩れない
++-- [ ] 左上に `ゆうしゃ` と `そうりょ` の2枠が表示される
++-- [ ] 敵名の最後の文字が化けない
++-- [ ] コマンド欄下段にゴミ文字が残らない
++-- [ ] 敵スプライトが表示される
++-- [ ] 戦闘後にフィールドへ戻れる
++-- [ ] 敵スプライトがフィールドに残らない
++-
++-</details>
++-
++-<details>
++-<summary>今回まだ見ない項目</summary>
++-
++-- [ ] そうりょが実際に戦闘参加すること
++-- [ ] 仲間加入処理
++-- [ ] 技ひらめき
++-- [ ] 魔法
++-- [ ] 状態異常
++-- [ ] 連携技
++-- [ ] 広域マップ/チャンク制
++-
++-</details>
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_075_FIX.md /mnt/data/rpg075_fix/docs/checks/CHECK_075_FIX.md
++--- /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_075_FIX.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg075_fix/docs/checks/CHECK_075_FIX.md	2026-05-05 11:03:19.476409665 +0000
++@@ -0,0 +1,29 @@
+++# CHECK rpg075_fix
+++
+++<details open>
+++<summary>ビルド確認</summary>
+++
+++- [ ] `./build.sh` で `main.c:1689` のエラーが解消している。
+++- [ ] `rpg075_fix.gb` が作成される。
+++- [ ] undefined global が出ない。
+++- [ ] bank overflow が出ない。
+++
+++</details>
+++
+++<details>
+++<summary>VBA表示確認</summary>
+++
+++- [ ] 起動して白画面にならない。
+++- [ ] フィールドBGが表示される。
+++- [ ] プレイヤーが表示される。
+++- [ ] 移動できる。
+++- [ ] NPC会話がフリーズしない。
+++- [ ] ランダムエンカウントする。
+++- [ ] 戦闘開始エフェクトが出る。
+++- [ ] 初回コマンド画面でBG/Window位置が崩れない。
+++- [ ] 左上に `ゆうしゃ` と `そうりょ` の仮枠が表示される。
+++- [ ] 敵名末尾が化けない。
+++- [ ] コマンド欄下段にゴミ文字が残らない。
+++- [ ] 戦闘後にフィールドへ戻れる。
+++
+++</details>
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_075_UI.md /mnt/data/rpg075_fix/docs/checks/CHECK_075_UI.md
++--- /mnt/data/rpg074_work/rpg074_ui/docs/checks/CHECK_075_UI.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg075_fix/docs/checks/CHECK_075_UI.md	2026-05-05 11:03:19.178893182 +0000
++@@ -0,0 +1,34 @@
+++# CHECK rpg075_fix
+++
+++<details open>
+++<summary>最重要確認</summary>
+++
+++- [ ] 起動して白画面にならない
+++- [ ] フィールドBGが表示される
+++- [ ] プレイヤーが表示される
+++- [ ] 移動できる
+++- [ ] NPC会話がフリーズしない
+++- [ ] ランダムエンカウントする
+++- [ ] 戦闘開始エフェクトが出る
+++- [ ] 戦闘開始メッセージ後、初回コマンド画面でBG/Window位置が崩れない
+++- [ ] 左上に `ゆうしゃ` と `そうりょ` の2枠が表示される
+++- [ ] 敵名の最後の文字が化けない
+++- [ ] コマンド欄下段にゴミ文字が残らない
+++- [ ] 敵スプライトが表示される
+++- [ ] 戦闘後にフィールドへ戻れる
+++- [ ] 敵スプライトがフィールドに残らない
+++
+++</details>
+++
+++<details>
+++<summary>今回まだ見ない項目</summary>
+++
+++- [ ] そうりょが実際に戦闘参加すること
+++- [ ] 仲間加入処理
+++- [ ] 技ひらめき
+++- [ ] 魔法
+++- [ ] 状態異常
+++- [ ] 連携技
+++- [ ] 広域マップ/チャンク制
+++
+++</details>
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG074_UI.md /mnt/data/rpg075_fix/docs/features/RPG074_UI.md
++--- /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG074_UI.md	2026-05-05 10:53:08.000000000 +0000
+++++ /mnt/data/rpg075_fix/docs/features/RPG074_UI.md	1970-01-01 00:00:00.000000000 +0000
++@@ -1,38 +0,0 @@
++-# rpg074_ui
++-
++-## 目的
++-rpg073の戦闘初回UI安定化方針を実コード側に寄せ、戦闘画面の左上パーティ欄を2枠レイアウトへ拡張する。
++-
++-## 実装内容
++-
++-<details>
++-<summary>戦闘UI</summary>
++-
++-- `draw_party_status_box()` を追加。
++-- 左上に `ゆうしゃ` と `そうりょ` の2枠を表示。
++-- `そうりょ` は表示だけの仮枠で、戦闘参加処理・仲間配列・新規actorは未追加。
++-- `draw_battle_frame()` は full BG clear → party box → enemy name box の順に整理。
++-- `battle_reset_screen_for_command()` を追加し、戦闘開始メッセージ後の初回コマンド画面を再構築。
++-
++-</details>
++-
++-<details>
++-<summary>敵名文字化け対策</summary>
++-
++-- `BATTLE_NAME_LEN` を `18u` に拡張。
++-- `battle_data_copy_name_bank()` をUTF-8境界を意識したコピーに変更。
++-- 日本語敵名が途中のbyteで切れにくいようにした。
++-
++-</details>
++-
++-<details>
++-<summary>安全制約</summary>
++-
++-- 新規BGタイル追加なし。
++-- `MAP_GFX_TILE_COUNT` 変更なし。
++-- 新規actor/NPC追加なし。
++-- 新規object kind追加なし。
++-- VRAMロード経路の大幅変更なし。
++-- `jpfont.c` / `misakiUTF16.c` のBANKED化なし。
++-
++-</details>
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG075_FIX.md /mnt/data/rpg075_fix/docs/features/RPG075_FIX.md
++--- /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG075_FIX.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg075_fix/docs/features/RPG075_FIX.md	2026-05-05 11:03:19.463897488 +0000
++@@ -0,0 +1,37 @@
+++# rpg075_fix
+++
+++<details open>
+++<summary>概要</summary>
+++
+++rpg074_ui のビルドエラー修正版です。
+++
+++`main.c:1689: error 12: called object is not a function` の原因は、
+++`battle_reset_screen_for_command(UINT8 display_off)` の引数名 `display_off` が、
+++GBDK側の `DISPLAY_OFF` マクロ展開で呼ばれる `display_off()` と衝突していたためです。
+++
+++rpg075_fix では引数名を `turn_display_off` に変更し、マクロ衝突を避けました。
+++
+++</details>
+++
+++<details>
+++<summary>修正内容</summary>
+++
+++- `battle_reset_screen_for_command(UINT8 display_off)` を `battle_reset_screen_for_command(UINT8 turn_display_off)` に変更。
+++- 関数内の `if (display_off)` を `if (turn_display_off)` に変更。
+++- ビルド出力名を `rpg075_fix.gb` に変更。
+++- rpg074で追加した左上2人分パーティUI、敵名長18、初回コマンド前再描画処理は維持。
+++
+++</details>
+++
+++<details>
+++<summary>修正していない箇所</summary>
+++
+++- 新規BGタイル追加なし。
+++- `MAP_GFX_TILE_COUNT` 変更なし。
+++- 新規actor/NPC追加なし。
+++- 新規object kind追加なし。
+++- VRAMロード経路変更なし。
+++- `jpfont.c` のBANKED化なし。
+++- `misakiUTF16.c` のBANKED化なし。
+++
+++</details>
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG075_UI.md /mnt/data/rpg075_fix/docs/features/RPG075_UI.md
++--- /mnt/data/rpg074_work/rpg074_ui/docs/features/RPG075_UI.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg075_fix/docs/features/RPG075_UI.md	2026-05-05 11:03:19.211942908 +0000
++@@ -0,0 +1,38 @@
+++# rpg075_fix
+++
+++## 目的
+++rpg073の戦闘初回UI安定化方針を実コード側に寄せ、戦闘画面の左上パーティ欄を2枠レイアウトへ拡張する。
+++
+++## 実装内容
+++
+++<details>
+++<summary>戦闘UI</summary>
+++
+++- `draw_party_status_box()` を追加。
+++- 左上に `ゆうしゃ` と `そうりょ` の2枠を表示。
+++- `そうりょ` は表示だけの仮枠で、戦闘参加処理・仲間配列・新規actorは未追加。
+++- `draw_battle_frame()` は full BG clear → party box → enemy name box の順に整理。
+++- `battle_reset_screen_for_command()` を追加し、戦闘開始メッセージ後の初回コマンド画面を再構築。
+++
+++</details>
+++
+++<details>
+++<summary>敵名文字化け対策</summary>
+++
+++- `BATTLE_NAME_LEN` を `18u` に拡張。
+++- `battle_data_copy_name_bank()` をUTF-8境界を意識したコピーに変更。
+++- 日本語敵名が途中のbyteで切れにくいようにした。
+++
+++</details>
+++
+++<details>
+++<summary>安全制約</summary>
+++
+++- 新規BGタイル追加なし。
+++- `MAP_GFX_TILE_COUNT` 変更なし。
+++- 新規actor/NPC追加なし。
+++- 新規object kind追加なし。
+++- VRAMロード経路の大幅変更なし。
+++- `jpfont.c` / `misakiUTF16.c` のBANKED化なし。
+++
+++</details>
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/handover/HANDOVER_074.md /mnt/data/rpg075_fix/docs/handover/HANDOVER_074.md
++--- /mnt/data/rpg074_work/rpg074_ui/docs/handover/HANDOVER_074.md	2026-05-05 10:53:08.000000000 +0000
+++++ /mnt/data/rpg075_fix/docs/handover/HANDOVER_074.md	1970-01-01 00:00:00.000000000 +0000
++@@ -1,23 +0,0 @@
++-# HANDOVER rpg074_ui
++-
++-## 基準
++-rpg073_battle_first_turn_ui_fix を基準に、実コード側の戦闘UI安定化を進めた版。
++-
++-## 今回の主変更
++-- ZIP名を短縮方針に変更: `rpg074_ui.zip`
++-- `BATTLE_NAME_LEN` を18へ拡張
++-- UTF-8境界を意識した敵名コピーへ変更
++-- 左上パーティ枠を2枠表示へ拡張
++-- `battle_reset_screen_for_command()` で初回コマンド前の再描画処理を集約
++-
++-## まだ未実装
++-- そうりょの実ステータス管理
++-- そうりょの戦闘参加
++-- 仲間加入/離脱
++-- 技/魔法/属性/状態異常
++-- 5000x5000相当フィールド設計の実装
++-
++-## 次回候補
++-rpg075_party_stub
++-- 表示専用のそうりょ枠を、データ構造上の仮パーティメンバーへ分離
++-- ただしactor追加・OAM追加・新規BGタイル追加はしない
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/docs/handover/HANDOVER_075.md /mnt/data/rpg075_fix/docs/handover/HANDOVER_075.md
++--- /mnt/data/rpg074_work/rpg074_ui/docs/handover/HANDOVER_075.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg075_fix/docs/handover/HANDOVER_075.md	2026-05-05 11:03:19.488745251 +0000
++@@ -0,0 +1,22 @@
+++# HANDOVER rpg075_fix
+++
+++<details open>
+++<summary>今回の位置づけ</summary>
+++
+++rpg075_fix は rpg074_ui のビルドエラー修正版です。
+++
+++rpg074_ui で `main.c:1689: error 12: called object is not a function` が発生しました。
+++原因は `battle_reset_screen_for_command(UINT8 display_off)` の引数名が、GBDKの `DISPLAY_OFF` マクロ展開で使われる `display_off()` と衝突したことです。
+++
+++</details>
+++
+++<details>
+++<summary>次回候補</summary>
+++
+++次は `rpg076_party.zip` 候補です。
+++
+++- 表示だけの `そうりょ` を仮パーティデータ構造に分離。
+++- まだ戦闘参加はさせない。
+++- actor/NPC/OAM追加はしない。
+++
+++</details>
++diff -ruN /mnt/data/rpg074_work/rpg074_ui/main.c /mnt/data/rpg075_fix/main.c
++--- /mnt/data/rpg074_work/rpg074_ui/main.c	2026-05-05 10:51:49.000000000 +0000
+++++ /mnt/data/rpg075_fix/main.c	2026-05-05 11:03:19.164046533 +0000
++@@ -532,7 +532,7 @@
++ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
++ static void draw_battle_enemy_names(void);
++ static void draw_party_status_box(void);
++-static void battle_reset_screen_for_command(UINT8 display_off);
+++static void battle_reset_screen_for_command(UINT8 turn_display_off);
++ static void hide_battle_enemy_sprites(void);
++ static void show_battle_enemy_sprites(void);
++ static void battle_copy_enemy_from_data(UINT8 slot);
++@@ -1685,8 +1685,8 @@
++     jp_put_bkg_text(16u, 14u, "かい"); put_u8(18u, 14u, heal_uses);
++ }
++ 
++-static void battle_reset_screen_for_command(UINT8 display_off) {
++-    if (display_off) DISPLAY_OFF;
+++static void battle_reset_screen_for_command(UINT8 turn_display_off) {
+++    if (turn_display_off) DISPLAY_OFF;
++     HIDE_WIN;
++     SHOW_BKG;
++     SHOW_SPRITES;
++@@ -1695,7 +1695,7 @@
++     draw_battle_frame();
++     draw_battle_menu();
++     show_battle_enemy_sprites();
++-    if (display_off) DISPLAY_ON;
+++    if (turn_display_off) DISPLAY_ON;
++ }
++ 
++ 

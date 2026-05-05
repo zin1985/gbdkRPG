@@ -1,3 +1,27 @@
+# rpg075_fix
+
+<details open>
+<summary>2026-05-05 rpg075_fix</summary>
+
+- rpg074_ui の `main.c:1689` ビルドエラーを修正。
+- `display_off` 引数名が GBDK の `DISPLAY_OFF` マクロ展開と衝突していたため、`turn_display_off` に変更。
+- ZIP名を `rpg075_fix.zip` に短縮。
+
+</details>
+
+# rpg075_fix
+
+<details open>
+<summary>変更概要</summary>
+
+- 左上パーティ欄を2枠表示へ拡張。
+- 敵名バッファを18byteへ拡張。
+- bank 7の敵名コピーをUTF-8境界を意識した処理に変更。
+- 初回コマンド前の戦闘画面再構築を専用関数に集約。
+- ZIP名を短縮し、`rpg075_fix.zip` とした。
+
+</details>
+
 # CHANGELOG
 
 ## rpg017

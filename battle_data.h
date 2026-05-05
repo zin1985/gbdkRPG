@@ -4,7 +4,7 @@
 #include <gb/gb.h>
 
 #define BATTLE_DATA_MAX_ENEMIES 2u
-#define BATTLE_NAME_LEN 12u
+#define BATTLE_NAME_LEN 18u
 
 typedef struct BattleEnemyData {
     char name[BATTLE_NAME_LEN];

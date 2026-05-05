@@ -1,5 +1,5 @@
 ===== prebank_check.py =====
-main.c bytes: 67421
+main.c bytes: 68236
 [OK] no direct set_bkg_data() call found in main.c code
 [OK] no direct set_sprite_data() call found in main.c code
 [OK] no static const char[] message definitions found in main.c code
