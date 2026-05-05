@@ -6,6 +6,7 @@
 #include "sprites.h"
 #include "banked_graphics.h"
 #include "map_data.h"
+#include "battle_data.h"
 
 /*
  * ============================================================================
@@ -191,6 +192,28 @@ BANKREF_EXTERN(sprite_data_bank)
 
 /*
  * ============================================================================
+ * rpg071 BATTLE SCENE / ENCOUNTER TABLE POLICY
+ * ============================================================================
+ * Fix battle screen residue and add a small encounter table.
+ *
+ * - Full 32x32 battle BG is cleared with already-loaded JP frame blank tile.
+ * - Battle command UI uses BG box tiles, matching the message-window style.
+ * - Existing enemy OBJ tile sheet is reused for battle enemy sprites.
+ * - Enemy data/encounter table lives in battle_data_bank.c bank 7.
+ * - Supports up to 2 enemies at once, without adding map actors or OAM slots.
+ * - No new BG tiles, MAP_GFX_TILE_COUNT change, object kind, map switch, or
+ *   sprite sheet path change.
+ * ============================================================================
+ */
+
+#define BATTLE_MAX_ENEMY_COUNT BATTLE_DATA_MAX_ENEMIES
+#define BATTLE_ENEMY0_SPRITE_BASE 0u
+#define BATTLE_ENEMY1_SPRITE_BASE 4u
+#define BATTLE_ENEMY_SPRITE_Y 40u
+
+
+/*
+ * ============================================================================
  * rpg069 FONT CACHE / BATTLE TEXT CLEANUP
  * ============================================================================
  * rpg068 worked but text could corrupt because the temporary byte-based glyph
@@ -372,7 +395,11 @@ static UINT8 camera_py;
 static UINT8 camera_target_px;
 static UINT8 camera_target_py;
 static Fighter player_battle;
-static Fighter enemy_battle;
+static Fighter enemy_battles[BATTLE_MAX_ENEMY_COUNT];
+static BattleEnemyData battle_enemy_data_slots[BATTLE_MAX_ENEMY_COUNT];
+static UINT8 battle_enemy_count;
+static UINT8 battle_target_index;
+#define enemy_battle (enemy_battles[battle_target_index])
 static UINT8 player_max_hp_stat;
 static UINT8 player_attack_stat;
 static UINT8 player_defense_stat;
@@ -501,6 +528,14 @@ static void update_player_movement(void);
 static void map_input(void);
 static UINT8 calc_damage(UINT8 power, UINT8 atk, UINT8 def);
 static void draw_battle_frame(void);
+static void battle_clear_bg_full(void);
+static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
+static void draw_battle_enemy_names(void);
+static void hide_battle_enemy_sprites(void);
+static void show_battle_enemy_sprites(void);
+static void battle_copy_enemy_from_data(UINT8 slot);
+static UINT8 battle_select_first_alive(void);
+static UINT8 battle_alive_count(void);
 static void draw_battle_menu(void);
 static void update_battle_status(void);
 static void init_battle_from_enemy(UINT8 enemy_index);
@@ -817,6 +852,7 @@ static void open_main_menu(void) {
         }
     }
 
+    hide_battle_enemy_sprites();
     restore_field_vram_state();
 }
 
@@ -1478,40 +1514,165 @@ static UINT8 calc_damage(UINT8 power, UINT8 atk, UINT8 def) {
     return base;
 }
 
-static void draw_battle_frame(void) {
+/*
+ * rpg072:
+ * rpg071 declared the battle helper functions and called them, but the helper
+ * bodies were not emitted into main.c.  Keep them immediately before the battle
+ * drawing functions so future battle UI changes have one safe checkpoint.
+ */
+static void battle_clear_bg_full(void) {
+    static UINT8 bg[BG_DRAW_W * BG_DRAW_H];
+    UINT16 i;
+    UINT8 blank;
+
     /*
-     * rpg069:
-     * Keep this screen text-only and avoid decorative ASCII border rows.
-     * The battle menu/dialogue/window already provide the frame presentation.
+     * Clear the full 32x32 BG map, not just the visible 20x18 area.
+     * This prevents field BG residue on the first battle command turn.
      */
-    screen_clear();
+    blank = (UINT8)(JP_FRAME_BASE + 0u);
+    for (i = 0u; i < (UINT16)(BG_DRAW_W * BG_DRAW_H); i++) {
+        bg[i] = blank;
+    }
+
     move_bkg(0u, 0u);
-
-    jp_put_bkg_text(6u, 1u, "せんとう");
-
-    jp_put_bkg_text(0u, 4u, "まもの");
-    jp_put_bkg_text(7u, 4u, enemy_battle.name);
-    jp_put_bkg_text(0u, 5u, "HP"); put_hp_pair(4u, 5u, enemy_battle.hp, enemy_battle.max_hp);
-
-    jp_put_bkg_text(0u, 8u, "ゆうしゃ");
-    jp_put_bkg_text(0u, 9u, "HP"); put_hp_pair(4u, 9u, player_battle.hp, player_battle.max_hp);
-
-    jp_put_bkg_text(0u, 17u, "A けってい じゅうじ");
+    set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
 }
+
+static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
+    UINT8 x;
+    UINT8 y;
+    UINT8 t;
+
+    if (w < 2u || h < 2u) return;
+
+    for (y = 0u; y < h; y++) {
+        for (x = 0u; x < w; x++) {
+            t = JP_FRAME_BASE + 0u;
+            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u;
+            else if (y == 0u && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 4u;
+            else if (y == (UINT8)(h - 1u) && x == 0u) t = JP_FRAME_BASE + 5u;
+            else if (y == (UINT8)(h - 1u) && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 6u;
+            else if (y == 0u || y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 1u;
+            else if (x == 0u || x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u;
+
+            set_bkg_tiles((UINT8)(x0 + x), (UINT8)(y0 + y), 1u, 1u, &t);
+        }
+    }
+}
+
+static void draw_battle_enemy_names(void) {
+    UINT8 i;
+
+    draw_bkg_box(0u, 11u, 9u, 5u);
+
+    for (i = 0u; i < battle_enemy_count; i++) {
+        if (enemy_battles[i].hp > 0u) {
+            jp_put_bkg_text(1u, (UINT8)(12u + i), enemy_battles[i].name);
+        }
+    }
+}
+
+static void hide_battle_enemy_sprites(void) {
+    UINT8 i;
+
+    for (i = 0u; i < 8u; i++) {
+        move_sprite(i, 0u, 0u);
+    }
+}
+
+static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y) {
+    set_sprite_tile(sprite_base + 0u, ENEMY0_TILE_BASE + 0u);
+    set_sprite_tile(sprite_base + 1u, ENEMY0_TILE_BASE + 1u);
+    set_sprite_tile(sprite_base + 2u, ENEMY0_TILE_BASE + 2u);
+    set_sprite_tile(sprite_base + 3u, ENEMY0_TILE_BASE + 3u);
+
+    move_sprite(sprite_base + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
+    move_sprite(sprite_base + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
+    move_sprite(sprite_base + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
+    move_sprite(sprite_base + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
+}
+
+static void show_battle_enemy_sprites(void) {
+    hide_battle_enemy_sprites();
+
+    if (battle_enemy_count == 0u) return;
+
+    if (battle_enemy_count == 1u) {
+        if (enemy_battles[0].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y);
+        }
+    } else {
+        if (enemy_battles[0].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y);
+        }
+        if (enemy_battles[1].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y);
+        }
+    }
+}
+
+static void battle_copy_enemy_from_data(UINT8 slot) {
+    enemy_battles[slot].name = battle_enemy_data_slots[slot].name;
+    enemy_battles[slot].max_hp = battle_enemy_data_slots[slot].max_hp;
+    enemy_battles[slot].hp = battle_enemy_data_slots[slot].hp;
+    enemy_battles[slot].attack = battle_enemy_data_slots[slot].attack;
+    enemy_battles[slot].defense = battle_enemy_data_slots[slot].defense;
+    enemy_battles[slot].skill_power = 0u;
+    enemy_battles[slot].heal_power = 0u;
+    enemy_battles[slot].agility = battle_enemy_data_slots[slot].agility;
+}
+
+static UINT8 battle_select_first_alive(void) {
+    UINT8 i;
+
+    for (i = 0u; i < battle_enemy_count; i++) {
+        if (enemy_battles[i].hp > 0u) {
+            battle_target_index = i;
+            return 1u;
+        }
+    }
+    return 0u;
+}
+
+static UINT8 battle_alive_count(void) {
+    UINT8 i;
+    UINT8 count = 0u;
+
+    for (i = 0u; i < battle_enemy_count; i++) {
+        if (enemy_battles[i].hp > 0u) count++;
+    }
+    return count;
+}
+
+static void draw_battle_frame(void) {
+    battle_clear_bg_full();
+
+    jp_put_bkg_text(0u, 0u, "ゆうしゃ");
+    jp_put_bkg_text(0u, 1u, "HP"); put_hp_pair(4u, 1u, player_battle.hp, player_battle.max_hp);
+
+    draw_battle_enemy_names();
+}
+
 
 static void draw_battle_menu(void) {
-    put_cursor(1u, 13u, (UINT8)(menu_index == CMD_ATTACK)); jp_put_bkg_text(3u, 13u, "こうげき");
-    put_cursor(10u,13u, (UINT8)(menu_index == CMD_SKILL));  jp_put_bkg_text(12u,13u, "とくぎ");
-    put_cursor(1u, 14u, (UINT8)(menu_index == CMD_HEAL));   jp_put_bkg_text(3u, 14u, "かいふく");
-    put_cursor(10u,14u, (UINT8)(menu_index == CMD_RUN));    jp_put_bkg_text(12u,14u, "にげる");
-    jp_put_bkg_text(0u, 15u, "とくぎ"); put_u8(8u, 15u, skill_uses);
-    jp_put_bkg_text(11u,15u, "くすり"); put_u8(18u,15u, heal_uses);
+    draw_bkg_box(9u, 11u, 11u, 5u);
+
+    put_cursor(10u, 12u, (UINT8)(menu_index == CMD_ATTACK)); jp_put_bkg_text(11u, 12u, "こうげき");
+    put_cursor(15u, 12u, (UINT8)(menu_index == CMD_SKILL));  jp_put_bkg_text(16u, 12u, "とくぎ");
+    put_cursor(10u, 13u, (UINT8)(menu_index == CMD_HEAL));   jp_put_bkg_text(11u, 13u, "かいふく");
+    put_cursor(15u, 13u, (UINT8)(menu_index == CMD_RUN));    jp_put_bkg_text(16u, 13u, "にげる");
+
+    jp_put_bkg_text(10u, 14u, "とく"); put_u8(15u, 14u, skill_uses);
+    jp_put_bkg_text(16u, 14u, "く");   put_u8(18u, 14u, heal_uses);
 }
 
+
 static void update_battle_status(void) {
-    jp_put_bkg_text(0u, 5u, "HP"); put_hp_pair(4u, 5u, enemy_battle.hp, enemy_battle.max_hp);
-    jp_put_bkg_text(0u, 9u, "HP"); put_hp_pair(4u, 9u, player_battle.hp, player_battle.max_hp);
+    draw_battle_frame();
+    draw_battle_menu();
+    show_battle_enemy_sprites();
 }
+
 
 static void init_battle_from_enemy(UINT8 enemy_index) {
     current_enemy_index = enemy_index;
@@ -1523,12 +1684,19 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     player_battle.skill_power = player_skill_power_stat;
     player_battle.heal_power = player_heal_power_stat;
     player_battle.agility = player_agility_stat;
-    enemy_battle = actors[enemy_index].stats;
+
+    battle_enemy_count = 1u;
+    battle_target_index = 0u;
+
+    enemy_battles[0] = actors[enemy_index].stats;
+    battle_enemy_data_slots[0].sprite_kind = 0u;
+
     menu_index = 0u;
     skill_uses = 3u;
     heal_uses = 2u;
     battle_state = BSTATE_PLAYER;
 }
+
 
 static void battle_start_effect(void) {
     UINT8 i;
@@ -1562,30 +1730,30 @@ static void enter_battle_screen(void) {
 
     DISPLAY_OFF;
     HIDE_WIN;
-    HIDE_SPRITES;
     SHOW_BKG;
+    SHOW_SPRITES;
     move_bkg(0u, 0u);
 
-    /* rpg069: reset font cache before drawing battle BG text. */
     jp_init();
-
     draw_battle_frame();
     draw_battle_menu();
+    show_battle_enemy_sprites();
     DISPLAY_ON;
 
     dialogue_message("まものが\nあらわれた！");
 
-    /*
-     * The dialogue window uses the same glyph cache as BG text.  Redraw the
-     * battle screen after the opening message so any overwritten cache tiles are
-     * refreshed before command input.
-     */
     DISPLAY_OFF;
     HIDE_WIN;
+    SHOW_BKG;
+    SHOW_SPRITES;
+    move_bkg(0u, 0u);
+    jp_init();
     draw_battle_frame();
     draw_battle_menu();
+    show_battle_enemy_sprites();
     DISPLAY_ON;
 }
+
 
 static void enter_battle(UINT8 enemy_index) {
     game_mode = MODE_BATTLE;
@@ -1595,9 +1763,36 @@ static void enter_battle(UINT8 enemy_index) {
 }
 
 static void init_random_battle_from_field(void) {
-    init_battle_from_enemy(ENEMY_ACTOR_INDEX);
+    UINT8 i;
+
     current_enemy_index = 0xFFu;
+
+    player_battle.name = "ゆうしゃ";
+    player_battle.max_hp = player_max_hp_stat;
+    player_battle.hp = player_max_hp_stat;
+    player_battle.attack = player_attack_stat;
+    player_battle.defense = player_defense_stat;
+    player_battle.skill_power = player_skill_power_stat;
+    player_battle.heal_power = player_heal_power_stat;
+    player_battle.agility = player_agility_stat;
+
+    battle_data_load_random(random_u8(), battle_enemy_data_slots, &battle_enemy_count);
+    if (battle_enemy_count == 0u) battle_enemy_count = 1u;
+    if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
+
+    for (i = 0u; i < battle_enemy_count; i++) {
+        battle_copy_enemy_from_data(i);
+    }
+
+    battle_target_index = 0u;
+    battle_select_first_alive();
+
+    menu_index = 0u;
+    skill_uses = 3u;
+    heal_uses = 2u;
+    battle_state = BSTATE_PLAYER;
 }
+
 
 static void enter_random_battle(void) {
     game_mode = MODE_BATTLE;
@@ -1659,31 +1854,52 @@ static void return_to_map_after_battle(UINT8 won) {
 
 static void player_attack(void) {
     UINT8 dmg;
+
+    if (!battle_select_first_alive()) {
+        battle_state = BSTATE_WIN;
+        return;
+    }
+
     dmg = calc_damage(3u, player_battle.attack, enemy_battle.defense);
     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT8)(enemy_battle.hp - dmg);
+
     dialogue_message("ゆうしゃの こうげき！\nダメージ！");
-    update_battle_status();
-    if (enemy_battle.hp == 0u) battle_state = BSTATE_WIN;
+
+    if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
     else battle_state = BSTATE_ENEMY;
+
+    update_battle_status();
 }
+
 
 static void player_skill(void) {
     UINT8 dmg;
+
     if (skill_uses == 0u) {
         dialogue_message("もう つかえない！");
         battle_state = BSTATE_PLAYER;
         return;
     }
+
+    if (!battle_select_first_alive()) {
+        battle_state = BSTATE_WIN;
+        return;
+    }
+
     skill_uses--;
     dmg = calc_damage(player_battle.skill_power, player_battle.attack, enemy_battle.defense);
     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT8)(enemy_battle.hp - dmg);
+
     dialogue_message("とくぎを つかった！\nダメージ！");
-    update_battle_status();
-    if (enemy_battle.hp == 0u) battle_state = BSTATE_WIN;
+
+    if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
     else battle_state = BSTATE_ENEMY;
+
+    update_battle_status();
 }
+
 
 static void player_heal(void) {
     UINT8 before;
@@ -1715,15 +1931,30 @@ static void player_run(void) {
 }
 
 static void enemy_turn(void) {
+    UINT8 i;
     UINT8 dmg;
-    dmg = calc_damage(2u, enemy_battle.attack, player_battle.defense);
-    if (dmg >= player_battle.hp) player_battle.hp = 0u;
-    else player_battle.hp = (UINT8)(player_battle.hp - dmg);
-    dialogue_message("まもの の こうげき！\nダメージ！");
-    update_battle_status();
-    if (player_battle.hp == 0u) battle_state = BSTATE_LOSE;
-    else battle_state = BSTATE_PLAYER;
+
+    for (i = 0u; i < battle_enemy_count; i++) {
+        if (enemy_battles[i].hp == 0u) continue;
+
+        battle_target_index = i;
+        dmg = calc_damage(2u, enemy_battles[i].attack, player_battle.defense);
+        if (dmg >= player_battle.hp) player_battle.hp = 0u;
+        else player_battle.hp = (UINT8)(player_battle.hp - dmg);
+
+        dialogue_message("まもの の こうげき！\nダメージ！");
+        update_battle_status();
+
+        if (player_battle.hp == 0u) {
+            battle_state = BSTATE_LOSE;
+            return;
+        }
+    }
+
+    battle_select_first_alive();
+    battle_state = BSTATE_PLAYER;
 }
+
 
 static void battle_input(void) {
     UINT8 keys;
@@ -1749,6 +1980,7 @@ static void battle_input(void) {
         }
         draw_battle_frame();
         draw_battle_menu();
+        show_battle_enemy_sprites();
     }
 }
 

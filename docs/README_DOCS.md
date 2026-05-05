@@ -44,3 +44,9 @@ files and build entry points.
 
 `README.md` remains in the root because GitHub displays it as the repository
 landing page.
+
+## rpg071 additions
+
+- `features/BATTLE_ENCOUNTER_TABLE_071.md`
+- `checks/CHECK_071_BATTLE_ENCOUNTER_TABLE.md`
+- `bank/BANK_071_BATTLE_DATA.md`

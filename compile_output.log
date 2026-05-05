@@ -10,3 +10,5 @@ map_data_bank.c:
 map_data_runtime.c:
 font_data_bank.c:
 font_data_runtime.c:
+battle_data_bank.c:
+battle_data_runtime.c:

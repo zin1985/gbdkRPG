@@ -455,3 +455,22 @@ Start here:
 - `docs/bank/`
 - `docs/graphics_safety/`
 - `docs/features/`
+
+
+## rpg071: Battle encounter table
+
+rpg071 cleans the battle screen fully before command input and adds a banked enemy encounter table.
+
+- Full 32x32 battle BG clear
+- Boxed command UI
+- Lower-left enemy name box
+- Existing enemy OBJ sprites shown during battle
+- Up to two enemies per encounter
+- Battle data stored in bank 7
+
+
+## rpg072: Battle helper definition fix
+
+rpg072 fixes the rpg071 linker error by adding the missing battle helper function bodies to `main.c`.
+
+No new BG tiles, map actors, object kinds, or sprite sheets were added.
