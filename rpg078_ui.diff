@@ -1,0 +1,211 @@
+Only in rpg078_ui: CHECK_rpg078.md
+diff -ru rpg077_battle/Makefile rpg078_ui/Makefile
+--- rpg077_battle/Makefile	2026-05-05 11:36:48.548967769 +0000
++++ rpg078_ui/Makefile	2026-05-05 12:01:05.076490869 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg077_battle.gb
++OUT = rpg078_ui.gb
+ SRCS = main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ru rpg077_battle/README.md rpg078_ui/README.md
+--- rpg077_battle/README.md	2026-05-05 11:38:40.238107658 +0000
++++ rpg078_ui/README.md	2026-05-05 12:01:05.077292738 +0000
+@@ -1,3 +1,11 @@
++
++## rpg078_ui: battle redraw hotfix
++
++- 敵攻撃前に白画面が出る原因になっていた通常ターン中の `DISPLAY_OFF` 再描画を停止。
++- コマンドカーソル移動時はメニュー全体ではなくカーソル位置だけ更新。
++- `かいふく` / `にげる` の下に出ていた使用回数表示行を削除し、ゴミ文字に見える表示を排除。
++- 敵ターン終了後、次のコマンド入力前に Window を画面外へ退避し、BGスクロールを `0,0` に戻してからUIを再構築。
++
+ # rpg077_battle
+ > 最新版: `rpg077_battle` では、戦闘UIの横幅圧迫を減らすため味方パラメータ表示から `/最大値` を外し、敵を最大3体表示へ拡張し、戦闘用の新しい敵OBJスプライト3種を追加しました。戦闘コマンドカーソルは上下左右で2x2移動できます。
+ 
+diff -ru rpg077_battle/build.bat rpg078_ui/build.bat
+--- rpg077_battle/build.bat	2026-05-05 11:36:48.548338361 +0000
++++ rpg078_ui/build.bat	2026-05-05 12:01:05.075921632 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg077_battle"
++set "PROJECT=rpg078_ui"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+diff -ru rpg077_battle/build.sh rpg078_ui/build.sh
+--- rpg077_battle/build.sh	2026-05-05 11:36:48.547158627 +0000
++++ rpg078_ui/build.sh	2026-05-05 12:01:05.075022482 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg077_battle.gb"
++OUT="rpg078_ui.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+diff -ru rpg077_battle/docs/changelog/CHANGELOG.md rpg078_ui/docs/changelog/CHANGELOG.md
+--- rpg077_battle/docs/changelog/CHANGELOG.md	2026-05-05 11:38:40.334885853 +0000
++++ rpg078_ui/docs/changelog/CHANGELOG.md	2026-05-05 12:01:05.079465203 +0000
+@@ -331,3 +331,11 @@
+ - Windowを非表示に加えて画面外へ退避。
+ - 戦闘開始メッセージ前は空の戦闘BGにし、コマンドUIはメッセージ後に初回構築。
+ - 左上パーティ枠を20タイル幅へ拡張し、2人目HP/MPが枠線を上書きしないよう修正。
++
++
++## rpg078_ui
++
++- 通常ターン中のDISPLAY_OFF再描画を停止。
++- カーソル移動をカーソルだけの差分更新に変更。
++- コマンド欄の下段使用回数表示を削除。
++- 敵ターン終了後の次コマンド画面を再正規化。
+Only in rpg078_ui/docs/checks: CHECK_078_UI.md
+Only in rpg078_ui/docs/features: RPG078_UI.md
+Only in rpg078_ui/docs/handover: HANDOVER_078.md
+diff -ru rpg077_battle/main.c rpg078_ui/main.c
+--- rpg077_battle/main.c	2026-05-05 11:40:12.155365631 +0000
++++ rpg078_ui/main.c	2026-05-05 12:01:05.074227648 +0000
+@@ -544,7 +544,9 @@
+ static UINT8 battle_select_first_alive(void);
+ static UINT8 battle_alive_count(void);
+ static void draw_battle_menu(void);
++static void update_battle_menu_cursor(UINT8 old_index, UINT8 new_index);
+ static void update_battle_status(void);
++static void battle_redraw_after_dialogue(void);
+ static void init_battle_from_enemy(UINT8 enemy_index);
+ static void enter_battle(UINT8 enemy_index);
+ static UINT8 field_random_encounter_should_start(void);
+@@ -1714,15 +1716,38 @@
+ 
+ 
+ static void draw_battle_menu(void) {
+-    draw_bkg_box(9u, 11u, 11u, 5u);
++    /* rpg078:
++     * Keep this window to two command rows only.  The old skill/heal count row
++     * under "かいふく / にげる" looked like garbage text and made redraw
++     * artifacts easier to notice, so it is intentionally removed here.
++     */
++    draw_bkg_box(9u, 11u, 11u, 4u);
+ 
+     put_cursor(10u, 12u, (UINT8)(menu_index == CMD_ATTACK)); jp_put_bkg_text(11u, 12u, "こうげき");
+     put_cursor(15u, 12u, (UINT8)(menu_index == CMD_SKILL));  jp_put_bkg_text(16u, 12u, "とくぎ");
+     put_cursor(10u, 13u, (UINT8)(menu_index == CMD_HEAL));   jp_put_bkg_text(11u, 13u, "かいふく");
+     put_cursor(15u, 13u, (UINT8)(menu_index == CMD_RUN));    jp_put_bkg_text(16u, 13u, "にげる");
++}
++
++static void update_battle_menu_cursor(UINT8 old_index, UINT8 new_index) {
++    /* Cursor-only update.  Do not redraw the whole command box while the player
++     * moves the cursor, because full box redraw made the Japanese text flicker.
++     */
++    switch (old_index) {
++        case CMD_ATTACK: put_cursor(10u, 12u, 0u); break;
++        case CMD_SKILL:  put_cursor(15u, 12u, 0u); break;
++        case CMD_HEAL:   put_cursor(10u, 13u, 0u); break;
++        case CMD_RUN:    put_cursor(15u, 13u, 0u); break;
++        default: break;
++    }
+ 
+-    jp_put_bkg_text(10u, 14u, "とく"); put_u8(15u, 14u, skill_uses);
+-    jp_put_bkg_text(16u, 14u, "かい"); put_u8(18u, 14u, heal_uses);
++    switch (new_index) {
++        case CMD_ATTACK: put_cursor(10u, 12u, 1u); break;
++        case CMD_SKILL:  put_cursor(15u, 12u, 1u); break;
++        case CMD_HEAL:   put_cursor(10u, 13u, 1u); break;
++        case CMD_RUN:    put_cursor(15u, 13u, 1u); break;
++        default: break;
++    }
+ }
+ 
+ static void battle_hide_window_and_reset_scroll(void) {
+@@ -1760,8 +1785,21 @@
+ }
+ 
+ 
++static void battle_redraw_after_dialogue(void) {
++    /* rpg078:
++     * Do not use DISPLAY_OFF during normal battle turns.  rpg077 did so via
++     * update_battle_status(), which caused a visible blank/white frame before
++     * enemy attacks on some emulators/frontends.
++     */
++    battle_hide_window_and_reset_scroll();
++    draw_battle_frame();
++    show_battle_enemy_sprites();
++    battle_hide_window_and_reset_scroll();
++    wait_vbl_done();
++}
++
+ static void update_battle_status(void) {
+-    battle_reset_screen_for_command(1u);
++    battle_redraw_after_dialogue();
+ }
+ 
+ 
+@@ -2035,27 +2073,30 @@
+ 
+ static void battle_input(void) {
+     UINT8 keys;
++    UINT8 old_menu_index;
++
+     keys = joypad();
++    old_menu_index = menu_index;
+ 
+     if (keys & J_UP) {
+         if (menu_index >= 2u) menu_index = (UINT8)(menu_index - 2u);
+         else menu_index = (UINT8)(menu_index + 2u);
+-        draw_battle_menu();
++        update_battle_menu_cursor(old_menu_index, menu_index);
+         waitpadup();
+     } else if (keys & J_DOWN) {
+         if (menu_index < 2u) menu_index = (UINT8)(menu_index + 2u);
+         else menu_index = (UINT8)(menu_index - 2u);
+-        draw_battle_menu();
++        update_battle_menu_cursor(old_menu_index, menu_index);
+         waitpadup();
+     } else if (keys & J_LEFT) {
+         if (menu_index & 1u) menu_index--;
+         else menu_index++;
+-        draw_battle_menu();
++        update_battle_menu_cursor(old_menu_index, menu_index);
+         waitpadup();
+     } else if (keys & J_RIGHT) {
+         if (menu_index & 1u) menu_index--;
+         else menu_index++;
+-        draw_battle_menu();
++        update_battle_menu_cursor(old_menu_index, menu_index);
+         waitpadup();
+     } else if (keys & J_A) {
+         waitpadup();
+@@ -2066,9 +2107,12 @@
+             case CMD_RUN:    player_run(); break;
+             default: break;
+         }
+-        draw_battle_frame();
+-        draw_battle_menu();
+-        show_battle_enemy_sprites();
++
++        if (battle_state == BSTATE_PLAYER) {
++            battle_reset_screen_for_command(0u);
++        } else if (battle_state == BSTATE_ENEMY) {
++            battle_redraw_after_dialogue();
++        }
+     }
+ }
+ 
+@@ -2133,8 +2177,9 @@
+                         break;
+                     case BSTATE_ENEMY:
+                         enemy_turn();
+-                        draw_battle_frame();
+-                        draw_battle_menu();
++                        if (battle_state == BSTATE_PLAYER) {
++                            battle_reset_screen_for_command(0u);
++                        }
+                         break;
+                     case BSTATE_WIN:
+                         dialogue_message("まものを\nたおした！");
+Only in rpg077_battle: rpg077_battle.diff
+Only in rpg078_ui: rpg078_ui.diff
+Only in rpg078_ui: rpg078_ui.prev.diff
