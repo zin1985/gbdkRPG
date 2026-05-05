@@ -1,0 +1,1404 @@
+diff -ruN /mnt/data/rpg082_dirty/CHECK_rpg083_music.md /mnt/data/rpg_work/rpg082_dirty/CHECK_rpg083_music.md
+--- /mnt/data/rpg082_dirty/CHECK_rpg083_music.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/CHECK_rpg083_music.md	2026-05-05 15:33:31.608691344 +0000
+@@ -0,0 +1,49 @@
++# CHECK rpg083_music
++
++## 目的
++
++フィールド・町・戦闘でBGMが切り替わることを確認する。
++
++## ビルド確認
++
++- [ ] `build.sh` に `audio.c` が含まれている
++- [ ] `build.bat` に `audio.c` が含まれている
++- [ ] `Makefile` に `audio.c` が含まれている
++- [ ] `rpg083_music.gb` が出力される
++- [ ] dangerous linker warning が出ていない
++- [ ] bank overflow / spans warning が出ていない
++
++## 音楽確認
++
++- [ ] 起動後、フィールドBGMが鳴る
++- [ ] フィールド移動中にBGMが継続する
++- [ ] 町に入ると町BGMへ切り替わる
++- [ ] 町から出るとフィールドBGMへ戻る
++- [ ] ランダムエンカウント時に戦闘BGMへ切り替わる
++- [ ] 戦闘勝利後にフィールドBGMへ戻る
++- [ ] 戦闘敗北/逃走後にフィールドBGMへ戻る
++- [ ] 会話中にBGMが完全停止しない
++- [ ] 戦闘メッセージのA待ち中にBGMが完全停止しない
++- [ ] メニュー中にBGMが完全停止しない
++
++## 既存機能確認
++
++- [ ] 起動して白画面にならない
++- [ ] フィールドBGが表示される
++- [ ] プレイヤーが表示される
++- [ ] 移動できる
++- [ ] NPC会話がフリーズしない
++- [ ] ランダムエンカウントする
++- [ ] 戦闘開始エフェクトが出る
++- [ ] 魔物登場時点で味方パラメータ欄が出る
++- [ ] 魔物登場時点で敵スプライトが出る
++- [ ] 初回コマンド時に画面がズレない
++- [ ] カーソル移動で文字がちらつかない
++- [ ] 敵攻撃前後に長い白画面が出ない
++- [ ] 戦闘後にフィールドへ戻れる
++
++## 注意点
++
++- 今回のBGMは既存曲のコピーではなく、SaGa風の方向性を意識したオリジナル短ループ。
++- hUGEdriverは未導入。
++- 音量が大きい場合は `audio.c` の `NR50_REG` を調整する。
+diff -ruN /mnt/data/rpg082_dirty/Makefile /mnt/data/rpg_work/rpg082_dirty/Makefile
+--- /mnt/data/rpg082_dirty/Makefile	2026-05-05 15:22:07.226377543 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/Makefile	2026-05-05 15:32:39.201578322 +0000
+@@ -1,5 +1,5 @@
+-OUT = rpg082_dirty.gb
+-SRCS = main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++OUT = rpg083_music.gb
++SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+ ROMUSAGE ?= romusage
+diff -ruN /mnt/data/rpg082_dirty/README.md /mnt/data/rpg_work/rpg082_dirty/README.md
+--- /mnt/data/rpg082_dirty/README.md	2026-05-05 15:23:21.324499099 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/README.md	2026-05-05 15:33:31.522569026 +0000
+@@ -563,3 +563,42 @@
+ - フィールドプレイヤーが中央などに残っていないか。
+ - 敵攻撃前後で白画面が長く挟まらないか。
+ - カーソル移動時に文字全体が再描画ちらつきしないか。
++
++## rpg083_music
++
++フィールド・町・戦闘のBGMを、軽量なGB音源レジスタ直叩き方式で追加しました。
++
++目的は、SaGa風の「場面ごとに空気が変わるRPG感」を入れることです。既存曲のコピーではなく、以下の方向性のオリジナル短ループです。
++
++- フィールド: 冒険感のある短い行進風ループ
++- 町: ゆっくりした落ち着いたループ
++- 戦闘: テンポが速い緊張感のあるループ
++
++追加ファイル:
++
++- `audio.h`
++- `audio.c`
++
++変更点:
++
++- `main.c` で `audio_init()` / `audio_play_music()` / `audio_update()` を呼び出すようにしました。
++- 起動後はフィールドBGMを再生します。
++- 町に入ると町BGMへ切り替えます。
++- 町から出るとフィールドBGMへ戻します。
++- 戦闘突入時に戦闘BGMへ切り替えます。
++- 戦闘終了後は現在エリアに応じてフィールド/町BGMへ戻します。
++- 会話・メニュー・戦闘メッセージ待ち中もBGMが止まりにくいよう、主要な `waitpad()` / `wait_vbl_done()` 待ちを `audio_waitpad()` / `audio_wait_vbl()` 経由へ変更しました。
++
++安全方針:
++
++- 新規BGタイルは追加していません。
++- `MAP_GFX_TILE_COUNT` は変更していません。
++- 新規actor/NPC/object kind は追加していません。
++- `jpfont.c` / `misakiUTF16.c` のBANKED化はしていません。
++- hUGEdriverなどの外部音楽ドライバはまだ追加していません。
++
++注意:
++
++- 今回は白画面リスクを避けるため、まずは小さい手作りBGMエンジンです。
++- 本格的な作曲データ化を行う場合は、次段階で hUGEtracker / hUGEdriver 方式を検討します。
++- 実機/VBAでは、音量が大きい場合があります。その場合は `audio.c` の `NR50_REG = 0x66u;` を `0x44u` などに下げて調整してください。
+diff -ruN /mnt/data/rpg082_dirty/audio.c /mnt/data/rpg_work/rpg082_dirty/audio.c
+--- /mnt/data/rpg082_dirty/audio.c	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/audio.c	2026-05-05 15:29:20.813923499 +0000
+@@ -0,0 +1,201 @@
++#include "audio.h"
++
++/*
++ * rpg083_music:
++ * Tiny register-based DMG music driver.
++ *
++ * This is intentionally much smaller than adding a tracker driver while the
++ * battle renderer is still being stabilized.  It uses square channel 1 for the
++ * melody, square channel 2 for a soft bass/drone, and a tiny noise hit for the
++ * battle loop.  The melodies are original and only aim for an old handheld RPG
++ * mood: field = march, town = calm, battle = urgent.
++ */
++
++typedef struct MusicStep {
++    UINT16 melody;
++    UINT16 bass;
++    UINT8 frames;
++} MusicStep;
++
++#define N_REST 0u
++#define N_C3 1046u
++#define N_D3 1155u
++#define N_E3 1253u
++#define N_F3 1297u
++#define N_G3 1379u
++#define N_A3 1452u
++#define N_B3 1517u
++#define N_C4 1546u
++#define N_D4 1602u
++#define N_E4 1650u
++#define N_F4 1673u
++#define N_G4 1714u
++#define N_A4 1750u
++#define N_B4 1781u
++#define N_C5 1798u
++#define N_D5 1824u
++#define N_E5 1847u
++#define N_G5 1884u
++
++static const MusicStep music_field[] = {
++    {N_C4, N_C3, 12u}, {N_E4, N_C3, 12u}, {N_G4, N_G3, 12u}, {N_C5, N_G3, 12u},
++    {N_B4, N_G3, 12u}, {N_G4, N_C3, 12u}, {N_E4, N_C3, 12u}, {N_G4, N_G3, 12u},
++    {N_A4, N_F3, 12u}, {N_C5, N_F3, 12u}, {N_A4, N_A3, 12u}, {N_G4, N_G3, 12u},
++    {N_E4, N_C3, 12u}, {N_D4, N_G3, 12u}, {N_E4, N_C3, 12u}, {N_REST, N_C3, 12u}
++};
++
++static const MusicStep music_town[] = {
++    {N_E4, N_C3, 24u}, {N_G4, N_C3, 24u}, {N_A4, N_F3, 24u}, {N_G4, N_F3, 24u},
++    {N_E4, N_C3, 24u}, {N_D4, N_G3, 24u}, {N_C4, N_C3, 36u}, {N_REST, N_C3, 12u},
++    {N_D4, N_G3, 24u}, {N_E4, N_C3, 24u}, {N_G4, N_E3, 24u}, {N_E4, N_C3, 24u},
++    {N_D4, N_G3, 24u}, {N_C4, N_C3, 48u}
++};
++
++static const MusicStep music_battle[] = {
++    {N_C4, N_C3, 6u}, {N_C4, N_G3, 6u}, {N_G4, N_C3, 6u}, {N_C5, N_G3, 6u},
++    {N_D5, N_D3, 6u}, {N_C5, N_G3, 6u}, {N_G4, N_C3, 6u}, {N_E4, N_G3, 6u},
++    {N_F4, N_F3, 6u}, {N_A4, N_C3, 6u}, {N_C5, N_F3, 6u}, {N_A4, N_C3, 6u},
++    {N_G4, N_G3, 6u}, {N_E4, N_C3, 6u}, {N_D4, N_G3, 6u}, {N_C4, N_C3, 6u}
++};
++
++static UINT8 audio_current_track = AUDIO_TRACK_NONE;
++static UINT8 audio_step_index = 0u;
++static UINT8 audio_step_frames = 0u;
++static UINT8 audio_started = 0u;
++static UINT8 audio_battle_noise_flip = 0u;
++
++static UINT8 audio_track_length(UINT8 track) {
++    if (track == AUDIO_TRACK_FIELD) return (UINT8)(sizeof(music_field) / sizeof(music_field[0]));
++    if (track == AUDIO_TRACK_TOWN) return (UINT8)(sizeof(music_town) / sizeof(music_town[0]));
++    if (track == AUDIO_TRACK_BATTLE) return (UINT8)(sizeof(music_battle) / sizeof(music_battle[0]));
++    return 0u;
++}
++
++static const MusicStep *audio_track_step(UINT8 track, UINT8 index) {
++    if (track == AUDIO_TRACK_FIELD) return &music_field[index];
++    if (track == AUDIO_TRACK_TOWN) return &music_town[index];
++    return &music_battle[index];
++}
++
++static void audio_trigger_pulse1(UINT16 note) {
++    if (note == N_REST) {
++        NR12_REG = 0x00u;
++        return;
++    }
++
++    NR10_REG = 0x00u;
++    NR11_REG = 0x80u;
++    NR12_REG = 0x74u;
++    NR13_REG = (UINT8)(note & 0xFFu);
++    NR14_REG = (UINT8)(0x80u | ((note >> 8) & 0x07u));
++}
++
++static void audio_trigger_pulse2(UINT16 note) {
++    if (note == N_REST) {
++        NR22_REG = 0x00u;
++        return;
++    }
++
++    NR21_REG = 0x40u;
++    NR22_REG = 0x42u;
++    NR23_REG = (UINT8)(note & 0xFFu);
++    NR24_REG = (UINT8)(0x80u | ((note >> 8) & 0x07u));
++}
++
++static void audio_trigger_noise_tick(void) {
++    NR41_REG = 0x00u;
++    NR42_REG = 0x31u;
++    NR43_REG = 0x51u;
++    NR44_REG = 0x80u;
++}
++
++static void audio_trigger_current_step(void) {
++    UINT8 len;
++    const MusicStep *step;
++
++    len = audio_track_length(audio_current_track);
++    if (len == 0u) return;
++    if (audio_step_index >= len) audio_step_index = 0u;
++
++    step = audio_track_step(audio_current_track, audio_step_index);
++    audio_trigger_pulse1(step->melody);
++    audio_trigger_pulse2(step->bass);
++    audio_step_frames = step->frames;
++
++    if (audio_current_track == AUDIO_TRACK_BATTLE) {
++        audio_battle_noise_flip++;
++        if ((audio_battle_noise_flip & 0x03u) == 0u) audio_trigger_noise_tick();
++    }
++
++    audio_step_index++;
++    if (audio_step_index >= len) audio_step_index = 0u;
++}
++
++void audio_init(void) {
++    /* Enable master sound, route all channels to both speakers, set modest volume. */
++    NR52_REG = 0x80u;
++    NR51_REG = 0xFFu;
++    NR50_REG = 0x66u;
++
++    audio_current_track = AUDIO_TRACK_NONE;
++    audio_step_index = 0u;
++    audio_step_frames = 0u;
++    audio_started = 1u;
++}
++
++void audio_stop_music(void) {
++    audio_current_track = AUDIO_TRACK_NONE;
++    audio_step_index = 0u;
++    audio_step_frames = 0u;
++    NR12_REG = 0x00u;
++    NR22_REG = 0x00u;
++    NR42_REG = 0x00u;
++}
++
++void audio_play_music(UINT8 track) {
++    if (!audio_started) audio_init();
++    if (audio_current_track == track) return;
++
++    audio_current_track = track;
++    audio_step_index = 0u;
++    audio_step_frames = 0u;
++    audio_battle_noise_flip = 0u;
++    audio_trigger_current_step();
++}
++
++void audio_update(void) {
++    if (audio_current_track == AUDIO_TRACK_NONE) return;
++
++    if (audio_step_frames > 0u) {
++        audio_step_frames--;
++    }
++    if (audio_step_frames == 0u) {
++        audio_trigger_current_step();
++    }
++}
++
++void audio_wait_vbl(void) {
++    audio_update();
++    wait_vbl_done();
++}
++
++void audio_wait_frames(UINT8 frames) {
++    while (frames > 0u) {
++        audio_wait_vbl();
++        frames--;
++    }
++}
++
++void audio_waitpadup(void) {
++    while (joypad()) audio_wait_vbl();
++}
++
++UINT8 audio_waitpad(UINT8 mask) {
++    UINT8 keys;
++
++    while (1) {
++        keys = joypad();
++        if (keys & mask) return keys;
++        audio_wait_vbl();
++    }
++}
+diff -ruN /mnt/data/rpg082_dirty/audio.h /mnt/data/rpg_work/rpg082_dirty/audio.h
+--- /mnt/data/rpg082_dirty/audio.h	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/audio.h	2026-05-05 15:29:20.720974840 +0000
+@@ -0,0 +1,20 @@
++#ifndef AUDIO_H
++#define AUDIO_H
++
++#include <gb/gb.h>
++
++#define AUDIO_TRACK_NONE   0u
++#define AUDIO_TRACK_FIELD  1u
++#define AUDIO_TRACK_TOWN   2u
++#define AUDIO_TRACK_BATTLE 3u
++
++void audio_init(void);
++void audio_play_music(UINT8 track);
++void audio_stop_music(void);
++void audio_update(void);
++void audio_wait_vbl(void);
++void audio_wait_frames(UINT8 frames);
++void audio_waitpadup(void);
++UINT8 audio_waitpad(UINT8 mask);
++
++#endif
+diff -ruN /mnt/data/rpg082_dirty/build.bat /mnt/data/rpg_work/rpg082_dirty/build.bat
+--- /mnt/data/rpg082_dirty/build.bat	2026-05-05 15:22:07.226855776 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/build.bat	2026-05-05 15:32:39.200835416 +0000
+@@ -1,9 +1,9 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg082_dirty"
++set "PROJECT=rpg083_music"
+ set "OUT=%PROJECT%.gb"
+-set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+ set "CART_TYPE=0x19"
+ set "LOG=build.log"
+diff -ruN /mnt/data/rpg082_dirty/build.log /mnt/data/rpg_work/rpg082_dirty/build.log
+--- /mnt/data/rpg082_dirty/build.log	2026-05-05 15:23:38.972953593 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/build.log	2026-05-05 15:33:53.702687820 +0000
+@@ -1,8 +1,8 @@
+-Building rpg082_dirty.gb ...
+-Sources: main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++Building rpg083_music.gb ...
++Sources: main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ 
+ ===== prebank_check.py =====
+-main.c bytes: 79151
++main.c bytes: 79704
+ [OK] no direct set_bkg_data() call found in main.c code
+ [OK] no direct set_sprite_data() call found in main.c code
+ [OK] no static const char[] message definitions found in main.c code
+@@ -22,7 +22,7 @@
+ [INFO] exact bank overflow cannot be known before compile/link.
+ [INFO] final judgment must use compiler/linker output plus romusage.
+ 
+-Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg082_dirty.gb main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg083_music.gb main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ 
+ ./build.sh: 32: lcc: not found
+ 
+diff -ruN /mnt/data/rpg082_dirty/build.sh /mnt/data/rpg_work/rpg082_dirty/build.sh
+--- /mnt/data/rpg082_dirty/build.sh	2026-05-05 15:22:07.225915255 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/build.sh	2026-05-05 15:32:39.199893213 +0000
+@@ -3,9 +3,9 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg082_dirty.gb"
++OUT="rpg083_music.gb"
+ MAP="${OUT%.gb}.map"
+-SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+ PRECHECK_LOG="precheck_output.log"
+ COMPILE_LOG="compile_output.log"
+diff -ruN /mnt/data/rpg082_dirty/dialogue.c /mnt/data/rpg_work/rpg082_dirty/dialogue.c
+--- /mnt/data/rpg082_dirty/dialogue.c	2026-05-05 13:40:01.000000000 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/dialogue.c	2026-05-05 15:30:30.614264579 +0000
+@@ -1,13 +1,14 @@
+ #include <gb/gb.h>
+ #include "dialogue.h"
+ #include "jpfont.h"
++#include "audio.h"
+ 
+ static UINT8 dialogue_active = 0u;
+ 
+ static void dialogue_wait_a_newpress(void) {
+-    waitpadup();
+-    waitpad(J_A);
+-    waitpadup();
++    audio_waitpadup();
++    audio_waitpad(J_A);
++    audio_waitpadup();
+ }
+ 
+ static UINT8 dialogue_render_page(const char *text, const char **next_ptr) {
+@@ -38,7 +39,7 @@
+         jp_put_glyph_utf8(col, row, p, &consumed);
+         p += (consumed == 0u) ? 1 : consumed;
+         col++;
+-        jp_wait_vbl(1u);
++        audio_wait_vbl();
+     }
+ 
+     if (*p == '\0') done = 1u;
+diff -ruN /mnt/data/rpg082_dirty/docs/checks/CHECK_083_MUSIC.md /mnt/data/rpg_work/rpg082_dirty/docs/checks/CHECK_083_MUSIC.md
+--- /mnt/data/rpg082_dirty/docs/checks/CHECK_083_MUSIC.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/docs/checks/CHECK_083_MUSIC.md	2026-05-05 15:33:31.718289892 +0000
+@@ -0,0 +1,49 @@
++# CHECK rpg083_music
++
++## 目的
++
++フィールド・町・戦闘でBGMが切り替わることを確認する。
++
++## ビルド確認
++
++- [ ] `build.sh` に `audio.c` が含まれている
++- [ ] `build.bat` に `audio.c` が含まれている
++- [ ] `Makefile` に `audio.c` が含まれている
++- [ ] `rpg083_music.gb` が出力される
++- [ ] dangerous linker warning が出ていない
++- [ ] bank overflow / spans warning が出ていない
++
++## 音楽確認
++
++- [ ] 起動後、フィールドBGMが鳴る
++- [ ] フィールド移動中にBGMが継続する
++- [ ] 町に入ると町BGMへ切り替わる
++- [ ] 町から出るとフィールドBGMへ戻る
++- [ ] ランダムエンカウント時に戦闘BGMへ切り替わる
++- [ ] 戦闘勝利後にフィールドBGMへ戻る
++- [ ] 戦闘敗北/逃走後にフィールドBGMへ戻る
++- [ ] 会話中にBGMが完全停止しない
++- [ ] 戦闘メッセージのA待ち中にBGMが完全停止しない
++- [ ] メニュー中にBGMが完全停止しない
++
++## 既存機能確認
++
++- [ ] 起動して白画面にならない
++- [ ] フィールドBGが表示される
++- [ ] プレイヤーが表示される
++- [ ] 移動できる
++- [ ] NPC会話がフリーズしない
++- [ ] ランダムエンカウントする
++- [ ] 戦闘開始エフェクトが出る
++- [ ] 魔物登場時点で味方パラメータ欄が出る
++- [ ] 魔物登場時点で敵スプライトが出る
++- [ ] 初回コマンド時に画面がズレない
++- [ ] カーソル移動で文字がちらつかない
++- [ ] 敵攻撃前後に長い白画面が出ない
++- [ ] 戦闘後にフィールドへ戻れる
++
++## 注意点
++
++- 今回のBGMは既存曲のコピーではなく、SaGa風の方向性を意識したオリジナル短ループ。
++- hUGEdriverは未導入。
++- 音量が大きい場合は `audio.c` の `NR50_REG` を調整する。
+diff -ruN /mnt/data/rpg082_dirty/main.c /mnt/data/rpg_work/rpg082_dirty/main.c
+--- /mnt/data/rpg082_dirty/main.c	2026-05-05 15:21:08.832139427 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/main.c	2026-05-05 15:32:18.095737498 +0000
+@@ -1,5 +1,6 @@
+ 
+ #include <gb/gb.h>
++#include "audio.h"
+ #include "dialogue.h"
+ #include "messages.h"
+ #include "jpfont.h"
+@@ -711,12 +712,12 @@
+ 
+ static UINT8 wait_choice_ab(void) {
+     UINT8 keys;
+-    waitpadup();
++    audio_waitpadup();
+     while (1) {
+         keys = joypad();
+-        if (keys & J_A) { waitpadup(); return 1u; }
+-        if (keys & J_B) { waitpadup(); return 0u; }
+-        wait_vbl_done();
++        if (keys & J_A) { audio_waitpadup(); return 1u; }
++        if (keys & J_B) { audio_waitpadup(); return 0u; }
++        audio_wait_vbl();
+     }
+ }
+ 
+@@ -852,7 +853,7 @@
+     SHOW_BKG;
+     move_bkg(0u, 0u);
+     DISPLAY_ON;
+-    waitpadup();
++    audio_waitpadup();
+ 
+     while (1) {
+         screen_clear();
+@@ -863,8 +864,8 @@
+         put_cursor(0u, 6u, (UINT8)(cursor == MENU_OBJECTIVE)); jp_put_bkg_text(1u, 6u, "もくてき");
+         jp_put_bkg_text(0u,14u, "A けってい B もどる");
+ 
+-        keys = waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
+-        waitpadup();
++        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
++        audio_waitpadup();
+ 
+         if (keys & J_UP) {
+             if (cursor == 0u) cursor = MENU_COUNT - 1u;
+@@ -888,18 +889,20 @@
+                     show_simple_page("もくてき", "まものを たおす", "つぎは まちと どうくつ");
+                 }
+             }
+-            waitpad(J_A | J_B | J_START);
+-            waitpadup();
++            audio_waitpad(J_A | J_B | J_START);
++            audio_waitpadup();
+         }
+     }
+ 
+     hide_battle_enemy_sprites();
+     restore_field_vram_state();
++    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
++    else audio_play_music(AUDIO_TRACK_FIELD);
+ }
+ 
+ static void wait_a_pressed(void) {
+-    waitpad(J_A);
+-    waitpadup();
++    audio_waitpad(J_A);
++    audio_waitpadup();
+ }
+ 
+ /* GRAPHICS HOTSPOT: draw_object_map()
+@@ -1294,6 +1297,7 @@
+      * actor_visible_in_current_area(); no actor array or sprite sheet is changed.
+      */
+     current_area = AREA_TOWN;
++    audio_play_music(AUDIO_TRACK_TOWN);
+     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
+     warp_player_to_tile(2u, 13u, DIR_DOWN);
+     dialogue_message("まちに\nつきました。");
+@@ -1306,6 +1310,7 @@
+      * Returning to field re-enables field-visible actors and hides town NPCs.
+      */
+     current_area = AREA_FIELD;
++    audio_play_music(AUDIO_TRACK_FIELD);
+     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
+     warp_player_to_tile(13u, 2u, DIR_RIGHT);
+     dialogue_message("フィールドに\nでました。");
+@@ -1875,8 +1880,8 @@
+     x = battle_enemy_x_for_index(enemy_index);
+ 
+     hide_one_battle_body(sprite_base);
+-    wait_vbl_done();
+-    wait_vbl_done();
++    audio_wait_vbl();
++    audio_wait_vbl();
+ 
+     if (enemy_battles[enemy_index].hp > 0u) {
+         show_one_battle_enemy_sprite(sprite_base, x, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[enemy_index]);
+@@ -1936,15 +1941,15 @@
+         battle_move_command_cursor_obj();
+     }
+ 
+-    wait_vbl_done();
++    audio_wait_vbl();
+ }
+ 
+ static void battle_show_message(const char *text) {
+     battle_set_message_dirty(text);
+     battle_update_dirty();
+-    waitpadup();
+-    waitpad(J_A);
+-    waitpadup();
++    audio_waitpadup();
++    audio_waitpad(J_A);
++    audio_waitpadup();
+     battle_set_message_dirty("");
+     battle_update_dirty();
+ }
+@@ -1975,7 +1980,7 @@
+ 
+     battle_screen_ready = 1u;
+     DISPLAY_ON;
+-    wait_vbl_done();
++    audio_wait_vbl();
+ }
+ 
+ static void update_battle_status(void) {
+@@ -2034,14 +2039,14 @@
+         BGP_REG = 0x1Bu;
+         OBP0_REG = 0x1Bu;
+         OBP1_REG = 0x1Bu;
+-        wait_vbl_done();
+-        wait_vbl_done();
++        audio_wait_vbl();
++        audio_wait_vbl();
+ 
+         BGP_REG = 0xE4u;
+         OBP0_REG = 0xE4u;
+         OBP1_REG = 0xE4u;
+-        wait_vbl_done();
+-        wait_vbl_done();
++        audio_wait_vbl();
++        audio_wait_vbl();
+     }
+ }
+ 
+@@ -2050,6 +2055,7 @@
+      * the battle intro.  The battle screen itself is then built exactly once.
+      */
+     hide_all_sprites_safe();
++    audio_play_music(AUDIO_TRACK_BATTLE);
+     battle_start_effect();
+     battle_enter_render_once();
+     battle_show_message("まものが\nあらわれた！");
+@@ -2151,6 +2157,8 @@
+         }
+     }
+     restore_field_vram_state();
++    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
++    else audio_play_music(AUDIO_TRACK_FIELD);
+ }
+ 
+ static void player_attack(void) {
+@@ -2270,24 +2278,24 @@
+         if (menu_index >= 2u) menu_index = (UINT8)(menu_index - 2u);
+         else menu_index = (UINT8)(menu_index + 2u);
+         update_battle_menu_cursor(old_menu_index, menu_index);
+-        waitpadup();
++        audio_waitpadup();
+     } else if (keys & J_DOWN) {
+         if (menu_index < 2u) menu_index = (UINT8)(menu_index + 2u);
+         else menu_index = (UINT8)(menu_index - 2u);
+         update_battle_menu_cursor(old_menu_index, menu_index);
+-        waitpadup();
++        audio_waitpadup();
+     } else if (keys & J_LEFT) {
+         if (menu_index & 1u) menu_index--;
+         else menu_index++;
+         update_battle_menu_cursor(old_menu_index, menu_index);
+-        waitpadup();
++        audio_waitpadup();
+     } else if (keys & J_RIGHT) {
+         if (menu_index & 1u) menu_index--;
+         else menu_index++;
+         update_battle_menu_cursor(old_menu_index, menu_index);
+-        waitpadup();
++        audio_waitpadup();
+     } else if (keys & J_A) {
+-        waitpadup();
++        audio_waitpadup();
+         switch (menu_index) {
+             case CMD_ATTACK: player_attack(); break;
+             case CMD_SKILL:  player_skill(); break;
+@@ -2348,9 +2356,11 @@
+     OBP0_REG = 0xE4u;
+     OBP1_REG = 0xE4u;
+ 
++    audio_init();
+     dialogue_init();
+     init_game();
+     load_map_mode();
++    audio_play_music(AUDIO_TRACK_FIELD);
+ 
+     while (1) {
+         switch (game_mode) {
+@@ -2394,6 +2404,6 @@
+                 game_mode = MODE_MAP;
+                 break;
+         }
+-        wait_vbl_done();
++        audio_wait_vbl();
+     }
+ }
+diff -ruN /mnt/data/rpg082_dirty/precheck_output.log /mnt/data/rpg_work/rpg082_dirty/precheck_output.log
+--- /mnt/data/rpg082_dirty/precheck_output.log	2026-05-05 15:23:38.717273215 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/precheck_output.log	2026-05-05 15:33:51.319099138 +0000
+@@ -1,5 +1,5 @@
+ ===== prebank_check.py =====
+-main.c bytes: 79151
++main.c bytes: 79704
+ [OK] no direct set_bkg_data() call found in main.c code
+ [OK] no direct set_sprite_data() call found in main.c code
+ [OK] no static const char[] message definitions found in main.c code
+diff -ruN /mnt/data/rpg082_dirty/rpg083_music.diff /mnt/data/rpg_work/rpg082_dirty/rpg083_music.diff
+--- /mnt/data/rpg082_dirty/rpg083_music.diff	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/rpg_work/rpg082_dirty/rpg083_music.diff	2026-05-05 15:35:45.897123910 +0000
+@@ -0,0 +1,700 @@
++diff -ruN /mnt/data/rpg082_dirty/CHECK_rpg083_music.md /mnt/data/rpg_work/rpg082_dirty/CHECK_rpg083_music.md
++--- /mnt/data/rpg082_dirty/CHECK_rpg083_music.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/CHECK_rpg083_music.md	2026-05-05 15:33:31.608691344 +0000
++@@ -0,0 +1,49 @@
+++# CHECK rpg083_music
+++
+++## 目的
+++
+++フィールド・町・戦闘でBGMが切り替わることを確認する。
+++
+++## ビルド確認
+++
+++- [ ] `build.sh` に `audio.c` が含まれている
+++- [ ] `build.bat` に `audio.c` が含まれている
+++- [ ] `Makefile` に `audio.c` が含まれている
+++- [ ] `rpg083_music.gb` が出力される
+++- [ ] dangerous linker warning が出ていない
+++- [ ] bank overflow / spans warning が出ていない
+++
+++## 音楽確認
+++
+++- [ ] 起動後、フィールドBGMが鳴る
+++- [ ] フィールド移動中にBGMが継続する
+++- [ ] 町に入ると町BGMへ切り替わる
+++- [ ] 町から出るとフィールドBGMへ戻る
+++- [ ] ランダムエンカウント時に戦闘BGMへ切り替わる
+++- [ ] 戦闘勝利後にフィールドBGMへ戻る
+++- [ ] 戦闘敗北/逃走後にフィールドBGMへ戻る
+++- [ ] 会話中にBGMが完全停止しない
+++- [ ] 戦闘メッセージのA待ち中にBGMが完全停止しない
+++- [ ] メニュー中にBGMが完全停止しない
+++
+++## 既存機能確認
+++
+++- [ ] 起動して白画面にならない
+++- [ ] フィールドBGが表示される
+++- [ ] プレイヤーが表示される
+++- [ ] 移動できる
+++- [ ] NPC会話がフリーズしない
+++- [ ] ランダムエンカウントする
+++- [ ] 戦闘開始エフェクトが出る
+++- [ ] 魔物登場時点で味方パラメータ欄が出る
+++- [ ] 魔物登場時点で敵スプライトが出る
+++- [ ] 初回コマンド時に画面がズレない
+++- [ ] カーソル移動で文字がちらつかない
+++- [ ] 敵攻撃前後に長い白画面が出ない
+++- [ ] 戦闘後にフィールドへ戻れる
+++
+++## 注意点
+++
+++- 今回のBGMは既存曲のコピーではなく、SaGa風の方向性を意識したオリジナル短ループ。
+++- hUGEdriverは未導入。
+++- 音量が大きい場合は `audio.c` の `NR50_REG` を調整する。
++diff -ruN /mnt/data/rpg082_dirty/Makefile /mnt/data/rpg_work/rpg082_dirty/Makefile
++--- /mnt/data/rpg082_dirty/Makefile	2026-05-05 15:22:07.226377543 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/Makefile	2026-05-05 15:32:39.201578322 +0000
++@@ -1,5 +1,5 @@
++-OUT = rpg082_dirty.gb
++-SRCS = main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+++OUT = rpg083_music.gb
+++SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ GBDK_PATH ?= /opt/gbdk/bin
++ LCC = $(GBDK_PATH)/lcc
++ ROMUSAGE ?= romusage
++diff -ruN /mnt/data/rpg082_dirty/README.md /mnt/data/rpg_work/rpg082_dirty/README.md
++--- /mnt/data/rpg082_dirty/README.md	2026-05-05 15:23:21.324499099 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/README.md	2026-05-05 15:33:31.522569026 +0000
++@@ -563,3 +563,42 @@
++ - フィールドプレイヤーが中央などに残っていないか。
++ - 敵攻撃前後で白画面が長く挟まらないか。
++ - カーソル移動時に文字全体が再描画ちらつきしないか。
+++
+++## rpg083_music
+++
+++フィールド・町・戦闘のBGMを、軽量なGB音源レジスタ直叩き方式で追加しました。
+++
+++目的は、SaGa風の「場面ごとに空気が変わるRPG感」を入れることです。既存曲のコピーではなく、以下の方向性のオリジナル短ループです。
+++
+++- フィールド: 冒険感のある短い行進風ループ
+++- 町: ゆっくりした落ち着いたループ
+++- 戦闘: テンポが速い緊張感のあるループ
+++
+++追加ファイル:
+++
+++- `audio.h`
+++- `audio.c`
+++
+++変更点:
+++
+++- `main.c` で `audio_init()` / `audio_play_music()` / `audio_update()` を呼び出すようにしました。
+++- 起動後はフィールドBGMを再生します。
+++- 町に入ると町BGMへ切り替えます。
+++- 町から出るとフィールドBGMへ戻します。
+++- 戦闘突入時に戦闘BGMへ切り替えます。
+++- 戦闘終了後は現在エリアに応じてフィールド/町BGMへ戻します。
+++- 会話・メニュー・戦闘メッセージ待ち中もBGMが止まりにくいよう、主要な `waitpad()` / `wait_vbl_done()` 待ちを `audio_waitpad()` / `audio_wait_vbl()` 経由へ変更しました。
+++
+++安全方針:
+++
+++- 新規BGタイルは追加していません。
+++- `MAP_GFX_TILE_COUNT` は変更していません。
+++- 新規actor/NPC/object kind は追加していません。
+++- `jpfont.c` / `misakiUTF16.c` のBANKED化はしていません。
+++- hUGEdriverなどの外部音楽ドライバはまだ追加していません。
+++
+++注意:
+++
+++- 今回は白画面リスクを避けるため、まずは小さい手作りBGMエンジンです。
+++- 本格的な作曲データ化を行う場合は、次段階で hUGEtracker / hUGEdriver 方式を検討します。
+++- 実機/VBAでは、音量が大きい場合があります。その場合は `audio.c` の `NR50_REG = 0x66u;` を `0x44u` などに下げて調整してください。
++diff -ruN /mnt/data/rpg082_dirty/audio.c /mnt/data/rpg_work/rpg082_dirty/audio.c
++--- /mnt/data/rpg082_dirty/audio.c	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/audio.c	2026-05-05 15:29:20.813923499 +0000
++@@ -0,0 +1,201 @@
+++#include "audio.h"
+++
+++/*
+++ * rpg083_music:
+++ * Tiny register-based DMG music driver.
+++ *
+++ * This is intentionally much smaller than adding a tracker driver while the
+++ * battle renderer is still being stabilized.  It uses square channel 1 for the
+++ * melody, square channel 2 for a soft bass/drone, and a tiny noise hit for the
+++ * battle loop.  The melodies are original and only aim for an old handheld RPG
+++ * mood: field = march, town = calm, battle = urgent.
+++ */
+++
+++typedef struct MusicStep {
+++    UINT16 melody;
+++    UINT16 bass;
+++    UINT8 frames;
+++} MusicStep;
+++
+++#define N_REST 0u
+++#define N_C3 1046u
+++#define N_D3 1155u
+++#define N_E3 1253u
+++#define N_F3 1297u
+++#define N_G3 1379u
+++#define N_A3 1452u
+++#define N_B3 1517u
+++#define N_C4 1546u
+++#define N_D4 1602u
+++#define N_E4 1650u
+++#define N_F4 1673u
+++#define N_G4 1714u
+++#define N_A4 1750u
+++#define N_B4 1781u
+++#define N_C5 1798u
+++#define N_D5 1824u
+++#define N_E5 1847u
+++#define N_G5 1884u
+++
+++static const MusicStep music_field[] = {
+++    {N_C4, N_C3, 12u}, {N_E4, N_C3, 12u}, {N_G4, N_G3, 12u}, {N_C5, N_G3, 12u},
+++    {N_B4, N_G3, 12u}, {N_G4, N_C3, 12u}, {N_E4, N_C3, 12u}, {N_G4, N_G3, 12u},
+++    {N_A4, N_F3, 12u}, {N_C5, N_F3, 12u}, {N_A4, N_A3, 12u}, {N_G4, N_G3, 12u},
+++    {N_E4, N_C3, 12u}, {N_D4, N_G3, 12u}, {N_E4, N_C3, 12u}, {N_REST, N_C3, 12u}
+++};
+++
+++static const MusicStep music_town[] = {
+++    {N_E4, N_C3, 24u}, {N_G4, N_C3, 24u}, {N_A4, N_F3, 24u}, {N_G4, N_F3, 24u},
+++    {N_E4, N_C3, 24u}, {N_D4, N_G3, 24u}, {N_C4, N_C3, 36u}, {N_REST, N_C3, 12u},
+++    {N_D4, N_G3, 24u}, {N_E4, N_C3, 24u}, {N_G4, N_E3, 24u}, {N_E4, N_C3, 24u},
+++    {N_D4, N_G3, 24u}, {N_C4, N_C3, 48u}
+++};
+++
+++static const MusicStep music_battle[] = {
+++    {N_C4, N_C3, 6u}, {N_C4, N_G3, 6u}, {N_G4, N_C3, 6u}, {N_C5, N_G3, 6u},
+++    {N_D5, N_D3, 6u}, {N_C5, N_G3, 6u}, {N_G4, N_C3, 6u}, {N_E4, N_G3, 6u},
+++    {N_F4, N_F3, 6u}, {N_A4, N_C3, 6u}, {N_C5, N_F3, 6u}, {N_A4, N_C3, 6u},
+++    {N_G4, N_G3, 6u}, {N_E4, N_C3, 6u}, {N_D4, N_G3, 6u}, {N_C4, N_C3, 6u}
+++};
+++
+++static UINT8 audio_current_track = AUDIO_TRACK_NONE;
+++static UINT8 audio_step_index = 0u;
+++static UINT8 audio_step_frames = 0u;
+++static UINT8 audio_started = 0u;
+++static UINT8 audio_battle_noise_flip = 0u;
+++
+++static UINT8 audio_track_length(UINT8 track) {
+++    if (track == AUDIO_TRACK_FIELD) return (UINT8)(sizeof(music_field) / sizeof(music_field[0]));
+++    if (track == AUDIO_TRACK_TOWN) return (UINT8)(sizeof(music_town) / sizeof(music_town[0]));
+++    if (track == AUDIO_TRACK_BATTLE) return (UINT8)(sizeof(music_battle) / sizeof(music_battle[0]));
+++    return 0u;
+++}
+++
+++static const MusicStep *audio_track_step(UINT8 track, UINT8 index) {
+++    if (track == AUDIO_TRACK_FIELD) return &music_field[index];
+++    if (track == AUDIO_TRACK_TOWN) return &music_town[index];
+++    return &music_battle[index];
+++}
+++
+++static void audio_trigger_pulse1(UINT16 note) {
+++    if (note == N_REST) {
+++        NR12_REG = 0x00u;
+++        return;
+++    }
+++
+++    NR10_REG = 0x00u;
+++    NR11_REG = 0x80u;
+++    NR12_REG = 0x74u;
+++    NR13_REG = (UINT8)(note & 0xFFu);
+++    NR14_REG = (UINT8)(0x80u | ((note >> 8) & 0x07u));
+++}
+++
+++static void audio_trigger_pulse2(UINT16 note) {
+++    if (note == N_REST) {
+++        NR22_REG = 0x00u;
+++        return;
+++    }
+++
+++    NR21_REG = 0x40u;
+++    NR22_REG = 0x42u;
+++    NR23_REG = (UINT8)(note & 0xFFu);
+++    NR24_REG = (UINT8)(0x80u | ((note >> 8) & 0x07u));
+++}
+++
+++static void audio_trigger_noise_tick(void) {
+++    NR41_REG = 0x00u;
+++    NR42_REG = 0x31u;
+++    NR43_REG = 0x51u;
+++    NR44_REG = 0x80u;
+++}
+++
+++static void audio_trigger_current_step(void) {
+++    UINT8 len;
+++    const MusicStep *step;
+++
+++    len = audio_track_length(audio_current_track);
+++    if (len == 0u) return;
+++    if (audio_step_index >= len) audio_step_index = 0u;
+++
+++    step = audio_track_step(audio_current_track, audio_step_index);
+++    audio_trigger_pulse1(step->melody);
+++    audio_trigger_pulse2(step->bass);
+++    audio_step_frames = step->frames;
+++
+++    if (audio_current_track == AUDIO_TRACK_BATTLE) {
+++        audio_battle_noise_flip++;
+++        if ((audio_battle_noise_flip & 0x03u) == 0u) audio_trigger_noise_tick();
+++    }
+++
+++    audio_step_index++;
+++    if (audio_step_index >= len) audio_step_index = 0u;
+++}
+++
+++void audio_init(void) {
+++    /* Enable master sound, route all channels to both speakers, set modest volume. */
+++    NR52_REG = 0x80u;
+++    NR51_REG = 0xFFu;
+++    NR50_REG = 0x66u;
+++
+++    audio_current_track = AUDIO_TRACK_NONE;
+++    audio_step_index = 0u;
+++    audio_step_frames = 0u;
+++    audio_started = 1u;
+++}
+++
+++void audio_stop_music(void) {
+++    audio_current_track = AUDIO_TRACK_NONE;
+++    audio_step_index = 0u;
+++    audio_step_frames = 0u;
+++    NR12_REG = 0x00u;
+++    NR22_REG = 0x00u;
+++    NR42_REG = 0x00u;
+++}
+++
+++void audio_play_music(UINT8 track) {
+++    if (!audio_started) audio_init();
+++    if (audio_current_track == track) return;
+++
+++    audio_current_track = track;
+++    audio_step_index = 0u;
+++    audio_step_frames = 0u;
+++    audio_battle_noise_flip = 0u;
+++    audio_trigger_current_step();
+++}
+++
+++void audio_update(void) {
+++    if (audio_current_track == AUDIO_TRACK_NONE) return;
+++
+++    if (audio_step_frames > 0u) {
+++        audio_step_frames--;
+++    }
+++    if (audio_step_frames == 0u) {
+++        audio_trigger_current_step();
+++    }
+++}
+++
+++void audio_wait_vbl(void) {
+++    audio_update();
+++    wait_vbl_done();
+++}
+++
+++void audio_wait_frames(UINT8 frames) {
+++    while (frames > 0u) {
+++        audio_wait_vbl();
+++        frames--;
+++    }
+++}
+++
+++void audio_waitpadup(void) {
+++    while (joypad()) audio_wait_vbl();
+++}
+++
+++UINT8 audio_waitpad(UINT8 mask) {
+++    UINT8 keys;
+++
+++    while (1) {
+++        keys = joypad();
+++        if (keys & mask) return keys;
+++        audio_wait_vbl();
+++    }
+++}
++diff -ruN /mnt/data/rpg082_dirty/audio.h /mnt/data/rpg_work/rpg082_dirty/audio.h
++--- /mnt/data/rpg082_dirty/audio.h	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/audio.h	2026-05-05 15:29:20.720974840 +0000
++@@ -0,0 +1,20 @@
+++#ifndef AUDIO_H
+++#define AUDIO_H
+++
+++#include <gb/gb.h>
+++
+++#define AUDIO_TRACK_NONE   0u
+++#define AUDIO_TRACK_FIELD  1u
+++#define AUDIO_TRACK_TOWN   2u
+++#define AUDIO_TRACK_BATTLE 3u
+++
+++void audio_init(void);
+++void audio_play_music(UINT8 track);
+++void audio_stop_music(void);
+++void audio_update(void);
+++void audio_wait_vbl(void);
+++void audio_wait_frames(UINT8 frames);
+++void audio_waitpadup(void);
+++UINT8 audio_waitpad(UINT8 mask);
+++
+++#endif
++diff -ruN /mnt/data/rpg082_dirty/build.bat /mnt/data/rpg_work/rpg082_dirty/build.bat
++--- /mnt/data/rpg082_dirty/build.bat	2026-05-05 15:22:07.226855776 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/build.bat	2026-05-05 15:32:39.200835416 +0000
++@@ -1,9 +1,9 @@
++ @echo off
++ setlocal
++ 
++-set "PROJECT=rpg082_dirty"
+++set "PROJECT=rpg083_music"
++ set "OUT=%PROJECT%.gb"
++-set "SRC=main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+++set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ set "ROM_BANKS=8"
++ set "CART_TYPE=0x19"
++ set "LOG=build.log"
++diff -ruN /mnt/data/rpg082_dirty/build.log /mnt/data/rpg_work/rpg082_dirty/build.log
++--- /mnt/data/rpg082_dirty/build.log	2026-05-05 15:23:38.972953593 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/build.log	2026-05-05 15:33:53.702687820 +0000
++@@ -1,8 +1,8 @@
++-Building rpg082_dirty.gb ...
++-Sources: main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+++Building rpg083_music.gb ...
+++Sources: main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ 
++ ===== prebank_check.py =====
++-main.c bytes: 79151
+++main.c bytes: 79704
++ [OK] no direct set_bkg_data() call found in main.c code
++ [OK] no direct set_sprite_data() call found in main.c code
++ [OK] no static const char[] message definitions found in main.c code
++@@ -22,7 +22,7 @@
++ [INFO] exact bank overflow cannot be known before compile/link.
++ [INFO] final judgment must use compiler/linker output plus romusage.
++ 
++-Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg082_dirty.gb main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+++Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg083_music.gb main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ 
++ ./build.sh: 32: lcc: not found
++ 
++diff -ruN /mnt/data/rpg082_dirty/build.sh /mnt/data/rpg_work/rpg082_dirty/build.sh
++--- /mnt/data/rpg082_dirty/build.sh	2026-05-05 15:22:07.225915255 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/build.sh	2026-05-05 15:32:39.199893213 +0000
++@@ -3,9 +3,9 @@
++ 
++ export PATH="/opt/gbdk/bin:$PATH"
++ 
++-OUT="rpg082_dirty.gb"
+++OUT="rpg083_music.gb"
++ MAP="${OUT%.gb}.map"
++-SRC="main.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+++SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ LOG="build.log"
++ PRECHECK_LOG="precheck_output.log"
++ COMPILE_LOG="compile_output.log"
++diff -ruN /mnt/data/rpg082_dirty/dialogue.c /mnt/data/rpg_work/rpg082_dirty/dialogue.c
++--- /mnt/data/rpg082_dirty/dialogue.c	2026-05-05 13:40:01.000000000 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/dialogue.c	2026-05-05 15:30:30.614264579 +0000
++@@ -1,13 +1,14 @@
++ #include <gb/gb.h>
++ #include "dialogue.h"
++ #include "jpfont.h"
+++#include "audio.h"
++ 
++ static UINT8 dialogue_active = 0u;
++ 
++ static void dialogue_wait_a_newpress(void) {
++-    waitpadup();
++-    waitpad(J_A);
++-    waitpadup();
+++    audio_waitpadup();
+++    audio_waitpad(J_A);
+++    audio_waitpadup();
++ }
++ 
++ static UINT8 dialogue_render_page(const char *text, const char **next_ptr) {
++@@ -38,7 +39,7 @@
++         jp_put_glyph_utf8(col, row, p, &consumed);
++         p += (consumed == 0u) ? 1 : consumed;
++         col++;
++-        jp_wait_vbl(1u);
+++        audio_wait_vbl();
++     }
++ 
++     if (*p == '\0') done = 1u;
++diff -ruN /mnt/data/rpg082_dirty/docs/checks/CHECK_083_MUSIC.md /mnt/data/rpg_work/rpg082_dirty/docs/checks/CHECK_083_MUSIC.md
++--- /mnt/data/rpg082_dirty/docs/checks/CHECK_083_MUSIC.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/docs/checks/CHECK_083_MUSIC.md	2026-05-05 15:33:31.718289892 +0000
++@@ -0,0 +1,49 @@
+++# CHECK rpg083_music
+++
+++## 目的
+++
+++フィールド・町・戦闘でBGMが切り替わることを確認する。
+++
+++## ビルド確認
+++
+++- [ ] `build.sh` に `audio.c` が含まれている
+++- [ ] `build.bat` に `audio.c` が含まれている
+++- [ ] `Makefile` に `audio.c` が含まれている
+++- [ ] `rpg083_music.gb` が出力される
+++- [ ] dangerous linker warning が出ていない
+++- [ ] bank overflow / spans warning が出ていない
+++
+++## 音楽確認
+++
+++- [ ] 起動後、フィールドBGMが鳴る
+++- [ ] フィールド移動中にBGMが継続する
+++- [ ] 町に入ると町BGMへ切り替わる
+++- [ ] 町から出るとフィールドBGMへ戻る
+++- [ ] ランダムエンカウント時に戦闘BGMへ切り替わる
+++- [ ] 戦闘勝利後にフィールドBGMへ戻る
+++- [ ] 戦闘敗北/逃走後にフィールドBGMへ戻る
+++- [ ] 会話中にBGMが完全停止しない
+++- [ ] 戦闘メッセージのA待ち中にBGMが完全停止しない
+++- [ ] メニュー中にBGMが完全停止しない
+++
+++## 既存機能確認
+++
+++- [ ] 起動して白画面にならない
+++- [ ] フィールドBGが表示される
+++- [ ] プレイヤーが表示される
+++- [ ] 移動できる
+++- [ ] NPC会話がフリーズしない
+++- [ ] ランダムエンカウントする
+++- [ ] 戦闘開始エフェクトが出る
+++- [ ] 魔物登場時点で味方パラメータ欄が出る
+++- [ ] 魔物登場時点で敵スプライトが出る
+++- [ ] 初回コマンド時に画面がズレない
+++- [ ] カーソル移動で文字がちらつかない
+++- [ ] 敵攻撃前後に長い白画面が出ない
+++- [ ] 戦闘後にフィールドへ戻れる
+++
+++## 注意点
+++
+++- 今回のBGMは既存曲のコピーではなく、SaGa風の方向性を意識したオリジナル短ループ。
+++- hUGEdriverは未導入。
+++- 音量が大きい場合は `audio.c` の `NR50_REG` を調整する。
++diff -ruN /mnt/data/rpg082_dirty/main.c /mnt/data/rpg_work/rpg082_dirty/main.c
++--- /mnt/data/rpg082_dirty/main.c	2026-05-05 15:21:08.832139427 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/main.c	2026-05-05 15:32:18.095737498 +0000
++@@ -1,5 +1,6 @@
++ 
++ #include <gb/gb.h>
+++#include "audio.h"
++ #include "dialogue.h"
++ #include "messages.h"
++ #include "jpfont.h"
++@@ -711,12 +712,12 @@
++ 
++ static UINT8 wait_choice_ab(void) {
++     UINT8 keys;
++-    waitpadup();
+++    audio_waitpadup();
++     while (1) {
++         keys = joypad();
++-        if (keys & J_A) { waitpadup(); return 1u; }
++-        if (keys & J_B) { waitpadup(); return 0u; }
++-        wait_vbl_done();
+++        if (keys & J_A) { audio_waitpadup(); return 1u; }
+++        if (keys & J_B) { audio_waitpadup(); return 0u; }
+++        audio_wait_vbl();
++     }
++ }
++ 
++@@ -852,7 +853,7 @@
++     SHOW_BKG;
++     move_bkg(0u, 0u);
++     DISPLAY_ON;
++-    waitpadup();
+++    audio_waitpadup();
++ 
++     while (1) {
++         screen_clear();
++@@ -863,8 +864,8 @@
++         put_cursor(0u, 6u, (UINT8)(cursor == MENU_OBJECTIVE)); jp_put_bkg_text(1u, 6u, "もくてき");
++         jp_put_bkg_text(0u,14u, "A けってい B もどる");
++ 
++-        keys = waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
++-        waitpadup();
+++        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
+++        audio_waitpadup();
++ 
++         if (keys & J_UP) {
++             if (cursor == 0u) cursor = MENU_COUNT - 1u;
++@@ -888,18 +889,20 @@
++                     show_simple_page("もくてき", "まものを たおす", "つぎは まちと どうくつ");
++                 }
++             }
++-            waitpad(J_A | J_B | J_START);
++-            waitpadup();
+++            audio_waitpad(J_A | J_B | J_START);
+++            audio_waitpadup();
++         }
++     }
++ 
++     hide_battle_enemy_sprites();
++     restore_field_vram_state();
+++    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
+++    else audio_play_music(AUDIO_TRACK_FIELD);
++ }
++ 
++ static void wait_a_pressed(void) {
++-    waitpad(J_A);
++-    waitpadup();
+++    audio_waitpad(J_A);
+++    audio_waitpadup();
++ }
++ 
++ /* GRAPHICS HOTSPOT: draw_object_map()
++@@ -1294,6 +1297,7 @@
++      * actor_visible_in_current_area(); no actor array or sprite sheet is changed.
++      */
++     current_area = AREA_TOWN;
+++    audio_play_music(AUDIO_TRACK_TOWN);
++     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
++     warp_player_to_tile(2u, 13u, DIR_DOWN);
++     dialogue_message("まちに\nつきました。");
++@@ -1306,6 +1310,7 @@
++      * Returning to field re-enables field-visible actors and hides town NPCs.
++      */
++     current_area = AREA_FIELD;
+++    audio_play_music(AUDIO_TRACK_FIELD);
++     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
++     warp_player_to_tile(13u, 2u, DIR_RIGHT);
++     dialogue_message("フィールドに\nでました。");
++@@ -1875,8 +1880,8 @@
++     x = battle_enemy_x_for_index(enemy_index);
++ 
++     hide_one_battle_body(sprite_base);
++-    wait_vbl_done();
++-    wait_vbl_done();
+++    audio_wait_vbl();
+++    audio_wait_vbl();
++ 
++     if (enemy_battles[enemy_index].hp > 0u) {
++         show_one_battle_enemy_sprite(sprite_base, x, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[enemy_index]);
++@@ -1936,15 +1941,15 @@
++         battle_move_command_cursor_obj();
++     }
++ 
++-    wait_vbl_done();
+++    audio_wait_vbl();
++ }
++ 
++ static void battle_show_message(const char *text) {
++     battle_set_message_dirty(text);
++     battle_update_dirty();
++-    waitpadup();
++-    waitpad(J_A);
++-    waitpadup();
+++    audio_waitpadup();
+++    audio_waitpad(J_A);
+++    audio_waitpadup();
++     battle_set_message_dirty("");
++     battle_update_dirty();
++ }
++@@ -1975,7 +1980,7 @@
++ 
++     battle_screen_ready = 1u;
++     DISPLAY_ON;
++-    wait_vbl_done();
+++    audio_wait_vbl();
++ }
++ 
++ static void update_battle_status(void) {
++@@ -2034,14 +2039,14 @@
++         BGP_REG = 0x1Bu;
++         OBP0_REG = 0x1Bu;
++         OBP1_REG = 0x1Bu;
++-        wait_vbl_done();
++-        wait_vbl_done();
+++        audio_wait_vbl();
+++        audio_wait_vbl();
++ 
++         BGP_REG = 0xE4u;
++         OBP0_REG = 0xE4u;
++         OBP1_REG = 0xE4u;
++-        wait_vbl_done();
++-        wait_vbl_done();
+++        audio_wait_vbl();
+++        audio_wait_vbl();
++     }
++ }
++ 
++@@ -2050,6 +2055,7 @@
++      * the battle intro.  The battle screen itself is then built exactly once.
++      */
++     hide_all_sprites_safe();
+++    audio_play_music(AUDIO_TRACK_BATTLE);
++     battle_start_effect();
++     battle_enter_render_once();
++     battle_show_message("まものが\nあらわれた！");
++@@ -2151,6 +2157,8 @@
++         }
++     }
++     restore_field_vram_state();
+++    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
+++    else audio_play_music(AUDIO_TRACK_FIELD);
++ }
++ 
++ static void player_attack(void) {
++@@ -2270,24 +2278,24 @@
++         if (menu_index >= 2u) menu_index = (UINT8)(menu_index - 2u);
++         else menu_index = (UINT8)(menu_index + 2u);
++         update_battle_menu_cursor(old_menu_index, menu_index);
++-        waitpadup();
+++        audio_waitpadup();
++     } else if (keys & J_DOWN) {
++         if (menu_index < 2u) menu_index = (UINT8)(menu_index + 2u);
++         else menu_index = (UINT8)(menu_index - 2u);
++         update_battle_menu_cursor(old_menu_index, menu_index);
++-        waitpadup();
+++        audio_waitpadup();
++     } else if (keys & J_LEFT) {
++         if (menu_index & 1u) menu_index--;
++         else menu_index++;
++         update_battle_menu_cursor(old_menu_index, menu_index);
++-        waitpadup();
+++        audio_waitpadup();
++     } else if (keys & J_RIGHT) {
++         if (menu_index & 1u) menu_index--;
++         else menu_index++;
++         update_battle_menu_cursor(old_menu_index, menu_index);
++-        waitpadup();
+++        audio_waitpadup();
++     } else if (keys & J_A) {
++-        waitpadup();
+++        audio_waitpadup();
++         switch (menu_index) {
++             case CMD_ATTACK: player_attack(); break;
++             case CMD_SKILL:  player_skill(); break;
++@@ -2348,9 +2356,11 @@
++     OBP0_REG = 0xE4u;
++     OBP1_REG = 0xE4u;
++ 
+++    audio_init();
++     dialogue_init();
++     init_game();
++     load_map_mode();
+++    audio_play_music(AUDIO_TRACK_FIELD);
++ 
++     while (1) {
++         switch (game_mode) {
++@@ -2394,6 +2404,6 @@
++                 game_mode = MODE_MAP;
++                 break;
++         }
++-        wait_vbl_done();
+++        audio_wait_vbl();
++     }
++ }
++diff -ruN /mnt/data/rpg082_dirty/precheck_output.log /mnt/data/rpg_work/rpg082_dirty/precheck_output.log
++--- /mnt/data/rpg082_dirty/precheck_output.log	2026-05-05 15:23:38.717273215 +0000
+++++ /mnt/data/rpg_work/rpg082_dirty/precheck_output.log	2026-05-05 15:33:51.319099138 +0000
++@@ -1,5 +1,5 @@
++ ===== prebank_check.py =====
++-main.c bytes: 79151
+++main.c bytes: 79704
++ [OK] no direct set_bkg_data() call found in main.c code
++ [OK] no direct set_sprite_data() call found in main.c code
++ [OK] no static const char[] message definitions found in main.c code

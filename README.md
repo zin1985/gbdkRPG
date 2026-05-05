@@ -1,3 +1,42 @@
+# rpg082_dirty: 戦闘 dirty update 化
+
+`rpg082_dirty` は、戦闘中の白画面化・カーソルちらつき・再描画遅延を避けるため、戦闘画面の全再描画を廃止する方向へ寄せた版です。
+
+## 目的
+
+- 戦闘突入時だけ `battle_enter_render_once()` で BG / OAM / 固定枠 / 敵 / 味方欄を一度だけ構築する。
+- 以後は dirty flag で、HP/MP数値、OBJカーソル、下部メッセージ欄、敵OAM表示だけを差分更新する。
+- コマンド選択、カーソル移動、敵攻撃、味方攻撃、メッセージ送りで戦闘画面全体を作り直さない。
+
+## 主な変更
+
+- `battle_dirty_flags` / `battle_update_dirty()` を追加。
+- `battle_enter_render_once()` を追加し、戦闘突入時の一回描画に集約。
+- `battle_reset_screen_for_command()` / `battle_prepare_intro_screen()` / `battle_redraw_after_dialogue()` の戦闘中再描画経路を廃止。
+- コマンドカーソルをBG文字 `>` から OBJ 24 の8x8スプライトへ変更。
+- `draw_battle_menu()` は静的BG文字だけを描画する方式へ変更。
+- 下部3行をメッセージ専用の差分更新領域として確保。
+- 敵名欄を rows 11-14 に縮め、rows 15-17 をメッセージ領域として分離。
+- 敵攻撃・味方攻撃・回復・逃走・勝利/敗北メッセージを、Windowではなく戦闘BG下部メッセージ欄に表示。
+- 敵ダメージ時は対象敵スプライトだけを短く非表示にして点滅風に見せる。
+- OBJカーソル用の `battle_cursor_tiles` を `sprites.c` / `sprites.h` に追加。
+
+## 維持した制約
+
+- 新規BGタイル追加なし。
+- `MAP_GFX_TILE_COUNT` 変更なし。
+- 新規object kind追加なし。
+- 新規actor/NPC追加なし。
+- `jpfont.c` / `misakiUTF16.c` のBANKED化なし。
+- `main.c` から直接 `set_bkg_data()` / `set_sprite_data()` しない。
+
+## ビルド注意
+
+`build.sh` / `build.bat` / `Makefile` の出力名は `rpg082_dirty.gb` に変更しています。
+この作業環境では GBDK `lcc` が存在しないため、実コンパイルは未確認です。`prebank_check.py` はOKです。
+
+---
+
 
 ## rpg079_party: battle redraw hotfix
 
@@ -506,7 +545,7 @@ No new BG tiles, map actors, object kinds, or sprite sheets were added.
 - 戦闘パーティ表示の顔アイコンをユーザー添付画像へ差し替えました。
 
 
-## rpg081_uifix
+## rpg082_dirty
 
 戦闘UIの残像・ズレ対策版です。
 
@@ -524,3 +563,42 @@ No new BG tiles, map actors, object kinds, or sprite sheets were added.
 - フィールドプレイヤーが中央などに残っていないか。
 - 敵攻撃前後で白画面が長く挟まらないか。
 - カーソル移動時に文字全体が再描画ちらつきしないか。
+
+## rpg083_music
+
+フィールド・町・戦闘のBGMを、軽量なGB音源レジスタ直叩き方式で追加しました。
+
+目的は、SaGa風の「場面ごとに空気が変わるRPG感」を入れることです。既存曲のコピーではなく、以下の方向性のオリジナル短ループです。
+
+- フィールド: 冒険感のある短い行進風ループ
+- 町: ゆっくりした落ち着いたループ
+- 戦闘: テンポが速い緊張感のあるループ
+
+追加ファイル:
+
+- `audio.h`
+- `audio.c`
+
+変更点:
+
+- `main.c` で `audio_init()` / `audio_play_music()` / `audio_update()` を呼び出すようにしました。
+- 起動後はフィールドBGMを再生します。
+- 町に入ると町BGMへ切り替えます。
+- 町から出るとフィールドBGMへ戻します。
+- 戦闘突入時に戦闘BGMへ切り替えます。
+- 戦闘終了後は現在エリアに応じてフィールド/町BGMへ戻します。
+- 会話・メニュー・戦闘メッセージ待ち中もBGMが止まりにくいよう、主要な `waitpad()` / `wait_vbl_done()` 待ちを `audio_waitpad()` / `audio_wait_vbl()` 経由へ変更しました。
+
+安全方針:
+
+- 新規BGタイルは追加していません。
+- `MAP_GFX_TILE_COUNT` は変更していません。
+- 新規actor/NPC/object kind は追加していません。
+- `jpfont.c` / `misakiUTF16.c` のBANKED化はしていません。
+- hUGEdriverなどの外部音楽ドライバはまだ追加していません。
+
+注意:
+
+- 今回は白画面リスクを避けるため、まずは小さい手作りBGMエンジンです。
+- 本格的な作曲データ化を行う場合は、次段階で hUGEtracker / hUGEdriver 方式を検討します。
+- 実機/VBAでは、音量が大きい場合があります。その場合は `audio.c` の `NR50_REG = 0x66u;` を `0x44u` などに下げて調整してください。
