@@ -1,13 +1,14 @@
 #include <gb/gb.h>
 #include "dialogue.h"
 #include "jpfont.h"
+#include "audio.h"
 
 static UINT8 dialogue_active = 0u;
 
 static void dialogue_wait_a_newpress(void) {
-    waitpadup();
-    waitpad(J_A);
-    waitpadup();
+    audio_waitpadup();
+    audio_waitpad(J_A);
+    audio_waitpadup();
 }
 
 static UINT8 dialogue_render_page(const char *text, const char **next_ptr) {
@@ -38,7 +39,7 @@ static UINT8 dialogue_render_page(const char *text, const char **next_ptr) {
         jp_put_glyph_utf8(col, row, p, &consumed);
         p += (consumed == 0u) ? 1 : consumed;
         col++;
-        jp_wait_vbl(1u);
+        audio_wait_vbl();
     }
 
     if (*p == '\0') done = 1u;

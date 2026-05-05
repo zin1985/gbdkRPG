@@ -1,5 +1,6 @@
 
 #include <gb/gb.h>
+#include "audio.h"
 #include "dialogue.h"
 #include "messages.h"
 #include "jpfont.h"
@@ -223,6 +224,16 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_MSG_Y 15u
 #define BATTLE_MSG_W 20u
 #define BATTLE_MSG_H 3u
+
+/* rpg084:
+ * Battle BG windows are drawn 10 BG tiles to the right and SCX is set to
+ * the same 10-tile offset.  This keeps the visible layout stable while
+ * avoiding the battle window drift seen when field BG scroll state leaks
+ * into battle rendering.
+ */
+#define BATTLE_BG_SHIFT_X 10u
+#define BATTLE_BG_SCROLL_X ((UINT8)(BATTLE_BG_SHIFT_X * 8u))
+#define BATTLE_BG_X(x) ((UINT8)((x) + BATTLE_BG_SHIFT_X))
 
 #define BATTLE_DIRTY_NONE      0x00u
 #define BATTLE_DIRTY_PARTY_HP  0x01u
@@ -711,12 +722,12 @@ static UINT8 update_camera_for_player(void) {
 
 static UINT8 wait_choice_ab(void) {
     UINT8 keys;
-    waitpadup();
+    audio_waitpadup();
     while (1) {
         keys = joypad();
-        if (keys & J_A) { waitpadup(); return 1u; }
-        if (keys & J_B) { waitpadup(); return 0u; }
-        wait_vbl_done();
+        if (keys & J_A) { audio_waitpadup(); return 1u; }
+        if (keys & J_B) { audio_waitpadup(); return 0u; }
+        audio_wait_vbl();
     }
 }
 
@@ -852,7 +863,7 @@ static void open_main_menu(void) {
     SHOW_BKG;
     move_bkg(0u, 0u);
     DISPLAY_ON;
-    waitpadup();
+    audio_waitpadup();
 
     while (1) {
         screen_clear();
@@ -863,8 +874,8 @@ static void open_main_menu(void) {
         put_cursor(0u, 6u, (UINT8)(cursor == MENU_OBJECTIVE)); jp_put_bkg_text(1u, 6u, "もくてき");
         jp_put_bkg_text(0u,14u, "A けってい B もどる");
 
-        keys = waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
-        waitpadup();
+        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
+        audio_waitpadup();
 
         if (keys & J_UP) {
             if (cursor == 0u) cursor = MENU_COUNT - 1u;
@@ -888,18 +899,20 @@ static void open_main_menu(void) {
                     show_simple_page("もくてき", "まものを たおす", "つぎは まちと どうくつ");
                 }
             }
-            waitpad(J_A | J_B | J_START);
-            waitpadup();
+            audio_waitpad(J_A | J_B | J_START);
+            audio_waitpadup();
         }
     }
 
     hide_battle_enemy_sprites();
     restore_field_vram_state();
+    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
+    else audio_play_music(AUDIO_TRACK_FIELD);
 }
 
 static void wait_a_pressed(void) {
-    waitpad(J_A);
-    waitpadup();
+    audio_waitpad(J_A);
+    audio_waitpadup();
 }
 
 /* GRAPHICS HOTSPOT: draw_object_map()
@@ -1294,6 +1307,7 @@ static void enter_town_marker(void) {
      * actor_visible_in_current_area(); no actor array or sprite sheet is changed.
      */
     current_area = AREA_TOWN;
+    audio_play_music(AUDIO_TRACK_TOWN);
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
     warp_player_to_tile(2u, 13u, DIR_DOWN);
     dialogue_message("まちに\nつきました。");
@@ -1306,6 +1320,7 @@ static void leave_town_marker(void) {
      * Returning to field re-enables field-visible actors and hides town NPCs.
      */
     current_area = AREA_FIELD;
+    audio_play_music(AUDIO_TRACK_FIELD);
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
     warp_player_to_tile(13u, 2u, DIR_RIGHT);
     dialogue_message("フィールドに\nでました。");
@@ -1575,7 +1590,8 @@ static void battle_clear_bg_full(void) {
         bg[i] = blank;
     }
 
-    move_bkg(0u, 0u);
+    /* rpg084: battle BG is rendered from tile X+10, so keep SCX at +80px. */
+    move_bkg(BATTLE_BG_SCROLL_X, 0u);
     set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
 }
 
@@ -1596,9 +1612,21 @@ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
             else if (y == 0u || y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 1u;
             else if (x == 0u || x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u;
 
-            set_bkg_tiles((UINT8)(x0 + x), (UINT8)(y0 + y), 1u, 1u, &t);
+            set_bkg_tiles(BATTLE_BG_X((UINT8)(x0 + x)), (UINT8)(y0 + y), 1u, 1u, &t);
         }
     }
+}
+
+static void battle_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
+    jp_bkg_clear_area(BATTLE_BG_X(x0), y0, w, h);
+}
+
+static void battle_put_bkg_text(UINT8 col, UINT8 row, const char *text) {
+    jp_put_bkg_text(BATTLE_BG_X(col), row, text);
+}
+
+static void battle_put_u8(UINT8 col, UINT8 row, UINT8 value) {
+    put_u8(BATTLE_BG_X(col), row, value);
 }
 
 static void draw_battle_enemy_names(void) {
@@ -1608,11 +1636,11 @@ static void draw_battle_enemy_names(void) {
      * Rows 12-14 hold up to three enemy names; rows 15-17 are message-only.
      */
     draw_bkg_box(0u, 11u, 9u, 4u);
-    jp_bkg_clear_area(1u, 12u, 7u, 3u);
+    battle_bkg_clear_area(1u, 12u, 7u, 3u);
 
     for (i = 0u; i < battle_enemy_count; i++) {
         if (enemy_battles[i].hp > 0u) {
-            jp_put_bkg_text(1u, (UINT8)(12u + i), enemy_battles[i].name);
+            battle_put_bkg_text(1u, (UINT8)(12u + i), enemy_battles[i].name);
         }
     }
 }
@@ -1629,23 +1657,23 @@ static void draw_party_status_box(void) {
      */
     draw_bkg_box(0u, 0u, 20u, 5u);
 
-    jp_put_bkg_text(1u, 1u,  "ゆうしゃ");
-    jp_put_bkg_text(1u, 2u,  "H ");
-    put_u8(3u, 2u, player_battle.hp);
-    jp_put_bkg_text(1u, 3u,  "M ");
-    put_u8(3u, 3u, 38u);
+    battle_put_bkg_text(1u, 1u,  "ゆうしゃ");
+    battle_put_bkg_text(1u, 2u,  "H ");
+    battle_put_u8(3u, 2u, player_battle.hp);
+    battle_put_bkg_text(1u, 3u,  "M ");
+    battle_put_u8(3u, 3u, 38u);
 
-    jp_put_bkg_text(7u, 1u,  "そうりょ");
-    jp_put_bkg_text(7u, 2u,  "H ");
-    put_u8(9u, 2u, 10u);
-    jp_put_bkg_text(7u, 3u,  "M ");
-    put_u8(9u, 3u, 10u);
+    battle_put_bkg_text(7u, 1u,  "そうりょ");
+    battle_put_bkg_text(7u, 2u,  "H ");
+    battle_put_u8(9u, 2u, 10u);
+    battle_put_bkg_text(7u, 3u,  "M ");
+    battle_put_u8(9u, 3u, 10u);
 
-    jp_put_bkg_text(13u, 1u, "まほう");
-    jp_put_bkg_text(13u, 2u, "H ");
-    put_u8(15u, 2u, 12u);
-    jp_put_bkg_text(13u, 3u, "M ");
-    put_u8(15u, 3u, 24u);
+    battle_put_bkg_text(13u, 1u, "まほう");
+    battle_put_bkg_text(13u, 2u, "H ");
+    battle_put_u8(15u, 2u, 12u);
+    battle_put_bkg_text(13u, 3u, "M ");
+    battle_put_u8(15u, 3u, 24u);
 }
 
 static void hide_battle_enemy_sprites(void) {
@@ -1793,7 +1821,7 @@ static void draw_battle_frame(void) {
 }
 
 static void draw_battle_message_area(void) {
-    jp_bkg_clear_area(BATTLE_MSG_X, BATTLE_MSG_Y, BATTLE_MSG_W, BATTLE_MSG_H);
+    battle_bkg_clear_area(BATTLE_MSG_X, BATTLE_MSG_Y, BATTLE_MSG_W, BATTLE_MSG_H);
 }
 
 static void draw_battle_menu(void) {
@@ -1804,10 +1832,10 @@ static void draw_battle_menu(void) {
      */
     draw_bkg_box(9u, 11u, 11u, 4u);
 
-    jp_put_bkg_text(11u, 12u, "こうげき");
-    jp_put_bkg_text(16u, 12u, "とくぎ");
-    jp_put_bkg_text(11u, 13u, "かいふく");
-    jp_put_bkg_text(16u, 13u, "にげる");
+    battle_put_bkg_text(11u, 12u, "こうげき");
+    battle_put_bkg_text(16u, 12u, "とくぎ");
+    battle_put_bkg_text(11u, 13u, "かいふく");
+    battle_put_bkg_text(16u, 13u, "にげる");
 }
 
 static void battle_command_cursor_bg_pos(UINT8 index, UINT8 *col, UINT8 *row) {
@@ -1875,8 +1903,8 @@ static void battle_flash_enemy_sprite(UINT8 enemy_index) {
     x = battle_enemy_x_for_index(enemy_index);
 
     hide_one_battle_body(sprite_base);
-    wait_vbl_done();
-    wait_vbl_done();
+    audio_wait_vbl();
+    audio_wait_vbl();
 
     if (enemy_battles[enemy_index].hp > 0u) {
         show_one_battle_enemy_sprite(sprite_base, x, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[enemy_index]);
@@ -1886,21 +1914,22 @@ static void battle_flash_enemy_sprite(UINT8 enemy_index) {
 static void battle_hide_window_and_reset_scroll(void) {
     HIDE_WIN;
     move_win(JP_WIN_X, 144u);
-    move_bkg(0u, 0u);
+    /* rpg084: use a 10-tile BG origin while in battle. */
+    move_bkg(BATTLE_BG_SCROLL_X, 0u);
     SHOW_BKG;
     SHOW_SPRITES;
 }
 
 static void battle_update_party_hp_dirty(UINT8 slot) {
     if (slot != 0u) return;
-    jp_bkg_clear_area(3u, 2u, 3u, 1u);
-    put_u8(3u, 2u, player_battle.hp);
+    battle_bkg_clear_area(3u, 2u, 3u, 1u);
+    battle_put_u8(3u, 2u, player_battle.hp);
 }
 
 static void battle_update_party_mp_dirty(UINT8 slot) {
     if (slot != 0u) return;
-    jp_bkg_clear_area(3u, 3u, 3u, 1u);
-    put_u8(3u, 3u, 38u);
+    battle_bkg_clear_area(3u, 3u, 3u, 1u);
+    battle_put_u8(3u, 3u, 38u);
 }
 
 static void battle_set_message_dirty(const char *text) {
@@ -1929,22 +1958,22 @@ static void battle_update_dirty(void) {
     if (flags & BATTLE_DIRTY_MESSAGE) {
         draw_battle_message_area();
         if (battle_message_text != 0) {
-            jp_put_bkg_text(1u, 15u, battle_message_text);
+            battle_put_bkg_text(1u, 15u, battle_message_text);
         }
     }
     if (flags & BATTLE_DIRTY_CURSOR) {
         battle_move_command_cursor_obj();
     }
 
-    wait_vbl_done();
+    audio_wait_vbl();
 }
 
 static void battle_show_message(const char *text) {
     battle_set_message_dirty(text);
     battle_update_dirty();
-    waitpadup();
-    waitpad(J_A);
-    waitpadup();
+    audio_waitpadup();
+    audio_waitpad(J_A);
+    audio_waitpadup();
     battle_set_message_dirty("");
     battle_update_dirty();
 }
@@ -1975,7 +2004,7 @@ static void battle_enter_render_once(void) {
 
     battle_screen_ready = 1u;
     DISPLAY_ON;
-    wait_vbl_done();
+    audio_wait_vbl();
 }
 
 static void update_battle_status(void) {
@@ -2034,14 +2063,14 @@ static void battle_start_effect(void) {
         BGP_REG = 0x1Bu;
         OBP0_REG = 0x1Bu;
         OBP1_REG = 0x1Bu;
-        wait_vbl_done();
-        wait_vbl_done();
+        audio_wait_vbl();
+        audio_wait_vbl();
 
         BGP_REG = 0xE4u;
         OBP0_REG = 0xE4u;
         OBP1_REG = 0xE4u;
-        wait_vbl_done();
-        wait_vbl_done();
+        audio_wait_vbl();
+        audio_wait_vbl();
     }
 }
 
@@ -2050,6 +2079,7 @@ static void enter_battle_screen(void) {
      * the battle intro.  The battle screen itself is then built exactly once.
      */
     hide_all_sprites_safe();
+    audio_play_music(AUDIO_TRACK_BATTLE);
     battle_start_effect();
     battle_enter_render_once();
     battle_show_message("まものが\nあらわれた！");
@@ -2151,6 +2181,8 @@ static void return_to_map_after_battle(UINT8 won) {
         }
     }
     restore_field_vram_state();
+    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
+    else audio_play_music(AUDIO_TRACK_FIELD);
 }
 
 static void player_attack(void) {
@@ -2270,24 +2302,24 @@ static void battle_input(void) {
         if (menu_index >= 2u) menu_index = (UINT8)(menu_index - 2u);
         else menu_index = (UINT8)(menu_index + 2u);
         update_battle_menu_cursor(old_menu_index, menu_index);
-        waitpadup();
+        audio_waitpadup();
     } else if (keys & J_DOWN) {
         if (menu_index < 2u) menu_index = (UINT8)(menu_index + 2u);
         else menu_index = (UINT8)(menu_index - 2u);
         update_battle_menu_cursor(old_menu_index, menu_index);
-        waitpadup();
+        audio_waitpadup();
     } else if (keys & J_LEFT) {
         if (menu_index & 1u) menu_index--;
         else menu_index++;
         update_battle_menu_cursor(old_menu_index, menu_index);
-        waitpadup();
+        audio_waitpadup();
     } else if (keys & J_RIGHT) {
         if (menu_index & 1u) menu_index--;
         else menu_index++;
         update_battle_menu_cursor(old_menu_index, menu_index);
-        waitpadup();
+        audio_waitpadup();
     } else if (keys & J_A) {
-        waitpadup();
+        audio_waitpadup();
         switch (menu_index) {
             case CMD_ATTACK: player_attack(); break;
             case CMD_SKILL:  player_skill(); break;
@@ -2348,9 +2380,11 @@ void main(void) {
     OBP0_REG = 0xE4u;
     OBP1_REG = 0xE4u;
 
+    audio_init();
     dialogue_init();
     init_game();
     load_map_mode();
+    audio_play_music(AUDIO_TRACK_FIELD);
 
     while (1) {
         switch (game_mode) {
@@ -2394,6 +2428,6 @@ void main(void) {
                 game_mode = MODE_MAP;
                 break;
         }
-        wait_vbl_done();
+        audio_wait_vbl();
     }
 }

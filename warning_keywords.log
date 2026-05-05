@@ -1,5 +1,5 @@
-main.c:2005: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
-main.c:2005: warning 126: unreachable code
+main.c:2034: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
+main.c:2034: warning 126: unreachable code
 messages_bank.c:
 banked_graphics.c:
 map_data_bank.c:

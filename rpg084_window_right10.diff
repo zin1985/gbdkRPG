@@ -1,0 +1,170 @@
+--- original/rpg083_music/main.c	2026-05-05 15:32:18.000000000 +0000
++++ rpg083_music/main.c	2026-05-05 15:57:11.326479858 +0000
+@@ -225,6 +225,16 @@
+ #define BATTLE_MSG_W 20u
+ #define BATTLE_MSG_H 3u
+ 
++/* rpg084:
++ * Battle BG windows are drawn 10 BG tiles to the right and SCX is set to
++ * the same 10-tile offset.  This keeps the visible layout stable while
++ * avoiding the battle window drift seen when field BG scroll state leaks
++ * into battle rendering.
++ */
++#define BATTLE_BG_SHIFT_X 10u
++#define BATTLE_BG_SCROLL_X ((UINT8)(BATTLE_BG_SHIFT_X * 8u))
++#define BATTLE_BG_X(x) ((UINT8)((x) + BATTLE_BG_SHIFT_X))
++
+ #define BATTLE_DIRTY_NONE      0x00u
+ #define BATTLE_DIRTY_PARTY_HP  0x01u
+ #define BATTLE_DIRTY_PARTY_MP  0x02u
+@@ -1580,7 +1590,8 @@
+         bg[i] = blank;
+     }
+ 
+-    move_bkg(0u, 0u);
++    /* rpg084: battle BG is rendered from tile X+10, so keep SCX at +80px. */
++    move_bkg(BATTLE_BG_SCROLL_X, 0u);
+     set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
+ }
+ 
+@@ -1601,11 +1612,23 @@
+             else if (y == 0u || y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 1u;
+             else if (x == 0u || x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u;
+ 
+-            set_bkg_tiles((UINT8)(x0 + x), (UINT8)(y0 + y), 1u, 1u, &t);
++            set_bkg_tiles(BATTLE_BG_X((UINT8)(x0 + x)), (UINT8)(y0 + y), 1u, 1u, &t);
+         }
+     }
+ }
+ 
++static void battle_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
++    jp_bkg_clear_area(BATTLE_BG_X(x0), y0, w, h);
++}
++
++static void battle_put_bkg_text(UINT8 col, UINT8 row, const char *text) {
++    jp_put_bkg_text(BATTLE_BG_X(col), row, text);
++}
++
++static void battle_put_u8(UINT8 col, UINT8 row, UINT8 value) {
++    put_u8(BATTLE_BG_X(col), row, value);
++}
++
+ static void draw_battle_enemy_names(void) {
+     UINT8 i;
+ 
+@@ -1613,11 +1636,11 @@
+      * Rows 12-14 hold up to three enemy names; rows 15-17 are message-only.
+      */
+     draw_bkg_box(0u, 11u, 9u, 4u);
+-    jp_bkg_clear_area(1u, 12u, 7u, 3u);
++    battle_bkg_clear_area(1u, 12u, 7u, 3u);
+ 
+     for (i = 0u; i < battle_enemy_count; i++) {
+         if (enemy_battles[i].hp > 0u) {
+-            jp_put_bkg_text(1u, (UINT8)(12u + i), enemy_battles[i].name);
++            battle_put_bkg_text(1u, (UINT8)(12u + i), enemy_battles[i].name);
+         }
+     }
+ }
+@@ -1634,23 +1657,23 @@
+      */
+     draw_bkg_box(0u, 0u, 20u, 5u);
+ 
+-    jp_put_bkg_text(1u, 1u,  "ゆうしゃ");
+-    jp_put_bkg_text(1u, 2u,  "H ");
+-    put_u8(3u, 2u, player_battle.hp);
+-    jp_put_bkg_text(1u, 3u,  "M ");
+-    put_u8(3u, 3u, 38u);
+-
+-    jp_put_bkg_text(7u, 1u,  "そうりょ");
+-    jp_put_bkg_text(7u, 2u,  "H ");
+-    put_u8(9u, 2u, 10u);
+-    jp_put_bkg_text(7u, 3u,  "M ");
+-    put_u8(9u, 3u, 10u);
+-
+-    jp_put_bkg_text(13u, 1u, "まほう");
+-    jp_put_bkg_text(13u, 2u, "H ");
+-    put_u8(15u, 2u, 12u);
+-    jp_put_bkg_text(13u, 3u, "M ");
+-    put_u8(15u, 3u, 24u);
++    battle_put_bkg_text(1u, 1u,  "ゆうしゃ");
++    battle_put_bkg_text(1u, 2u,  "H ");
++    battle_put_u8(3u, 2u, player_battle.hp);
++    battle_put_bkg_text(1u, 3u,  "M ");
++    battle_put_u8(3u, 3u, 38u);
++
++    battle_put_bkg_text(7u, 1u,  "そうりょ");
++    battle_put_bkg_text(7u, 2u,  "H ");
++    battle_put_u8(9u, 2u, 10u);
++    battle_put_bkg_text(7u, 3u,  "M ");
++    battle_put_u8(9u, 3u, 10u);
++
++    battle_put_bkg_text(13u, 1u, "まほう");
++    battle_put_bkg_text(13u, 2u, "H ");
++    battle_put_u8(15u, 2u, 12u);
++    battle_put_bkg_text(13u, 3u, "M ");
++    battle_put_u8(15u, 3u, 24u);
+ }
+ 
+ static void hide_battle_enemy_sprites(void) {
+@@ -1798,7 +1821,7 @@
+ }
+ 
+ static void draw_battle_message_area(void) {
+-    jp_bkg_clear_area(BATTLE_MSG_X, BATTLE_MSG_Y, BATTLE_MSG_W, BATTLE_MSG_H);
++    battle_bkg_clear_area(BATTLE_MSG_X, BATTLE_MSG_Y, BATTLE_MSG_W, BATTLE_MSG_H);
+ }
+ 
+ static void draw_battle_menu(void) {
+@@ -1809,10 +1832,10 @@
+      */
+     draw_bkg_box(9u, 11u, 11u, 4u);
+ 
+-    jp_put_bkg_text(11u, 12u, "こうげき");
+-    jp_put_bkg_text(16u, 12u, "とくぎ");
+-    jp_put_bkg_text(11u, 13u, "かいふく");
+-    jp_put_bkg_text(16u, 13u, "にげる");
++    battle_put_bkg_text(11u, 12u, "こうげき");
++    battle_put_bkg_text(16u, 12u, "とくぎ");
++    battle_put_bkg_text(11u, 13u, "かいふく");
++    battle_put_bkg_text(16u, 13u, "にげる");
+ }
+ 
+ static void battle_command_cursor_bg_pos(UINT8 index, UINT8 *col, UINT8 *row) {
+@@ -1891,21 +1914,22 @@
+ static void battle_hide_window_and_reset_scroll(void) {
+     HIDE_WIN;
+     move_win(JP_WIN_X, 144u);
+-    move_bkg(0u, 0u);
++    /* rpg084: use a 10-tile BG origin while in battle. */
++    move_bkg(BATTLE_BG_SCROLL_X, 0u);
+     SHOW_BKG;
+     SHOW_SPRITES;
+ }
+ 
+ static void battle_update_party_hp_dirty(UINT8 slot) {
+     if (slot != 0u) return;
+-    jp_bkg_clear_area(3u, 2u, 3u, 1u);
+-    put_u8(3u, 2u, player_battle.hp);
++    battle_bkg_clear_area(3u, 2u, 3u, 1u);
++    battle_put_u8(3u, 2u, player_battle.hp);
+ }
+ 
+ static void battle_update_party_mp_dirty(UINT8 slot) {
+     if (slot != 0u) return;
+-    jp_bkg_clear_area(3u, 3u, 3u, 1u);
+-    put_u8(3u, 3u, 38u);
++    battle_bkg_clear_area(3u, 3u, 3u, 1u);
++    battle_put_u8(3u, 3u, 38u);
+ }
+ 
+ static void battle_set_message_dirty(const char *text) {
+@@ -1934,7 +1958,7 @@
+     if (flags & BATTLE_DIRTY_MESSAGE) {
+         draw_battle_message_area();
+         if (battle_message_text != 0) {
+-            jp_put_bkg_text(1u, 15u, battle_message_text);
++            battle_put_bkg_text(1u, 15u, battle_message_text);
+         }
+     }
+     if (flags & BATTLE_DIRTY_CURSOR) {
