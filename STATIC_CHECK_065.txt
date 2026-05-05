@@ -1,0 +1,10 @@
+STATIC CHECK 065
+=================
+
+- jpfont.c is non-banked.
+- misakiUTF16.c is non-banked code.
+- misakiUTF16.c does not include misakiUTF16FontData.h.
+- font_data_bank.c includes misakiUTF16FontData.h and is #pragma bank 6.
+- font_data_runtime.c provides NONBANKED wrappers.
+- Build scripts include font_data_bank.c and font_data_runtime.c.
+- MAP_GFX_TILE_COUNT remains 17u.

@@ -1,0 +1,20 @@
+===== prebank_check.py =====
+main.c bytes: 60756
+[OK] no direct set_bkg_data() call found in main.c code
+[OK] no direct set_sprite_data() call found in main.c code
+[OK] no static const char[] message definitions found in main.c code
+[OK] message_show() is referenced
+[OK] map data arrays are not defined in main.c code
+[OK] jpfont.c is non-banked again
+[OK] jpfont.h public APIs are non-banked
+[OK] font_data_bank.c is bank 6
+[OK] misakiUTF16.c uses font data wrappers
+[OK] font_data_bank.c owns raw Misaki tables in bank 6
+[OK] font_data_runtime.c uses NONBANKED wrappers
+[OK] misakiUTF16.c no longer references raw fdata/ftable directly
+[OK] actor visibility predicate is present
+[OK] random encounter helper is present
+[OK] battle start effect helper is present
+[OK] normalized UTF-16 font cache key is restored
+[INFO] exact bank overflow cannot be known before compile/link.
+[INFO] final judgment must use compiler/linker output plus romusage.

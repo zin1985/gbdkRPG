@@ -1,0 +1,10 @@
+STATIC CHECK 059
+=================
+
+- main.c should not include console.h / stdio.h / string.h.
+- main.c should not call old console/stdio helpers.
+- main.c uses jpfont based helpers for numbers/cursor/ascii.
+- map_data.h guard is MAP_DATA_H_INCLUDE.
+- map dimensions are MAP_DATA_WIDTH / MAP_DATA_HEIGHT.
+- Build scripts output rpg059_no_console_stdio.gb.
+- MAP_GFX_TILE_COUNT remains 17u.

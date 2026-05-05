@@ -1,0 +1,10 @@
+STATIC CHECK 024
+================
+
+- Town marker tiles 9-12 are preserved.
+- Forest tiles are added to 13-16.
+- MAP_GFX_TILE_COUNT is 17u.
+- Forest overlay uses MAP_TILE_FOREST_TL/TR/BL/BR.
+- No object16_map/collision16_map changes.
+- No sprite/OAM code added.
+- build.bat, build.sh, Makefile remain included.

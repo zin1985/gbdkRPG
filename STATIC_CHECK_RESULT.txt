@@ -1,0 +1,25 @@
+v3p-005 static check result
+
+Purpose:
+- Fix build overflow by changing only build settings.
+
+Changed:
+- build.bat now uses: -Wl-yt1 -Wl-yo4
+- build.sh now uses: -Wl-yt1 -Wl-yo4
+- Makefile now uses: -Wl-yt1 -Wl-yo4
+
+Not changed:
+- main.c gameplay/rendering logic unchanged from v3o-004.
+- sprites.c tile data unchanged from v3o-004.
+- sprites.h MAP_GFX_TILE_COUNT remains 13u.
+- No new BG tile table.
+- No new object kind.
+- No kind == 4.
+- No new actor/NPC.
+- No NPC1_SPRITE_BASE.
+- No TOWN_NPC_ACTOR_INDEX.
+
+Build verification:
+- Real GBDK lcc is not available in this execution environment, so actual ROM build was not executed here.
+- The reported error indicates the ROM crossed the configured bank limit by a small amount.
+- GBDK FAQ recommends changing MBC type / ROM bank count when this error occurs.

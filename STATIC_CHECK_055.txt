@@ -1,0 +1,23 @@
+STATIC CHECK 055
+=================
+
+Base:
+- rpg051/rpg049 stable line.
+
+Message banking:
+- messages.h added.
+- messages_bank.c added with #pragma bank 2.
+- messages_runtime.c added.
+- main.c includes messages.h.
+- Actor.message pointer replaced with Actor.message_id.
+- main.c does not contain msg_test_npc_short.
+- main.c does not contain static const char msg_common_npc[].
+- try_interact() uses message_show().
+
+Build:
+- build.sh/Makefile/build.bat include messages_bank.c and messages_runtime.c.
+- dangerous bank-span/overflow warnings are fatal.
+
+Pre-compile check:
+- tools/prebank_check.py exists.
+- It is heuristic only, not a complete linker-layout predictor.

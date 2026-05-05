@@ -1,0 +1,9 @@
+STATIC CHECK 062
+=================
+
+- misakiUTF16.c includes <gb/gb.h>.
+- misakiUTF16.c has #pragma bank 5.
+- misakiUTF16.c has BANKREF(misaki_bank).
+- jpfont.c remains bank 5 with BANKREF(jpfont_bank).
+- Build scripts output rpg062_misaki_bankref_include_fix.gb.
+- MAP_GFX_TILE_COUNT remains 17u.

@@ -1,0 +1,3 @@
+12:#define MAP_GFX_TILE_COUNT 13u
+33:extern const unsigned char map_gfx_tiles[MAP_GFX_TILE_COUNT * 16u];
+681:    set_bkg_data(MAP_TILE_BASE, MAP_GFX_TILE_COUNT, map_gfx_tiles);

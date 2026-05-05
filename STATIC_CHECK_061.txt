@@ -1,0 +1,11 @@
+STATIC CHECK 061
+=================
+
+- jpfont.c has #pragma bank 5.
+- jpfont.c has BANKREF(jpfont_bank).
+- misakiUTF16.c has #pragma bank 5.
+- misakiUTF16.c has BANKREF(misaki_bank).
+- jpfont.h public APIs are BANKED.
+- jpfont.c public function definitions are BANKED.
+- Build scripts output rpg061_bank_jpfont_misaki.gb.
+- MAP_GFX_TILE_COUNT remains 17u.

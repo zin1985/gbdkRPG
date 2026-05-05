@@ -1,0 +1,154 @@
+--- /mnt/data/rpg_orig003/main.c	2026-05-04 04:13:35.000000000 +0000
++++ /mnt/data/rpg_work/main.c	2026-05-04 04:19:21.507142673 +0000
+@@ -648,23 +648,34 @@
+             sy = (UINT8)(y * 2u);
+ 
+             if (kind == 1u) {
+-                tl = MAP_TILE_WALL_TL;
+-                tr = MAP_TILE_WALL_TR;
+-                bl = MAP_TILE_WALL_BL;
+-                br = MAP_TILE_WALL_BR;
++                if (current_area == AREA_TOWN) {
++                    /* Town keeps the original block wall visual. */
++                    tl = MAP_TILE_WALL_TL;
++                    tr = MAP_TILE_WALL_TR;
++                    bl = MAP_TILE_WALL_BL;
++                    br = MAP_TILE_WALL_BR;
++                } else {
++                    /* Field-only visual swap: impassable blocks look like sharp mountains. */
++                    tl = MAP_TILE_TOWN_TL;
++                    tr = MAP_TILE_TOWN_TR;
++                    bl = MAP_TILE_TOWN_BL;
++                    br = MAP_TILE_TOWN_BR;
++                }
+             } else if (kind == 2u) {
+                 tl = MAP_TILE_CAP_TL;
+                 tr = MAP_TILE_CAP_TR;
+                 bl = MAP_TILE_CAP_BL;
+                 br = MAP_TILE_CAP_BR;
+             } else if (kind == 3u) {
+-                /* v3d: visible town entrance marker.  It is still a BG
+-                 * metatile, not an actor, so it does not consume OAM sprites.
++                /* v3o-004: keep town/exit trigger visual lightweight.
++                 * Slots 9-12 are now used by field sharp mountains, so kind 3 is
++                 * drawn as floor to avoid a passable mountain-looking entrance.
++                 * The event trigger itself remains unchanged.
+                  */
+-                tl = MAP_TILE_TOWN_TL;
+-                tr = MAP_TILE_TOWN_TR;
+-                bl = MAP_TILE_TOWN_BL;
+-                br = MAP_TILE_TOWN_BR;
++                tl = MAP_TILE_FLOOR;
++                tr = MAP_TILE_FLOOR;
++                bl = MAP_TILE_FLOOR;
++                br = MAP_TILE_FLOOR;
+             } else {
+                 tl = MAP_TILE_FLOOR;
+                 tr = MAP_TILE_FLOOR;
+@@ -680,15 +691,12 @@
+         }
+     }
+ 
+-    /* v3n-003:
+-     * Always load the original 13-tile set first.
+-     * Only in FIELD, overwrite tile slots 1-4 with sharp mountain art.
+-     * This avoids storing a second 13-tile set and keeps town blocks unchanged.
++    /* v3o-004:
++     * Load the same 13-tile set only once.
++     * No second BG set and no 4-tile override table are added, keeping ROM size
++     * below the non-banked ceiling.
+      */
+     set_bkg_data(MAP_TILE_BASE, MAP_GFX_TILE_COUNT, map_gfx_tiles);
+-    if (current_area != AREA_TOWN) {
+-        set_bkg_data((UINT8)(MAP_TILE_BASE + MAP_TILE_WALL_TL), 4u, field_wall_gfx_tiles);
+-    }
+     set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
+ }
+ static void set_player_frame(Direction dir, UINT8 frame) {
+--- /mnt/data/rpg_orig003/sprites.c	2026-05-04 04:13:35.000000000 +0000
++++ /mnt/data/rpg_work/sprites.c	2026-05-04 04:19:21.505676155 +0000
+@@ -1,28 +1,5 @@
+ #include "sprites.h"
+ 
+-/* v3n-003: field-only sharp mountain override.
+- * Do NOT duplicate the full 13-tile BG set.
+- * Town keeps map_gfx_tiles slots 1-4 as blocks.
+- * Field loads map_gfx_tiles first, then overwrites only slots 1-4.
+- */
+-const unsigned char field_wall_gfx_tiles[4u * 16u] = {
+-    /* 1: sharp mountain TL - field-only impassable block */
+-    0x00,0x00, 0x00,0x00, 0x01,0x01, 0x03,0x02,
+-    0x07,0x05, 0x0F,0x0A, 0x1B,0x14, 0x37,0x28,
+-
+-    /* 2: sharp mountain TR - field-only impassable block */
+-    0x00,0x00, 0x00,0x00, 0x80,0x80, 0xC0,0x40,
+-    0xE0,0xA0, 0xF0,0x50, 0xD8,0x28, 0xEC,0x14,
+-
+-    /* 3: sharp mountain BL - field-only impassable block */
+-    0x6F,0x50, 0xDF,0xA0, 0xFF,0x91, 0xFF,0xAA,
+-    0xF7,0x94, 0x7B,0x58, 0x3F,0x27, 0x1F,0x1F,
+-
+-    /* 4: sharp mountain BR - field-only impassable block */
+-    0xF6,0x0A, 0xFB,0x05, 0xFF,0x89, 0xFF,0x55,
+-    0xEF,0x29, 0xDE,0x1A, 0xFC,0xE4, 0xF8,0xF8
+-};
+-
+ const unsigned char map_gfx_tiles[MAP_GFX_TILE_COUNT * 16u] = {
+     /* 0: floor - clean white tile with tiny dotted texture */
+     0x00,0x00, 0x00,0x00, 0x00,0x00, 0x10,0x10,
+@@ -60,21 +37,21 @@
+     0xFE,0x02, 0xFF,0x01, 0xFF,0x81, 0xFF,0x41,
+     0xFF,0x21, 0xFE,0x12, 0xFC,0x0C, 0xF8,0xF8,
+ 
+-    /* 9: town marker TL - roof and doorway icon */
+-    0x00,0x00, 0x01,0x01, 0x03,0x03, 0x07,0x07,
+-    0x0F,0x0F, 0x1F,0x1F, 0x3F,0x3F, 0x7F,0x40,
+-
+-    /* 10: town marker TR - roof and doorway icon */
+-    0x00,0x00, 0x80,0x80, 0xC0,0xC0, 0xE0,0xE0,
+-    0xF0,0xF0, 0xF8,0xF8, 0xFC,0xFC, 0xFE,0x02,
+-
+-    /* 11: town marker BL - wall / left door */
+-    0x7F,0x40, 0x7F,0x40, 0x7F,0x40, 0x7F,0x40,
+-    0x7F,0x40, 0x70,0x4F, 0x70,0x4F, 0x7F,0x7F,
+-
+-    /* 12: town marker BR - wall / right door */
+-    0xFE,0x02, 0xFE,0x02, 0xFE,0x02, 0xFE,0x02,
+-    0xFE,0x02, 0x0E,0xF2, 0x0E,0xF2, 0xFE,0xFE
++    /* 9: sharp mountain TL - field-only impassable visual, reusing existing slot */
++    0x00,0x00, 0x00,0x00, 0x01,0x01, 0x03,0x02,
++    0x07,0x05, 0x0F,0x0A, 0x1B,0x14, 0x37,0x28,
++
++    /* 10: sharp mountain TR - field-only impassable visual, reusing existing slot */
++    0x00,0x00, 0x00,0x00, 0x80,0x80, 0xC0,0x40,
++    0xE0,0xA0, 0xF0,0x50, 0xD8,0x28, 0xEC,0x14,
++
++    /* 11: sharp mountain BL - field-only impassable visual, reusing existing slot */
++    0x6F,0x50, 0xDF,0xA0, 0xFF,0x91, 0xFF,0xAA,
++    0xF7,0x94, 0x7B,0x58, 0x3F,0x27, 0x1F,0x1F,
++
++    /* 12: sharp mountain BR - field-only impassable visual, reusing existing slot */
++    0xF6,0x0A, 0xFB,0x05, 0xFF,0x89, 0xFF,0x55,
++    0xEF,0x29, 0xDE,0x1A, 0xFC,0xE4, 0xF8,0xF8
+ };
+ 
+ /* Base04 replaces the field actor graphics with verified simple 16x16 sheets.
+--- /mnt/data/rpg_orig003/sprites.h	2026-05-04 04:13:35.000000000 +0000
++++ /mnt/data/rpg_work/sprites.h	2026-05-04 04:19:21.506078006 +0000
+@@ -7,7 +7,7 @@
+  * 0 = floor
+  * 1-4 = wall 16x16 metatile: TL, TR, BL, BR
+  * 5-8 = wall cap / accent 16x16 metatile: TL, TR, BL, BR
+- * 9-12 = town entrance marker 16x16 metatile: TL, TR, BL, BR
++ * 9-12 = field sharp mountain 16x16 metatile: TL, TR, BL, BR
+  */
+ #define MAP_GFX_TILE_COUNT 13u
+ 
+@@ -31,7 +31,6 @@
+  */
+ 
+ extern const unsigned char map_gfx_tiles[MAP_GFX_TILE_COUNT * 16u];
+-extern const unsigned char field_wall_gfx_tiles[4u * 16u];
+ extern const unsigned char player_tiles[ACTOR_TOTAL_TILES * 16u];
+ extern const unsigned char npc_tiles[ACTOR_TOTAL_TILES * 16u];
+ extern const unsigned char enemy_tiles[ACTOR_TOTAL_TILES * 16u];

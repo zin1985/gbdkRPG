@@ -1,0 +1,17 @@
+STATIC CHECK 049
+=================
+
+- Base: rpg048b confirmed working.
+- Intended runtime behavior change: none.
+- actors[] entries should remain 3.
+- Third actor should remain:
+  - active = 1
+  - solid = 0
+  - talkable = 1
+  - tx,ty = 10,8
+  - sprite_base = TEST_ACTOR_SPRITE_BASE
+  - tile_base = NPC0_TILE_BASE
+- try_interact() should not contain the rpg048 index-0 branch.
+- MAP_GFX_TILE_COUNT remains 17u.
+- No spring BG remnants.
+- No debug overlay remnants.

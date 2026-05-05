@@ -1,0 +1,11 @@
+STATIC CHECK 058
+=================
+
+- map_data.h added.
+- map_data_bank.c added with #pragma bank 4.
+- map_data_runtime.c added.
+- main.c no longer defines collision16_map/object16_map/town_collision16_map/town_object16_map.
+- main.c calls map_data_collision16_at() and map_data_object16_at().
+- build scripts include map_data_bank.c and map_data_runtime.c.
+- romusage warnings are treated as fatal.
+- MAP_GFX_TILE_COUNT remains 17u.

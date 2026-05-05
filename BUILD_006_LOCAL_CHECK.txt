@@ -1,0 +1,10 @@
+Local checks performed in ChatGPT container:
+
+- bash -n build.sh: OK
+- make -n: OK
+- build flags in build.bat/build.sh/Makefile checked
+- MAP_GFX_TILE_COUNT remains 13u
+- No source files intentionally changed: main.c, sprites.c, sprites.h, dialogue.c, jpfont.c, misakiUTF16.c
+
+GBDK lcc is not installed in this container, so real ROM build was not executed here.
+Please build on the user's Linux server or Windows GBDK environment.
