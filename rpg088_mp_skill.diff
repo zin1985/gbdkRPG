@@ -1,0 +1,752 @@
+Only in rpg088_mp_skill: BUILD_NOT_RUN_IN_CHATGPT.md
+Only in rpg088_mp_skill: CHECK_rpg088_mp_skill.md
+diff -ru rpg_work/rpg087_growth_rank/Makefile rpg088_mp_skill/Makefile
+--- rpg_work/rpg087_growth_rank/Makefile	2026-05-06 01:59:16.000000000 +0000
++++ rpg088_mp_skill/Makefile	2026-05-06 03:30:53.495920120 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg087_growth_rank.gb
++OUT = rpg088_mp_skill.gb
+ SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ru rpg_work/rpg087_growth_rank/README.md rpg088_mp_skill/README.md
+--- rpg_work/rpg087_growth_rank/README.md	2026-05-06 01:59:16.000000000 +0000
++++ rpg088_mp_skill/README.md	2026-05-06 03:33:18.605167406 +0000
+@@ -691,3 +691,27 @@
+ - 技ひらめき、武器熟練度、GrowthResult配列化は未実装。
+ - MPはステータスとして追加したが、現時点では `とくぎ` / `かいふく` の使用回数制からMP消費制へは変更していない。
+ - 戦闘UIの描画方式、BGM、MAP_GFX_TILE_COUNT、jpfont.c、misakiUTF16.c は変更していない。
++
++## rpg088_mp_skill
++
++目的: rpg087_growth_rank の成長システム拡張を前提に、スレッドで検討したMP消費制・SkillDefテーブル方式・軽量な効果計算式を取り込む。
++
++### 主な変更
++- `とくぎ` / `かいふく` を使用回数制からMP消費制へ移行した。
++- とくぎの消費MPは2、かいふくの消費MPは4とした。
++- MP不足時は「Mがたりない」と表示し、敵ターンへ進めずプレイヤー選択へ戻す。
++- HP満タン時のかいふくは「Hまんたん」と表示し、MPを消費しない。
++- `SkillId` / `SkillKind` / `TargetType` / `SkillDef` を追加し、将来の複数技テーブル化に備えた。
++- 通常攻撃、とくぎ、かいふくの効果計算を分離した。
++- ダメージ計算は `INT16` を経由し、最低1ダメージを保証する。
++- 成長メッセージ文字列を `messages_bank.c` へ移動し、Bank 0圧迫を軽減した。
++
++### 効果式
++```c
++通常攻撃 = attack * 2 - defense
++とくぎ   = skill * 3 + attack + power - defense / 2
++かいふく = heal * 2 + power
++```
++
++### Bank 0注意
++前回の `rpg087_growth_rank` ではビルド自体は完了したものの、`romusage` により `_HOME` overflow が検出された。今回の変更では、追加コードを最小限にしつつ、成長メッセージ文字列をbank 2へ逃がしてBank 0増加を抑えている。
+diff -ru rpg_work/rpg087_growth_rank/build.bat rpg088_mp_skill/build.bat
+--- rpg_work/rpg087_growth_rank/build.bat	2026-05-06 01:59:16.000000000 +0000
++++ rpg088_mp_skill/build.bat	2026-05-06 03:30:53.496806657 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg087_growth_rank"
++set "PROJECT=rpg088_mp_skill"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+Only in rpg_work/rpg087_growth_rank: build.log
+diff -ru rpg_work/rpg087_growth_rank/build.sh rpg088_mp_skill/build.sh
+--- rpg_work/rpg087_growth_rank/build.sh	2026-05-06 01:59:16.000000000 +0000
++++ rpg088_mp_skill/build.sh	2026-05-06 03:30:53.495402782 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg087_growth_rank.gb"
++OUT="rpg088_mp_skill.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+Only in rpg_work/rpg087_growth_rank: build_exit.code
+Only in rpg_work/rpg087_growth_rank: compile_output.log
+Only in rpg088_mp_skill/docs/checks: CHECK_088_MP_SKILL.md
+Only in rpg088_mp_skill/docs/future: RPG_FEATURE_DESIGN_ACCUM_088.md
+diff -ru rpg_work/rpg087_growth_rank/main.c rpg088_mp_skill/main.c
+--- rpg_work/rpg087_growth_rank/main.c	2026-05-06 02:00:58.000000000 +0000
++++ rpg088_mp_skill/main.c	2026-05-06 03:36:03.997005592 +0000
+@@ -365,6 +365,44 @@
+     CMD_COUNT
+ } CommandType;
+ 
++/* rpg088:
++ * Keep the visible 4-command menu, but move special actions toward a small
++ * SkillDef table.  This is the first step toward multiple skills without
++ * adding a skill-list UI yet.
++ */
++typedef enum SkillId {
++    SKILL_NONE = 0,
++    SKILL_SLASH,
++    SKILL_HEAL_SIMPLE,
++    SKILL_MAX
++} SkillId;
++
++typedef enum SkillKind {
++    SKILL_KIND_DAMAGE = 0,
++    SKILL_KIND_HEAL
++} SkillKind;
++
++typedef enum TargetType {
++    TARGET_ENEMY = 0,
++    TARGET_SELF
++} TargetType;
++
++typedef struct SkillDef {
++    UINT8 mp_cost;
++    UINT8 power;
++    UINT8 kind;
++    UINT8 target;
++} SkillDef;
++
++#define PLAYER_ACTIVE_SKILL SKILL_SLASH
++#define PLAYER_ACTIVE_HEAL  SKILL_HEAL_SIMPLE
++
++static const SkillDef skill_table[SKILL_MAX] = {
++    {0u, 0u, SKILL_KIND_DAMAGE, TARGET_ENEMY}, /* SKILL_NONE */
++    {2u, 4u, SKILL_KIND_DAMAGE, TARGET_ENEMY}, /* SKILL_SLASH */
++    {4u, 6u, SKILL_KIND_HEAL,   TARGET_SELF}   /* SKILL_HEAL_SIMPLE */
++};
++
+ typedef enum Direction {
+     DIR_DOWN = 0,
+     DIR_UP,
+@@ -409,7 +447,7 @@
+ 
+ static Actor actors[] = {
+     {ACTOR_KIND_NPC,   1u, 1u, 1u, 3u, 2u, DIR_DOWN, 0u, NPC0_SPRITE_BASE,   NPC0_TILE_BASE,   MSG_COMMON_NPC, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}},
+-    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"スライム",20u,20u,0u,0u,5u,2u,0u,0u,5u}},
++    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"",20u,20u,0u,0u,5u,2u,0u,0u,5u}},
+     /* rpg046:
+      * Minimal talkable actor data-only test.
+      * Uses OAM 12-15 and existing NPC0_TILE_BASE.
+@@ -423,8 +461,6 @@
+ static GameMode game_mode;
+ static BattleState battle_state;
+ static UINT8 menu_index;
+-static UINT8 skill_uses;
+-static UINT8 heal_uses;
+ static UINT8 rand_seed;
+ static UINT8 encounter_grace_steps;
+ static UINT8 event_flags[EVENT_FLAG_COUNT];
+@@ -584,7 +620,10 @@
+ static void start_move(Direction dir);
+ static void update_player_movement(void);
+ static void map_input(void);
+-static UINT16 calc_damage(UINT8 power, UINT8 atk, UINT8 def);
++static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defender);
++static UINT16 calc_skill_damage(const Fighter *attacker, const Fighter *defender, const SkillDef *skill);
++static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill);
++static UINT8 fighter_try_consume_mp(Fighter *actor, UINT16 cost);
+ static void draw_battle_frame(void);
+ static void battle_clear_bg_full(void);
+ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
+@@ -770,19 +809,19 @@
+ 
+ static void prompt_enemy_revive_choice(void) {
+     if (actors[ENEMY_ACTOR_INDEX].active) {
+-        dialogue_message("まだ まものは\nそこに いるよ。");
++        message_show(MSG_ENEMY_STILL);
+         return;
+     }
+ 
+-    dialogue_message_nowait_window("まものを ふっかつ?\nA:はい  B:いいえ");
++    dialogue_message_nowait_window(message_get_buffered(MSG_PROMPT_REVIVE));
+     if (wait_choice_ab()) {
+         dialogue_hide();
+         revive_enemy_actor();
+         draw_all_actors();
+-        dialogue_message("まものが\nふっかつした！");
++        message_show(MSG_ENEMY_REVIVED);
+     } else {
+         dialogue_hide();
+-        dialogue_message("そのままに\nしておこう。");
++        message_show(MSG_LEAVE_AS_IS);
+     }
+     draw_all_actors();
+ }
+@@ -1357,7 +1396,7 @@
+ }
+ 
+ static void enter_town_marker(void) {
+-    dialogue_message("まちへ\nはいります。");
++    message_show(MSG_ENTER_TOWN);
+ 
+     /* v3f/rpg067:
+      * Switch the area selector only. Actor visibility is decided by
+@@ -1367,12 +1406,12 @@
+     audio_play_music(AUDIO_TRACK_TOWN);
+     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
+     warp_player_to_tile(2u, 13u, DIR_DOWN);
+-    dialogue_message("まちに\nつきました。");
++    message_show(MSG_ARRIVE_TOWN);
+     draw_all_actors();
+ }
+ 
+ static void leave_town_marker(void) {
+-    dialogue_message("フィールドへ\nもどります。");
++    message_show(MSG_BACK_FIELD);
+     /* rpg067:
+      * Returning to field re-enables field-visible actors and hides town NPCs.
+      */
+@@ -1380,7 +1419,7 @@
+     audio_play_music(AUDIO_TRACK_FIELD);
+     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
+     warp_player_to_tile(13u, 2u, DIR_RIGHT);
+-    dialogue_message("フィールドに\nでました。");
++    message_show(MSG_LEFT_FIELD);
+     draw_all_actors();
+ }
+ 
+@@ -1427,27 +1466,27 @@
+ 
+ static void inspect_map_event(UINT8 event_id) {
+     if (event_id == MAP_EVENT_TOWN) {
+-        dialogue_message_nowait_window("まちに はいりますか?\nA:はい  B:いいえ");
++        dialogue_message_nowait_window(message_get_buffered(MSG_PROMPT_ENTER_TOWN));
+         if (wait_choice_ab()) {
+             dialogue_hide();
+             enter_town_marker();
+         } else {
+             dialogue_hide();
+-            dialogue_message("また あとで\nこよう。");
++            message_show(MSG_LATER);
+             draw_all_actors();
+         }
+     } else if (event_id == MAP_EVENT_FIELD_EXIT) {
+-        dialogue_message_nowait_window("フィールドへ でますか?\nA:はい  B:いいえ");
++        dialogue_message_nowait_window(message_get_buffered(MSG_PROMPT_EXIT_TOWN));
+         if (wait_choice_ab()) {
+             dialogue_hide();
+             leave_town_marker();
+         } else {
+             dialogue_hide();
+-            dialogue_message("もうすこし\nまちにいよう。");
++            message_show(MSG_STAY_TOWN);
+             draw_all_actors();
+         }
+     } else if (event_id == MAP_EVENT_DUNGEON) {
+-        dialogue_message("くらい どうくつが\nつづいている。");
++        message_show(MSG_DARK_CAVE);
+     }
+ }
+ 
+@@ -1466,7 +1505,7 @@
+         actors[(UINT8)index].dir = opposite_dir(player_dir);
+         draw_all_actors();
+         if (check_event_flag(FLAG_ENEMY_DEFEATED)) {
+-            dialogue_message("まものは たおした。\nふっかつ する？");
++            message_show(MSG_ENEMY_DEFEATED_REVIVE);
+         } else {
+             message_show(actors[(UINT8)index].message_id);
+         }
+@@ -1616,20 +1655,53 @@
+     prev_keys = keys;
+ }
+ 
+-static UINT16 calc_damage(UINT8 power, UINT8 atk, UINT8 def) {
+-    UINT8 variance;
+-    UINT16 base;
++static UINT16 clamp_damage_i16(INT16 damage) {
++    if (damage < 1) {
++        return 1u;
++    }
++    if ((UINT16)damage > PLAYER_HP_MP_MAX) {
++        return PLAYER_HP_MP_MAX;
++    }
++    return (UINT16)damage;
++}
++
++static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defender) {
++    INT16 damage;
+ 
+-    variance = (UINT8)(random_u8() % 4u);
+-    base = (UINT16)power + (UINT16)atk;
++    damage = (INT16)((UINT16)attacker->attack * 2u);
++    damage -= (INT16)defender->defense;
+ 
+-    if (base <= def) return 1u;
++    return clamp_damage_i16(damage);
++}
++
++static UINT16 calc_skill_damage(const Fighter *attacker, const Fighter *defender, const SkillDef *skill) {
++    INT16 damage;
++
++    damage = (INT16)((UINT16)attacker->skill_power * 3u);
++    damage += (INT16)attacker->attack;
++    damage += (INT16)skill->power;
++    damage -= (INT16)(defender->defense >> 1);
++
++    return clamp_damage_i16(damage);
++}
+ 
+-    base = (UINT16)(base - def + variance);
+-    if (base == 0u) return 1u;
+-    if (base > PLAYER_HP_MP_MAX) return PLAYER_HP_MP_MAX;
++static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill) {
++    UINT16 amount;
+ 
+-    return base;
++    amount = (UINT16)((UINT16)actor->heal_power * 2u);
++    amount = (UINT16)(amount + skill->power);
++    if (amount > PLAYER_HP_MP_MAX) {
++        return PLAYER_HP_MP_MAX;
++    }
++    return amount;
++}
++
++static UINT8 fighter_try_consume_mp(Fighter *actor, UINT16 cost) {
++    if (actor->mp < cost) {
++        return 0u;
++    }
++    actor->mp = (UINT16)(actor->mp - cost);
++    return 1u;
+ }
+ 
+ /*
+@@ -2098,8 +2170,7 @@
+      * removed from the map after victory.
+      */
+     battle_data_load_random((UINT8)(enemy_index + 5u), battle_enemy_data_slots, &battle_enemy_count);
+-    battle_enemy_count = 3u;
+-    if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
++    battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
+ 
+     for (i = 0u; i < battle_enemy_count; i++) {
+         battle_copy_enemy_from_data(i);
+@@ -2111,8 +2182,6 @@
+     battle_select_first_alive();
+ 
+     menu_index = 0u;
+-    skill_uses = 3u;
+-    heal_uses = 2u;
+     battle_state = BSTATE_PLAYER;
+ }
+ 
+@@ -2152,7 +2221,7 @@
+     audio_play_music(AUDIO_TRACK_BATTLE);
+     battle_start_effect();
+     battle_enter_render_once();
+-    battle_show_message("まものが\nあらわれた！");
++    battle_show_message(message_get_buffered(MSG_BATTLE_APPEAR));
+ }
+ 
+ 
+@@ -2193,8 +2262,6 @@
+     battle_select_first_alive();
+ 
+     menu_index = 0u;
+-    skill_uses = 3u;
+-    heal_uses = 2u;
+     battle_state = BSTATE_PLAYER;
+ }
+ 
+@@ -2227,10 +2294,6 @@
+         }
+     }
+ 
+-    if (max_rank > ENEMY_RANK_MAX) {
+-        max_rank = ENEMY_RANK_MAX;
+-    }
+-
+     battle_enemy_rank = max_rank;
+ }
+ 
+@@ -2360,19 +2423,19 @@
+ 
+ static void show_growth_message(void) {
+     if (last_growth.stat_type == GROWTH_HP) {
+-        dialogue_message("HPが\nあがった！");
++        message_show(MSG_GROWTH_HP);
+     } else if (last_growth.stat_type == GROWTH_MP) {
+-        dialogue_message("MPが\nあがった！");
++        message_show(MSG_GROWTH_MP);
+     } else if (last_growth.stat_type == GROWTH_ATK) {
+-        dialogue_message("ちからが\nあがった！");
++        message_show(MSG_GROWTH_ATK);
+     } else if (last_growth.stat_type == GROWTH_DEF) {
+-        dialogue_message("まもりが\nあがった！");
++        message_show(MSG_GROWTH_DEF);
+     } else if (last_growth.stat_type == GROWTH_SKILL) {
+-        dialogue_message("とくぎが\nあがった！");
++        message_show(MSG_GROWTH_SKILL);
+     } else if (last_growth.stat_type == GROWTH_HEAL) {
+-        dialogue_message("かいふくが\nあがった！");
++        message_show(MSG_GROWTH_HEAL);
+     } else if (last_growth.stat_type == GROWTH_AGI) {
+-        dialogue_message("すばやさが\nあがった！");
++        message_show(MSG_GROWTH_AGI);
+     }
+ }
+ 
+@@ -2403,11 +2466,11 @@
+         return;
+     }
+ 
+-    dmg = calc_damage(3u, player_battle.attack, enemy_battle.defense);
++    dmg = calc_attack_damage(&player_battle, &enemy_battle);
+     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
+     else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
+ 
+-    battle_show_message("ゆうしゃの こうげき！\nダメージ！");
++    battle_show_message(message_get_buffered(MSG_BATTLE_ATTACK));
+     battle_flash_enemy_sprite(battle_target_index);
+ 
+     if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
+@@ -2418,25 +2481,27 @@
+ 
+ 
+ static void player_skill(void) {
++    const SkillDef *skill;
+     UINT16 dmg;
+ 
+-    if (skill_uses == 0u) {
+-        battle_show_message("もう つかえない！");
+-        battle_state = BSTATE_PLAYER;
++    if (!battle_select_first_alive()) {
++        battle_state = BSTATE_WIN;
+         return;
+     }
+ 
+-    if (!battle_select_first_alive()) {
+-        battle_state = BSTATE_WIN;
++    skill = &skill_table[PLAYER_ACTIVE_SKILL];
++    if (!fighter_try_consume_mp(&player_battle, (UINT16)skill->mp_cost)) {
++        battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
++        battle_state = BSTATE_PLAYER;
++        update_battle_status();
+         return;
+     }
+ 
+-    skill_uses--;
+-    dmg = calc_damage(player_battle.skill_power, player_battle.attack, enemy_battle.defense);
++    dmg = calc_skill_damage(&player_battle, &enemy_battle, skill);
+     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
+     else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
+ 
+-    battle_show_message("とくぎを つかった！\nダメージ！");
++    battle_show_message(message_get_buffered(MSG_BATTLE_SKILL));
+     battle_flash_enemy_sprite(battle_target_index);
+ 
+     if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
+@@ -2447,19 +2512,33 @@
+ 
+ 
+ static void player_heal(void) {
++    const SkillDef *skill;
++    UINT16 amount;
+     UINT16 healed;
+-    if (heal_uses == 0u) {
+-        battle_show_message("もう かいふく\nできない！");
++
++    if (player_battle.hp >= player_battle.max_hp) {
++        battle_show_message(message_get_buffered(MSG_BATTLE_HP_FULL));
++        battle_state = BSTATE_PLAYER;
++        update_battle_status();
++        return;
++    }
++
++    skill = &skill_table[PLAYER_ACTIVE_HEAL];
++    if (!fighter_try_consume_mp(&player_battle, (UINT16)skill->mp_cost)) {
++        battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
+         battle_state = BSTATE_PLAYER;
++        update_battle_status();
+         return;
+     }
+-    heal_uses--;
+-    healed = (UINT16)(player_battle.hp + player_battle.heal_power);
+-    if (healed > player_battle.max_hp) {
++
++    amount = calc_heal_amount(&player_battle, skill);
++    healed = (UINT16)(player_battle.hp + amount);
++    if (healed > player_battle.max_hp || healed < player_battle.hp) {
+         healed = player_battle.max_hp;
+     }
+     player_battle.hp = healed;
+-    battle_show_message("かいふくした！");
++
++    battle_show_message(message_get_buffered(MSG_BATTLE_HEAL_DONE));
+     update_battle_status();
+     battle_state = BSTATE_ENEMY;
+ }
+@@ -2476,10 +2555,10 @@
+ 
+     roll = (UINT8)(random_u8() % 100u);
+     if (roll < chance) {
+-        battle_show_message("うまく\nにげだした！");
++        battle_show_message(message_get_buffered(MSG_BATTLE_ESCAPE_OK));
+         battle_state = BSTATE_ESCAPE;
+     } else {
+-        battle_show_message("にげられない！");
++        battle_show_message(message_get_buffered(MSG_BATTLE_ESCAPE_NG));
+         battle_state = BSTATE_ENEMY;
+     }
+ }
+@@ -2492,11 +2571,11 @@
+         if (enemy_battles[i].hp == 0u) continue;
+ 
+         battle_target_index = i;
+-        dmg = calc_damage(2u, enemy_battles[i].attack, player_battle.defense);
++        dmg = calc_attack_damage(&enemy_battles[i], &player_battle);
+         if (dmg >= player_battle.hp) player_battle.hp = 0u;
+         else player_battle.hp = (UINT16)(player_battle.hp - dmg);
+ 
+-        battle_show_message("まもの の こうげき！\nダメージ！");
++        battle_show_message(message_get_buffered(MSG_BATTLE_ENEMY_ATTACK));
+         update_battle_status();
+ 
+         if (player_battle.hp == 0u) {
+@@ -2625,11 +2704,11 @@
+                         }
+                         break;
+                     case BSTATE_WIN:
+-                        battle_show_message("まものを\nたおした！");
++                        battle_show_message(message_get_buffered(MSG_BATTLE_WIN));
+                         return_to_map_after_battle(1u);
+                         break;
+                     case BSTATE_LOSE:
+-                        battle_show_message("ゆうしゃは\nたおれた…");
++                        battle_show_message(message_get_buffered(MSG_BATTLE_LOSE));
+                         player_tx = spawn_player_tx;
+                         player_ty = spawn_player_ty;
+                         player_px = actor_px(player_tx);
+diff -ru rpg_work/rpg087_growth_rank/messages.h rpg088_mp_skill/messages.h
+--- rpg_work/rpg087_growth_rank/messages.h	2026-05-05 13:40:01.000000000 +0000
++++ rpg088_mp_skill/messages.h	2026-05-06 03:35:09.517734207 +0000
+@@ -11,8 +11,41 @@
+ #define MSG_COMMON_NPC  0u
+ #define MSG_TEST_SHORT  1u
+ #define MSG_NONE        0xFFu
+-#define MSG_COUNT       2u
++#define MSG_GROWTH_HP   2u
++#define MSG_GROWTH_MP   3u
++#define MSG_GROWTH_ATK  4u
++#define MSG_GROWTH_DEF  5u
++#define MSG_GROWTH_SKILL 6u
++#define MSG_GROWTH_HEAL 7u
++#define MSG_GROWTH_AGI  8u
++#define MSG_ENEMY_STILL 9u
++#define MSG_ENEMY_REVIVED 10u
++#define MSG_LEAVE_AS_IS 11u
++#define MSG_ENTER_TOWN 12u
++#define MSG_ARRIVE_TOWN 13u
++#define MSG_BACK_FIELD 14u
++#define MSG_LEFT_FIELD 15u
++#define MSG_LATER 16u
++#define MSG_STAY_TOWN 17u
++#define MSG_DARK_CAVE 18u
++#define MSG_ENEMY_DEFEATED_REVIVE 19u
++#define MSG_BATTLE_APPEAR 20u
++#define MSG_BATTLE_ATTACK 21u
++#define MSG_BATTLE_LOW_MP 22u
++#define MSG_BATTLE_SKILL 23u
++#define MSG_BATTLE_HP_FULL 24u
++#define MSG_BATTLE_HEAL_DONE 25u
++#define MSG_BATTLE_ESCAPE_OK 26u
++#define MSG_BATTLE_ESCAPE_NG 27u
++#define MSG_BATTLE_ENEMY_ATTACK 28u
++#define MSG_BATTLE_WIN 29u
++#define MSG_BATTLE_LOSE 30u
++#define MSG_PROMPT_REVIVE 31u
++#define MSG_PROMPT_ENTER_TOWN 32u
++#define MSG_PROMPT_EXIT_TOWN 33u
++#define MSG_COUNT       34u
+ 
+ void message_show(UINT8 id) NONBANKED;
++const char *message_get_buffered(UINT8 id) NONBANKED;
+ 
+ #endif
+diff -ru rpg_work/rpg087_growth_rank/messages_bank.c rpg088_mp_skill/messages_bank.c
+--- rpg_work/rpg087_growth_rank/messages_bank.c	2026-05-05 13:40:01.000000000 +0000
++++ rpg088_mp_skill/messages_bank.c	2026-05-06 03:35:09.518540625 +0000
+@@ -20,7 +20,164 @@
+     "みちを\n"
+     "みてね。";
+ 
++
++const char msg_growth_hp_bank[] =
++    "HPが\n"
++    "あがった！";
++
++const char msg_growth_mp_bank[] =
++    "MPが\n"
++    "あがった！";
++
++const char msg_growth_atk_bank[] =
++    "ちからが\n"
++    "あがった！";
++
++const char msg_growth_def_bank[] =
++    "まもりが\n"
++    "あがった！";
++
++const char msg_growth_skill_bank[] =
++    "とくぎが\n"
++    "あがった！";
++
++const char msg_growth_heal_bank[] =
++    "かいふくが\n"
++    "あがった！";
++
++const char msg_growth_agi_bank[] =
++    "すばやさが\n"
++    "あがった！";
++
++const char msg_enemy_still_bank[] =
++    "まだ まものは\n"
++    "そこに いるよ。";
++
++const char msg_enemy_revived_bank[] =
++    "まものが\n"
++    "ふっかつした！";
++
++const char msg_leave_as_is_bank[] =
++    "そのままに\n"
++    "しておこう。";
++
++const char msg_enter_town_bank[] =
++    "まちへ\n"
++    "はいります。";
++
++const char msg_arrive_town_bank[] =
++    "まちに\n"
++    "つきました。";
++
++const char msg_back_field_bank[] =
++    "フィールドへ\n"
++    "もどります。";
++
++const char msg_left_field_bank[] =
++    "フィールドに\n"
++    "でました。";
++
++const char msg_later_bank[] =
++    "また あとで\n"
++    "こよう。";
++
++const char msg_stay_town_bank[] =
++    "もうすこし\n"
++    "まちにいよう。";
++
++const char msg_dark_cave_bank[] =
++    "くらい どうくつが\n"
++    "つづいている。";
++
++const char msg_enemy_defeated_revive_bank[] =
++    "まものは たおした。\n"
++    "ふっかつ する？";
++
++const char msg_battle_appear_bank[] =
++    "まものが\n"
++    "あらわれた！";
++
++const char msg_battle_attack_bank[] =
++    "ゆうしゃの こうげき！\n"
++    "ダメージ！";
++
++const char msg_battle_low_mp_bank[] =
++    "Mがたりない";
++
++const char msg_battle_skill_bank[] =
++    "とくぎを つかった！\n"
++    "ダメージ！";
++
++const char msg_battle_hp_full_bank[] =
++    "Hまんたん";
++
++const char msg_battle_heal_done_bank[] =
++    "かいふくした！";
++
++const char msg_battle_escape_ok_bank[] =
++    "うまく\n"
++    "にげだした！";
++
++const char msg_battle_escape_ng_bank[] =
++    "にげられない！";
++
++const char msg_battle_enemy_attack_bank[] =
++    "まもの の こうげき！\n"
++    "ダメージ！";
++
++const char msg_battle_win_bank[] =
++    "まものを\n"
++    "たおした！";
++
++const char msg_battle_lose_bank[] =
++    "ゆうしゃは\n"
++    "たおれた…";
++
++const char msg_prompt_revive_bank[] =
++    "まものを ふっかつ?\n"
++    "A:はい  B:いいえ";
++
++const char msg_prompt_enter_town_bank[] =
++    "まちに はいりますか?\n"
++    "A:はい  B:いいえ";
++
++const char msg_prompt_exit_town_bank[] =
++    "フィールドへ でますか?\n"
++    "A:はい  B:いいえ";
++
+ const char * const message_table[MSG_COUNT] = {
+     msg_common_npc_bank,
+-    msg_test_short_bank
++    msg_test_short_bank,
++    msg_growth_hp_bank,
++    msg_growth_mp_bank,
++    msg_growth_atk_bank,
++    msg_growth_def_bank,
++    msg_growth_skill_bank,
++    msg_growth_heal_bank,
++    msg_growth_agi_bank,
++    msg_enemy_still_bank,
++    msg_enemy_revived_bank,
++    msg_leave_as_is_bank,
++    msg_enter_town_bank,
++    msg_arrive_town_bank,
++    msg_back_field_bank,
++    msg_left_field_bank,
++    msg_later_bank,
++    msg_stay_town_bank,
++    msg_dark_cave_bank,
++    msg_enemy_defeated_revive_bank,
++    msg_battle_appear_bank,
++    msg_battle_attack_bank,
++    msg_battle_low_mp_bank,
++    msg_battle_skill_bank,
++    msg_battle_hp_full_bank,
++    msg_battle_heal_done_bank,
++    msg_battle_escape_ok_bank,
++    msg_battle_escape_ng_bank,
++    msg_battle_enemy_attack_bank,
++    msg_battle_win_bank,
++    msg_battle_lose_bank,
++    msg_prompt_revive_bank,
++    msg_prompt_enter_town_bank,
++    msg_prompt_exit_town_bank
+ };
+diff -ru rpg_work/rpg087_growth_rank/messages_runtime.c rpg088_mp_skill/messages_runtime.c
+--- rpg_work/rpg087_growth_rank/messages_runtime.c	2026-05-05 13:40:01.000000000 +0000
++++ rpg088_mp_skill/messages_runtime.c	2026-05-06 03:34:45.789088802 +0000
+@@ -46,3 +46,12 @@
+     message_copy_from_bank(id);
+     dialogue_message(message_buffer);
+ }
++
++const char *message_get_buffered(UINT8 id) NONBANKED {
++    if (id == MSG_NONE) {
++        message_buffer[0] = '\0';
++        return message_buffer;
++    }
++    message_copy_from_bank(id);
++    return message_buffer;
++}
+Only in rpg_work/rpg087_growth_rank: precheck_output.log
+Only in rpg088_mp_skill: precheck_output_rpg088.log
+Only in rpg088_mp_skill: rpg088_mp_skill.diff

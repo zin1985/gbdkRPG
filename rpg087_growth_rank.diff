@@ -1,0 +1,1752 @@
+diff -ruN rpg_work/rpg086_window_reset/CHECK_rpg087_growth_rank.md rpg087_growth_rank/CHECK_rpg087_growth_rank.md
+--- rpg_work/rpg086_window_reset/CHECK_rpg087_growth_rank.md	1970-01-01 00:00:00.000000000 +0000
++++ rpg087_growth_rank/CHECK_rpg087_growth_rank.md	2026-05-06 01:59:16.071127517 +0000
+@@ -0,0 +1,39 @@
++# CHECK rpg087_growth_rank
++
++## 目的
++
++rpg086_window_reset を基準に、スレッドで検討した成長システム拡張のうち、すぐ実装可能な土台を追加する。
++
++## 実装確認
++
++- [ ] HP/MPの上限が 999 になっている
++- [ ] ちから/まもり/とくぎ/かいふく/すばやさの上限が 255 になっている
++- [ ] 主人公に MP ステータスが追加されている
++- [ ] 戦闘画面の主人公 M 表示が固定値ではなく現在MPを表示している
++- [ ] 勝利時の成長候補に MP / とくぎ / かいふく が含まれている
++- [ ] 選ばれた能力が上限の場合、すばやさへ流れ込まず成長なしになる
++- [ ] 敵ランク battle_enemy_rank が戦闘開始時に保存される
++- [ ] 成長発生率が敵ランクテーブルで決まる
++- [ ] GrowthResult に actor_id / stat_type / old_value / new_value が保存される
++
++## VBA確認
++
++- [ ] 起動して白画面にならない
++- [ ] フィールド表示が崩れない
++- [ ] STARTメニューの「つよさ」で HP / MP が表示される
++- [ ] ランダムエンカウントする
++- [ ] 戦闘突入時に主人公のH/M表示が出る
++- [ ] 戦闘勝利後に成長メッセージが出る場合がある
++- [ ] HPが上がった場合に次回以降の最大HPへ反映される
++- [ ] MPが上がった場合に「つよさ」へ反映される
++- [ ] 戦闘後にフィールドへ戻れる
++- [ ] 戦闘UI位置が rpg086_window_reset から大きく崩れていない
++
++## 未実装
++
++- [ ] 複数キャラ成長
++- [ ] GrowthResult配列化
++- [ ] 技ひらめき
++- [ ] 武器熟練度
++- [ ] メッセージキュー連携
++- [ ] MP消費制のとくぎ/かいふく
+diff -ruN rpg_work/rpg086_window_reset/Makefile rpg087_growth_rank/Makefile
+--- rpg_work/rpg086_window_reset/Makefile	2026-05-05 16:38:45.000000000 +0000
++++ rpg087_growth_rank/Makefile	2026-05-06 01:59:16.058571855 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg086_window_reset.gb
++OUT = rpg087_growth_rank.gb
+ SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ruN rpg_work/rpg086_window_reset/README.md rpg087_growth_rank/README.md
+--- rpg_work/rpg086_window_reset/README.md	2026-05-05 16:35:31.000000000 +0000
++++ rpg087_growth_rank/README.md	2026-05-06 01:59:16.121245277 +0000
+@@ -666,3 +666,28 @@
+ - 戦闘突入時のパーティ欄、敵名欄、コマンド欄、メッセージ欄が画面内の自然な位置に戻ること。
+ - BG枠と文字がずれずに重なること。
+ - 敵・味方アイコン・カーソルOBJが大きく外れないこと。
++
++## rpg087_growth_rank
++
++### 目的
++
++`rpg086_window_reset` を基準に、スレッドで検討した成長システム拡張のうち、すぐ実装可能な土台を追加した版です。
++
++### 追加内容
++
++- HP/MPの上限を `999` に変更。
++- その他能力値の上限を `255` に変更。
++- 主人公に `MP` ステータスを追加。
++- 戦闘画面の主人公 `M` 表示を固定値ではなく `player_battle.mp` 表示へ変更。
++- 成長候補を `HP / MP / ちから / まもり / とくぎ / かいふく / すばやさ` に拡張。
++- `GrowthResult` 構造体を追加し、成長前後の値を記録する土台を追加。
++- `battle_enemy_rank` を追加し、戦闘開始時点の敵の強さを保存。
++- rank別成長率テーブルを追加。
++- 上限到達時に別能力へ流れ込む挙動を廃止。
++
++### 制約
++
++- 複数キャラ成長は未実装。
++- 技ひらめき、武器熟練度、GrowthResult配列化は未実装。
++- MPはステータスとして追加したが、現時点では `とくぎ` / `かいふく` の使用回数制からMP消費制へは変更していない。
++- 戦闘UIの描画方式、BGM、MAP_GFX_TILE_COUNT、jpfont.c、misakiUTF16.c は変更していない。
+diff -ruN rpg_work/rpg086_window_reset/battle_data.h rpg087_growth_rank/battle_data.h
+--- rpg_work/rpg086_window_reset/battle_data.h	2026-05-05 13:40:01.000000000 +0000
++++ rpg087_growth_rank/battle_data.h	2026-05-06 01:58:50.730519401 +0000
+@@ -8,8 +8,8 @@
+ 
+ typedef struct BattleEnemyData {
+     char name[BATTLE_NAME_LEN];
+-    UINT8 max_hp;
+-    UINT8 hp;
++    UINT16 max_hp;
++    UINT16 hp;
+     UINT8 attack;
+     UINT8 defense;
+     UINT8 agility;
+diff -ruN rpg_work/rpg086_window_reset/battle_data_bank.c rpg087_growth_rank/battle_data_bank.c
+--- rpg_work/rpg086_window_reset/battle_data_bank.c	2026-05-05 14:07:10.000000000 +0000
++++ rpg087_growth_rank/battle_data_bank.c	2026-05-06 01:58:50.731383144 +0000
+@@ -7,7 +7,7 @@
+ 
+ typedef struct BattleEnemyTemplate {
+     const char *name;
+-    UINT8 max_hp;
++    UINT16 max_hp;
+     UINT8 attack;
+     UINT8 defense;
+     UINT8 agility;
+diff -ruN rpg_work/rpg086_window_reset/build.bat rpg087_growth_rank/build.bat
+--- rpg_work/rpg086_window_reset/build.bat	2026-05-05 16:38:45.000000000 +0000
++++ rpg087_growth_rank/build.bat	2026-05-06 01:59:16.058301719 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg086_window_reset"
++set "PROJECT=rpg087_growth_rank"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+diff -ruN rpg_work/rpg086_window_reset/build.log rpg087_growth_rank/build.log
+--- rpg_work/rpg086_window_reset/build.log	2026-05-05 16:38:49.000000000 +0000
++++ rpg087_growth_rank/build.log	2026-05-06 02:01:30.148806648 +0000
+@@ -1,3 +1,29 @@
+-Building rpg086_window_reset.gb ...
++Building rpg087_growth_rank.gb ...
+ Sources: main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ 
++===== prebank_check.py =====
++main.c bytes: 87296
++[OK] no direct set_bkg_data() call found in main.c code
++[OK] no direct set_sprite_data() call found in main.c code
++[OK] no static const char[] message definitions found in main.c code
++[OK] message_show() is referenced
++[OK] map data arrays are not defined in main.c code
++[OK] jpfont.c is non-banked again
++[OK] jpfont.h public APIs are non-banked
++[OK] font_data_bank.c is bank 6
++[OK] misakiUTF16.c uses font data wrappers
++[OK] font_data_bank.c owns raw Misaki tables in bank 6
++[OK] font_data_runtime.c uses NONBANKED wrappers
++[OK] misakiUTF16.c no longer references raw fdata/ftable directly
++[OK] actor visibility predicate is present
++[OK] random encounter helper is present
++[OK] battle start effect helper is present
++[OK] normalized UTF-16 font cache key is restored
++[INFO] exact bank overflow cannot be known before compile/link.
++[INFO] final judgment must use compiler/linker output plus romusage.
++
++Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg087_growth_rank.gb main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++
++./build.sh: 32: lcc: not found
++
++[ERROR] Build failed: exit=127
+diff -ruN rpg_work/rpg086_window_reset/build.sh rpg087_growth_rank/build.sh
+--- rpg_work/rpg086_window_reset/build.sh	2026-05-05 16:38:45.000000000 +0000
++++ rpg087_growth_rank/build.sh	2026-05-06 01:59:16.057678738 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg086_window_reset.gb"
++OUT="rpg087_growth_rank.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+diff -ruN rpg_work/rpg086_window_reset/compile_output.log rpg087_growth_rank/compile_output.log
+--- rpg_work/rpg086_window_reset/compile_output.log	1970-01-01 00:00:00.000000000 +0000
++++ rpg087_growth_rank/compile_output.log	2026-05-06 02:01:30.058933681 +0000
+@@ -0,0 +1 @@
++./build.sh: 32: lcc: not found
+diff -ruN rpg_work/rpg086_window_reset/docs/checks/CHECK_087_GROWTH_RANK.md rpg087_growth_rank/docs/checks/CHECK_087_GROWTH_RANK.md
+--- rpg_work/rpg086_window_reset/docs/checks/CHECK_087_GROWTH_RANK.md	1970-01-01 00:00:00.000000000 +0000
++++ rpg087_growth_rank/docs/checks/CHECK_087_GROWTH_RANK.md	2026-05-06 01:59:16.097981066 +0000
+@@ -0,0 +1,39 @@
++# CHECK rpg087_growth_rank
++
++## 目的
++
++rpg086_window_reset を基準に、スレッドで検討した成長システム拡張のうち、すぐ実装可能な土台を追加する。
++
++## 実装確認
++
++- [ ] HP/MPの上限が 999 になっている
++- [ ] ちから/まもり/とくぎ/かいふく/すばやさの上限が 255 になっている
++- [ ] 主人公に MP ステータスが追加されている
++- [ ] 戦闘画面の主人公 M 表示が固定値ではなく現在MPを表示している
++- [ ] 勝利時の成長候補に MP / とくぎ / かいふく が含まれている
++- [ ] 選ばれた能力が上限の場合、すばやさへ流れ込まず成長なしになる
++- [ ] 敵ランク battle_enemy_rank が戦闘開始時に保存される
++- [ ] 成長発生率が敵ランクテーブルで決まる
++- [ ] GrowthResult に actor_id / stat_type / old_value / new_value が保存される
++
++## VBA確認
++
++- [ ] 起動して白画面にならない
++- [ ] フィールド表示が崩れない
++- [ ] STARTメニューの「つよさ」で HP / MP が表示される
++- [ ] ランダムエンカウントする
++- [ ] 戦闘突入時に主人公のH/M表示が出る
++- [ ] 戦闘勝利後に成長メッセージが出る場合がある
++- [ ] HPが上がった場合に次回以降の最大HPへ反映される
++- [ ] MPが上がった場合に「つよさ」へ反映される
++- [ ] 戦闘後にフィールドへ戻れる
++- [ ] 戦闘UI位置が rpg086_window_reset から大きく崩れていない
++
++## 未実装
++
++- [ ] 複数キャラ成長
++- [ ] GrowthResult配列化
++- [ ] 技ひらめき
++- [ ] 武器熟練度
++- [ ] メッセージキュー連携
++- [ ] MP消費制のとくぎ/かいふく
+diff -ruN rpg_work/rpg086_window_reset/docs/future/GROWTH_SYSTEM_DESIGN_087.md rpg087_growth_rank/docs/future/GROWTH_SYSTEM_DESIGN_087.md
+--- rpg_work/rpg086_window_reset/docs/future/GROWTH_SYSTEM_DESIGN_087.md	1970-01-01 00:00:00.000000000 +0000
++++ rpg087_growth_rank/docs/future/GROWTH_SYSTEM_DESIGN_087.md	2026-05-06 01:59:16.109481599 +0000
+@@ -0,0 +1,35 @@
++# rpg087 growth rank design
++
++## 方針
++
++この版では、スレッドで検討した成長システム拡張のうち、既存の戦闘UIを壊しにくい土台だけを実装する。
++
++- HP/MP上限: 999
++- その他能力上限: 255
++- 成長結果は GrowthResult に保存する
++- 敵ランク battle_enemy_rank を戦闘開始時に保存する
++- 成長発生率は rank 1〜5 のテーブルで管理する
++- 上限到達時は別能力へ流れ込ませず、成長なしにする
++
++## 今回入れた対象能力
++
++- HP
++- MP
++- ちから
++- まもり
++- とくぎ
++- かいふく
++- すばやさ
++
++## 今回まだ入れないもの
++
++- 複数キャラ成長
++- 複数成長ログ
++- 技ひらめき
++- 武器熟練度
++- メッセージキュー
++- MP消費制
++
++## 次回候補
++
++rpg088_growth_party では、プレイヤー単体の stat 変数を ActorStats 構造体へ整理し、複数キャラ成長へ拡張する。
+diff -ruN rpg_work/rpg086_window_reset/main.c rpg087_growth_rank/main.c
+--- rpg_work/rpg086_window_reset/main.c	2026-05-05 16:35:31.000000000 +0000
++++ rpg087_growth_rank/main.c	2026-05-06 02:00:58.322064365 +0000
+@@ -264,9 +264,24 @@
+ 
+ #define GROWTH_NONE 0u
+ #define GROWTH_HP 1u
+-#define GROWTH_ATK 2u
+-#define GROWTH_DEF 3u
+-#define GROWTH_AGI 4u
++#define GROWTH_MP 2u
++#define GROWTH_ATK 3u
++#define GROWTH_DEF 4u
++#define GROWTH_SKILL 5u
++#define GROWTH_HEAL 6u
++#define GROWTH_AGI 7u
++#define GROWTH_STAT_COUNT 7u
++
++#define PLAYER_HP_MP_MAX 999u
++#define PLAYER_STAT_MAX 255u
++#define ENEMY_RANK_MAX 5u
++
++typedef struct GrowthResult {
++    UINT8 actor_id;
++    UINT8 stat_type;
++    UINT16 old_value;
++    UINT16 new_value;
++} GrowthResult;
+ 
+ #define MENU_STATUS 0u
+ #define MENU_ITEM 1u
+@@ -364,8 +379,10 @@
+ 
+ typedef struct Fighter {
+     const char *name;
+-    UINT8 max_hp;
+-    UINT8 hp;
++    UINT16 max_hp;
++    UINT16 hp;
++    UINT16 max_mp;
++    UINT16 mp;
+     UINT8 attack;
+     UINT8 defense;
+     UINT8 skill_power;
+@@ -391,15 +408,15 @@
+ /* rpg058: map collision/object arrays moved to map_data_bank.c. */
+ 
+ static Actor actors[] = {
+-    {ACTOR_KIND_NPC,   1u, 1u, 1u, 3u, 2u, DIR_DOWN, 0u, NPC0_SPRITE_BASE,   NPC0_TILE_BASE,   MSG_COMMON_NPC, {"",0u,0u,0u,0u,0u,0u,0u}},
+-    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"スライム",20u,20u,5u,2u,0u,0u,5u}},
++    {ACTOR_KIND_NPC,   1u, 1u, 1u, 3u, 2u, DIR_DOWN, 0u, NPC0_SPRITE_BASE,   NPC0_TILE_BASE,   MSG_COMMON_NPC, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}},
++    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"スライム",20u,20u,0u,0u,5u,2u,0u,0u,5u}},
+     /* rpg046:
+      * Minimal talkable actor data-only test.
+      * Uses OAM 12-15 and existing NPC0_TILE_BASE.
+      * active=1 displays the sprite. solid=0 keeps it passable.
+      * talkable=1 is tested without changing try_interact().
+      */
+-    {ACTOR_KIND_NPC,   1u, 0u, 1u, 10u, 8u, DIR_DOWN, 0u, TEST_ACTOR_SPRITE_BASE, NPC0_TILE_BASE, MSG_TEST_SHORT, {"",0u,0u,0u,0u,0u,0u,0u}}
++    {ACTOR_KIND_NPC,   1u, 0u, 1u, 10u, 8u, DIR_DOWN, 0u, TEST_ACTOR_SPRITE_BASE, NPC0_TILE_BASE, MSG_TEST_SHORT, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}}
+ };
+ #define ACTOR_COUNT ((UINT8)(sizeof(actors) / sizeof(actors[0])))
+ 
+@@ -412,6 +429,9 @@
+ static UINT8 encounter_grace_steps;
+ static UINT8 event_flags[EVENT_FLAG_COUNT];
+ static UINT8 last_growth_type;
++static GrowthResult last_growth;
++static UINT8 battle_enemy_rank;
++static const UINT8 growth_chance_by_rank[] = {0u, 40u, 45u, 50u, 55u, 60u};
+ /* Japanese UTF-8 battle messages can exceed 48 bytes.
+  * Keeping this too small can corrupt nearby globals such as current_enemy_index,
+  * which made the NPC disappear after defeating the enemy.
+@@ -435,7 +455,8 @@
+ static const char *battle_message_text;
+ static UINT8 battle_screen_ready;
+ #define enemy_battle (enemy_battles[battle_target_index])
+-static UINT8 player_max_hp_stat;
++static UINT16 player_max_hp_stat;
++static UINT16 player_max_mp_stat;
+ static UINT8 player_attack_stat;
+ static UINT8 player_defense_stat;
+ static UINT8 player_skill_power_stat;
+@@ -487,8 +508,10 @@
+ static void put_ascii(UINT8 col, UINT8 row, const char *text);
+ static void put_cursor(UINT8 col, UINT8 row, UINT8 visible);
+ static void u8_to_dec(UINT8 value, char *out);
++static void u16_to_dec3(UINT16 value, char *out);
+ static void put_u8(UINT8 col, UINT8 row, UINT8 value);
+-static void put_hp_pair(UINT8 col, UINT8 row, UINT8 hp, UINT8 max_hp);
++static void put_u16(UINT8 col, UINT8 row, UINT16 value);
++static void put_hp_pair(UINT8 col, UINT8 row, UINT16 hp, UINT16 max_hp);
+ static void screen_clear(void);
+ static void wait_a_pressed(void);
+ static void draw_object_map(void);
+@@ -561,7 +584,7 @@
+ static void start_move(Direction dir);
+ static void update_player_movement(void);
+ static void map_input(void);
+-static UINT8 calc_damage(UINT8 power, UINT8 atk, UINT8 def);
++static UINT16 calc_damage(UINT8 power, UINT8 atk, UINT8 def);
+ static void draw_battle_frame(void);
+ static void battle_clear_bg_full(void);
+ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
+@@ -597,6 +620,11 @@
+ static void enter_battle_screen(void);
+ static void init_random_battle_from_field(void);
+ static void enter_random_battle(void);
++static void battle_prepare_enemy_rank(void);
++static void clear_growth_result(void);
++static UINT8 get_growth_chance(UINT8 enemy_rank);
++static UINT8 should_growth_happen(UINT8 enemy_rank);
++static UINT8 apply_player_stat_growth(UINT8 stat_type);
+ static void apply_battle_growth(void);
+ static void show_growth_message(void);
+ static void return_to_map_after_battle(UINT8 won);
+@@ -798,21 +826,49 @@
+     out[i] = '\0';
+ }
+ 
++static void u16_to_dec3(UINT16 value, char *out) {
++    UINT16 hundreds;
++    UINT8 tens;
++    UINT8 ones;
++    UINT8 i = 0u;
++
++    if (value > PLAYER_HP_MP_MAX) value = PLAYER_HP_MP_MAX;
++
++    hundreds = value / 100u;
++    tens = (UINT8)((value / 10u) % 10u);
++    ones = (UINT8)(value % 10u);
++
++    if (hundreds != 0u) {
++        out[i++] = (char)('0' + (UINT8)hundreds);
++        out[i++] = (char)('0' + tens);
++    } else if (tens != 0u) {
++        out[i++] = (char)('0' + tens);
++    }
++    out[i++] = (char)('0' + ones);
++    out[i] = '\0';
++}
++
+ static void put_u8(UINT8 col, UINT8 row, UINT8 value) {
+     char buf[4];
+     u8_to_dec(value, buf);
+     jp_put_bkg_text(col, row, buf);
+ }
+ 
+-static void put_hp_pair(UINT8 col, UINT8 row, UINT8 hp, UINT8 max_hp) {
+-    char a[4];
+-    char b[4];
+-    char buf[9];
++static void put_u16(UINT8 col, UINT8 row, UINT16 value) {
++    char buf[5];
++    u16_to_dec3(value, buf);
++    jp_put_bkg_text(col, row, buf);
++}
++
++static void put_hp_pair(UINT8 col, UINT8 row, UINT16 hp, UINT16 max_hp) {
++    char a[5];
++    char b[5];
++    char buf[11];
+     UINT8 i = 0u;
+     UINT8 j = 0u;
+ 
+-    u8_to_dec(hp, a);
+-    u8_to_dec(max_hp, b);
++    u16_to_dec3(hp, a);
++    u16_to_dec3(max_hp, b);
+ 
+     while (a[j] != '\0') {
+         buf[i++] = a[j++];
+@@ -836,12 +892,13 @@
+ static void show_status_page(void) {
+     screen_clear();
+     jp_put_bkg_text(1u, 0u, "つよさ");
+-    jp_put_bkg_text(0u, 2u, "たいりょく"); put_u8(11u, 2u, player_max_hp_stat);
+-    jp_put_bkg_text(0u, 3u, "ちから");     put_u8(11u, 3u, player_attack_stat);
+-    jp_put_bkg_text(0u, 4u, "まもり");     put_u8(11u, 4u, player_defense_stat);
+-    jp_put_bkg_text(0u, 5u, "とくぎ");     put_u8(11u, 5u, player_skill_power_stat);
+-    jp_put_bkg_text(0u, 6u, "かいふく");   put_u8(11u, 6u, player_heal_power_stat);
+-    jp_put_bkg_text(0u, 7u, "すばやさ");   put_u8(11u, 7u, player_agility_stat);
++    jp_put_bkg_text(0u, 2u, "たいりょく"); put_u16(11u, 2u, player_max_hp_stat);
++    jp_put_bkg_text(0u, 3u, "MP");         put_u16(11u, 3u, player_max_mp_stat);
++    jp_put_bkg_text(0u, 4u, "ちから");     put_u8(11u, 4u, player_attack_stat);
++    jp_put_bkg_text(0u, 5u, "まもり");     put_u8(11u, 5u, player_defense_stat);
++    jp_put_bkg_text(0u, 6u, "とくぎ");     put_u8(11u, 6u, player_skill_power_stat);
++    jp_put_bkg_text(0u, 7u, "かいふく");   put_u8(11u, 7u, player_heal_power_stat);
++    jp_put_bkg_text(0u, 8u, "すばやさ");   put_u8(11u, 8u, player_agility_stat);
+     jp_put_bkg_text(0u,14u, "A/B/START もどる");
+ }
+ 
+@@ -1559,14 +1616,19 @@
+     prev_keys = keys;
+ }
+ 
+-static UINT8 calc_damage(UINT8 power, UINT8 atk, UINT8 def) {
++static UINT16 calc_damage(UINT8 power, UINT8 atk, UINT8 def) {
+     UINT8 variance;
+-    UINT8 base;
++    UINT16 base;
++
+     variance = (UINT8)(random_u8() % 4u);
+-    base = (UINT8)(power + atk);
++    base = (UINT16)power + (UINT16)atk;
++
+     if (base <= def) return 1u;
+-    base = (UINT8)(base - def + variance);
++
++    base = (UINT16)(base - def + variance);
+     if (base == 0u) return 1u;
++    if (base > PLAYER_HP_MP_MAX) return PLAYER_HP_MP_MAX;
++
+     return base;
+ }
+ 
+@@ -1629,6 +1691,10 @@
+     put_u8(BATTLE_BG_X(col), row, value);
+ }
+ 
++static void battle_put_u16(UINT8 col, UINT8 row, UINT16 value) {
++    put_u16(BATTLE_BG_X(col), row, value);
++}
++
+ static void draw_battle_enemy_names(void) {
+     UINT8 i;
+ 
+@@ -1659,9 +1725,9 @@
+ 
+     battle_put_bkg_text(1u, 1u,  "ゆうしゃ");
+     battle_put_bkg_text(1u, 2u,  "H ");
+-    battle_put_u8(3u, 2u, player_battle.hp);
++    battle_put_u16(3u, 2u, player_battle.hp);
+     battle_put_bkg_text(1u, 3u,  "M ");
+-    battle_put_u8(3u, 3u, 38u);
++    battle_put_u16(3u, 3u, player_battle.mp);
+ 
+     battle_put_bkg_text(7u, 1u,  "そうりょ");
+     battle_put_bkg_text(7u, 2u,  "H ");
+@@ -1923,13 +1989,13 @@
+ static void battle_update_party_hp_dirty(UINT8 slot) {
+     if (slot != 0u) return;
+     battle_bkg_clear_area(3u, 2u, 3u, 1u);
+-    battle_put_u8(3u, 2u, player_battle.hp);
++    battle_put_u16(3u, 2u, player_battle.hp);
+ }
+ 
+ static void battle_update_party_mp_dirty(UINT8 slot) {
+     if (slot != 0u) return;
+     battle_bkg_clear_area(3u, 3u, 3u, 1u);
+-    battle_put_u8(3u, 3u, 38u);
++    battle_put_u16(3u, 3u, player_battle.mp);
+ }
+ 
+ static void battle_set_message_dirty(const char *text) {
+@@ -2019,6 +2085,8 @@
+     player_battle.name = "ゆうしゃ";
+     player_battle.max_hp = player_max_hp_stat;
+     player_battle.hp = player_max_hp_stat;
++    player_battle.max_mp = player_max_mp_stat;
++    player_battle.mp = player_max_mp_stat;
+     player_battle.attack = player_attack_stat;
+     player_battle.defense = player_defense_stat;
+     player_battle.skill_power = player_skill_power_stat;
+@@ -2037,6 +2105,8 @@
+         battle_copy_enemy_from_data(i);
+     }
+ 
++    battle_prepare_enemy_rank();
++
+     battle_target_index = 0u;
+     battle_select_first_alive();
+ 
+@@ -2101,6 +2171,8 @@
+     player_battle.name = "ゆうしゃ";
+     player_battle.max_hp = player_max_hp_stat;
+     player_battle.hp = player_max_hp_stat;
++    player_battle.max_mp = player_max_mp_stat;
++    player_battle.mp = player_max_mp_stat;
+     player_battle.attack = player_attack_stat;
+     player_battle.defense = player_defense_stat;
+     player_battle.skill_power = player_skill_power_stat;
+@@ -2115,6 +2187,8 @@
+         battle_copy_enemy_from_data(i);
+     }
+ 
++    battle_prepare_enemy_rank();
++
+     battle_target_index = 0u;
+     battle_select_first_alive();
+ 
+@@ -2132,36 +2206,172 @@
+     enter_battle_screen();
+ }
+ 
+-static void apply_battle_growth(void) {
+-    UINT8 roll;
++static void battle_prepare_enemy_rank(void) {
++    UINT8 i;
++    UINT8 rank;
++    UINT8 max_rank;
++
++    max_rank = 1u;
++
++    for (i = 0u; i < battle_enemy_count; i++) {
++        rank = 1u;
++
++        if (enemy_battles[i].max_hp >= 28u || enemy_battles[i].attack >= 7u) {
++            rank = 3u;
++        } else if (enemy_battles[i].max_hp >= 20u || enemy_battles[i].attack >= 5u) {
++            rank = 2u;
++        }
++
++        if (rank > max_rank) {
++            max_rank = rank;
++        }
++    }
+ 
+-    /* Small SaGa-like post-battle growth hook. Keep it conservative so the
+-     * working map/battle loop stays stable while the system is expanded. */
++    if (max_rank > ENEMY_RANK_MAX) {
++        max_rank = ENEMY_RANK_MAX;
++    }
++
++    battle_enemy_rank = max_rank;
++}
++
++static void clear_growth_result(void) {
+     last_growth_type = GROWTH_NONE;
+-    roll = (UINT8)(random_u8() % 4u);
+-    if (roll == 0u && player_max_hp_stat < 99u) {
+-        player_max_hp_stat++;
+-        last_growth_type = GROWTH_HP;
+-    } else if (roll == 1u && player_attack_stat < 30u) {
+-        player_attack_stat++;
+-        last_growth_type = GROWTH_ATK;
+-    } else if (roll == 2u && player_defense_stat < 30u) {
+-        player_defense_stat++;
+-        last_growth_type = GROWTH_DEF;
+-    } else if (player_agility_stat < 30u) {
+-        player_agility_stat++;
+-        last_growth_type = GROWTH_AGI;
++    last_growth.actor_id = 0u;
++    last_growth.stat_type = GROWTH_NONE;
++    last_growth.old_value = 0u;
++    last_growth.new_value = 0u;
++}
++
++static UINT8 get_growth_chance(UINT8 enemy_rank) {
++    if (enemy_rank == 0u) {
++        enemy_rank = 1u;
++    }
++    if (enemy_rank > ENEMY_RANK_MAX) {
++        enemy_rank = ENEMY_RANK_MAX;
+     }
++
++    return growth_chance_by_rank[enemy_rank];
++}
++
++static UINT8 should_growth_happen(UINT8 enemy_rank) {
++    return (UINT8)((random_u8() % 100u) < get_growth_chance(enemy_rank));
++}
++
++static UINT8 apply_player_stat_growth(UINT8 stat_type) {
++    last_growth.actor_id = 0u;
++    last_growth.stat_type = GROWTH_NONE;
++    last_growth.old_value = 0u;
++    last_growth.new_value = 0u;
++
++    switch (stat_type) {
++        case GROWTH_HP:
++            if (player_max_hp_stat < PLAYER_HP_MP_MAX) {
++                last_growth.old_value = player_max_hp_stat;
++                player_max_hp_stat++;
++                last_growth.new_value = player_max_hp_stat;
++                last_growth.stat_type = GROWTH_HP;
++                last_growth_type = GROWTH_HP;
++                return 1u;
++            }
++            break;
++
++        case GROWTH_MP:
++            if (player_max_mp_stat < PLAYER_HP_MP_MAX) {
++                last_growth.old_value = player_max_mp_stat;
++                player_max_mp_stat++;
++                last_growth.new_value = player_max_mp_stat;
++                last_growth.stat_type = GROWTH_MP;
++                last_growth_type = GROWTH_MP;
++                return 1u;
++            }
++            break;
++
++        case GROWTH_ATK:
++            if (player_attack_stat < PLAYER_STAT_MAX) {
++                last_growth.old_value = player_attack_stat;
++                player_attack_stat++;
++                last_growth.new_value = player_attack_stat;
++                last_growth.stat_type = GROWTH_ATK;
++                last_growth_type = GROWTH_ATK;
++                return 1u;
++            }
++            break;
++
++        case GROWTH_DEF:
++            if (player_defense_stat < PLAYER_STAT_MAX) {
++                last_growth.old_value = player_defense_stat;
++                player_defense_stat++;
++                last_growth.new_value = player_defense_stat;
++                last_growth.stat_type = GROWTH_DEF;
++                last_growth_type = GROWTH_DEF;
++                return 1u;
++            }
++            break;
++
++        case GROWTH_SKILL:
++            if (player_skill_power_stat < PLAYER_STAT_MAX) {
++                last_growth.old_value = player_skill_power_stat;
++                player_skill_power_stat++;
++                last_growth.new_value = player_skill_power_stat;
++                last_growth.stat_type = GROWTH_SKILL;
++                last_growth_type = GROWTH_SKILL;
++                return 1u;
++            }
++            break;
++
++        case GROWTH_HEAL:
++            if (player_heal_power_stat < PLAYER_STAT_MAX) {
++                last_growth.old_value = player_heal_power_stat;
++                player_heal_power_stat++;
++                last_growth.new_value = player_heal_power_stat;
++                last_growth.stat_type = GROWTH_HEAL;
++                last_growth_type = GROWTH_HEAL;
++                return 1u;
++            }
++            break;
++
++        case GROWTH_AGI:
++            if (player_agility_stat < PLAYER_STAT_MAX) {
++                last_growth.old_value = player_agility_stat;
++                player_agility_stat++;
++                last_growth.new_value = player_agility_stat;
++                last_growth.stat_type = GROWTH_AGI;
++                last_growth_type = GROWTH_AGI;
++                return 1u;
++            }
++            break;
++    }
++
++    return 0u;
++}
++
++static void apply_battle_growth(void) {
++    UINT8 stat_type;
++
++    clear_growth_result();
++
++    if (!should_growth_happen(battle_enemy_rank)) {
++        return;
++    }
++
++    stat_type = (UINT8)(GROWTH_HP + (random_u8() % GROWTH_STAT_COUNT));
++    apply_player_stat_growth(stat_type);
+ }
+ 
+ static void show_growth_message(void) {
+-    if (last_growth_type == GROWTH_HP) {
++    if (last_growth.stat_type == GROWTH_HP) {
+         dialogue_message("HPが\nあがった！");
+-    } else if (last_growth_type == GROWTH_ATK) {
++    } else if (last_growth.stat_type == GROWTH_MP) {
++        dialogue_message("MPが\nあがった！");
++    } else if (last_growth.stat_type == GROWTH_ATK) {
+         dialogue_message("ちからが\nあがった！");
+-    } else if (last_growth_type == GROWTH_DEF) {
++    } else if (last_growth.stat_type == GROWTH_DEF) {
+         dialogue_message("まもりが\nあがった！");
+-    } else if (last_growth_type == GROWTH_AGI) {
++    } else if (last_growth.stat_type == GROWTH_SKILL) {
++        dialogue_message("とくぎが\nあがった！");
++    } else if (last_growth.stat_type == GROWTH_HEAL) {
++        dialogue_message("かいふくが\nあがった！");
++    } else if (last_growth.stat_type == GROWTH_AGI) {
+         dialogue_message("すばやさが\nあがった！");
+     }
+ }
+@@ -2186,7 +2396,7 @@
+ }
+ 
+ static void player_attack(void) {
+-    UINT8 dmg;
++    UINT16 dmg;
+ 
+     if (!battle_select_first_alive()) {
+         battle_state = BSTATE_WIN;
+@@ -2195,7 +2405,7 @@
+ 
+     dmg = calc_damage(3u, player_battle.attack, enemy_battle.defense);
+     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
+-    else enemy_battle.hp = (UINT8)(enemy_battle.hp - dmg);
++    else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
+ 
+     battle_show_message("ゆうしゃの こうげき！\nダメージ！");
+     battle_flash_enemy_sprite(battle_target_index);
+@@ -2208,7 +2418,7 @@
+ 
+ 
+ static void player_skill(void) {
+-    UINT8 dmg;
++    UINT16 dmg;
+ 
+     if (skill_uses == 0u) {
+         battle_show_message("もう つかえない！");
+@@ -2224,7 +2434,7 @@
+     skill_uses--;
+     dmg = calc_damage(player_battle.skill_power, player_battle.attack, enemy_battle.defense);
+     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
+-    else enemy_battle.hp = (UINT8)(enemy_battle.hp - dmg);
++    else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
+ 
+     battle_show_message("とくぎを つかった！\nダメージ！");
+     battle_flash_enemy_sprite(battle_target_index);
+@@ -2237,24 +2447,33 @@
+ 
+ 
+ static void player_heal(void) {
+-    UINT8 before;
++    UINT16 healed;
+     if (heal_uses == 0u) {
+         battle_show_message("もう かいふく\nできない！");
+         battle_state = BSTATE_PLAYER;
+         return;
+     }
+     heal_uses--;
+-    before = player_battle.hp;
+-    player_battle.hp = min_u8((UINT8)(player_battle.hp + player_battle.heal_power), player_battle.max_hp);
++    healed = (UINT16)(player_battle.hp + player_battle.heal_power);
++    if (healed > player_battle.max_hp) {
++        healed = player_battle.max_hp;
++    }
++    player_battle.hp = healed;
+     battle_show_message("かいふくした！");
+     update_battle_status();
+     battle_state = BSTATE_ENEMY;
+ }
+ 
+ static void player_run(void) {
++    INT16 chance_i;
+     UINT8 chance;
+     UINT8 roll;
+-    chance = (UINT8)(40u + player_battle.agility - enemy_battle.agility);
++
++    chance_i = (INT16)40 + (INT16)player_battle.agility - (INT16)enemy_battle.agility;
++    if (chance_i < 5) chance = 5u;
++    else if (chance_i > 95) chance = 95u;
++    else chance = (UINT8)chance_i;
++
+     roll = (UINT8)(random_u8() % 100u);
+     if (roll < chance) {
+         battle_show_message("うまく\nにげだした！");
+@@ -2267,7 +2486,7 @@
+ 
+ static void enemy_turn(void) {
+     UINT8 i;
+-    UINT8 dmg;
++    UINT16 dmg;
+ 
+     for (i = 0u; i < battle_enemy_count; i++) {
+         if (enemy_battles[i].hp == 0u) continue;
+@@ -2275,7 +2494,7 @@
+         battle_target_index = i;
+         dmg = calc_damage(2u, enemy_battles[i].attack, player_battle.defense);
+         if (dmg >= player_battle.hp) player_battle.hp = 0u;
+-        else player_battle.hp = (UINT8)(player_battle.hp - dmg);
++        else player_battle.hp = (UINT16)(player_battle.hp - dmg);
+ 
+         battle_show_message("まもの の こうげき！\nダメージ！");
+         update_battle_status();
+@@ -2339,7 +2558,8 @@
+     rand_seed = DIV_REG;
+     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
+     init_event_flags();
+-    last_growth_type = GROWTH_NONE;
++    clear_growth_result();
++    battle_enemy_rank = 1u;
+     spawn_player_tx = 1u;
+     spawn_player_ty = 2u;
+     player_tx = spawn_player_tx;
+@@ -2362,6 +2582,7 @@
+     camera_target_px = 0u;
+     camera_target_py = 0u;
+     player_max_hp_stat = 38u;
++    player_max_mp_stat = 24u;
+     player_attack_stat = 7u;
+     player_defense_stat = 3u;
+     player_skill_power_stat = 8u;
+diff -ruN rpg_work/rpg086_window_reset/precheck_output.log rpg087_growth_rank/precheck_output.log
+--- rpg_work/rpg086_window_reset/precheck_output.log	2026-05-05 16:38:49.000000000 +0000
++++ rpg087_growth_rank/precheck_output.log	2026-05-06 02:01:29.645995090 +0000
+@@ -0,0 +1,20 @@
++===== prebank_check.py =====
++main.c bytes: 87296
++[OK] no direct set_bkg_data() call found in main.c code
++[OK] no direct set_sprite_data() call found in main.c code
++[OK] no static const char[] message definitions found in main.c code
++[OK] message_show() is referenced
++[OK] map data arrays are not defined in main.c code
++[OK] jpfont.c is non-banked again
++[OK] jpfont.h public APIs are non-banked
++[OK] font_data_bank.c is bank 6
++[OK] misakiUTF16.c uses font data wrappers
++[OK] font_data_bank.c owns raw Misaki tables in bank 6
++[OK] font_data_runtime.c uses NONBANKED wrappers
++[OK] misakiUTF16.c no longer references raw fdata/ftable directly
++[OK] actor visibility predicate is present
++[OK] random encounter helper is present
++[OK] battle start effect helper is present
++[OK] normalized UTF-16 font cache key is restored
++[INFO] exact bank overflow cannot be known before compile/link.
++[INFO] final judgment must use compiler/linker output plus romusage.
+diff -ruN rpg_work/rpg086_window_reset/rpg087_growth_rank.diff rpg087_growth_rank/rpg087_growth_rank.diff
+--- rpg_work/rpg086_window_reset/rpg087_growth_rank.diff	1970-01-01 00:00:00.000000000 +0000
++++ rpg087_growth_rank/rpg087_growth_rank.diff	2026-05-06 02:01:37.029236385 +0000
+@@ -0,0 +1,874 @@
++diff -ruN rpg_work/rpg086_window_reset/CHECK_rpg087_growth_rank.md rpg087_growth_rank/CHECK_rpg087_growth_rank.md
++--- rpg_work/rpg086_window_reset/CHECK_rpg087_growth_rank.md	1970-01-01 00:00:00.000000000 +0000
+++++ rpg087_growth_rank/CHECK_rpg087_growth_rank.md	2026-05-06 01:59:16.071127517 +0000
++@@ -0,0 +1,39 @@
+++# CHECK rpg087_growth_rank
+++
+++## 目的
+++
+++rpg086_window_reset を基準に、スレッドで検討した成長システム拡張のうち、すぐ実装可能な土台を追加する。
+++
+++## 実装確認
+++
+++- [ ] HP/MPの上限が 999 になっている
+++- [ ] ちから/まもり/とくぎ/かいふく/すばやさの上限が 255 になっている
+++- [ ] 主人公に MP ステータスが追加されている
+++- [ ] 戦闘画面の主人公 M 表示が固定値ではなく現在MPを表示している
+++- [ ] 勝利時の成長候補に MP / とくぎ / かいふく が含まれている
+++- [ ] 選ばれた能力が上限の場合、すばやさへ流れ込まず成長なしになる
+++- [ ] 敵ランク battle_enemy_rank が戦闘開始時に保存される
+++- [ ] 成長発生率が敵ランクテーブルで決まる
+++- [ ] GrowthResult に actor_id / stat_type / old_value / new_value が保存される
+++
+++## VBA確認
+++
+++- [ ] 起動して白画面にならない
+++- [ ] フィールド表示が崩れない
+++- [ ] STARTメニューの「つよさ」で HP / MP が表示される
+++- [ ] ランダムエンカウントする
+++- [ ] 戦闘突入時に主人公のH/M表示が出る
+++- [ ] 戦闘勝利後に成長メッセージが出る場合がある
+++- [ ] HPが上がった場合に次回以降の最大HPへ反映される
+++- [ ] MPが上がった場合に「つよさ」へ反映される
+++- [ ] 戦闘後にフィールドへ戻れる
+++- [ ] 戦闘UI位置が rpg086_window_reset から大きく崩れていない
+++
+++## 未実装
+++
+++- [ ] 複数キャラ成長
+++- [ ] GrowthResult配列化
+++- [ ] 技ひらめき
+++- [ ] 武器熟練度
+++- [ ] メッセージキュー連携
+++- [ ] MP消費制のとくぎ/かいふく
++diff -ruN rpg_work/rpg086_window_reset/Makefile rpg087_growth_rank/Makefile
++--- rpg_work/rpg086_window_reset/Makefile	2026-05-05 16:38:45.000000000 +0000
+++++ rpg087_growth_rank/Makefile	2026-05-06 01:59:16.058571855 +0000
++@@ -1,4 +1,4 @@
++-OUT = rpg086_window_reset.gb
+++OUT = rpg087_growth_rank.gb
++ SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ GBDK_PATH ?= /opt/gbdk/bin
++ LCC = $(GBDK_PATH)/lcc
++diff -ruN rpg_work/rpg086_window_reset/README.md rpg087_growth_rank/README.md
++--- rpg_work/rpg086_window_reset/README.md	2026-05-05 16:35:31.000000000 +0000
+++++ rpg087_growth_rank/README.md	2026-05-06 01:59:16.121245277 +0000
++@@ -666,3 +666,28 @@
++ - 戦闘突入時のパーティ欄、敵名欄、コマンド欄、メッセージ欄が画面内の自然な位置に戻ること。
++ - BG枠と文字がずれずに重なること。
++ - 敵・味方アイコン・カーソルOBJが大きく外れないこと。
+++
+++## rpg087_growth_rank
+++
+++### 目的
+++
+++`rpg086_window_reset` を基準に、スレッドで検討した成長システム拡張のうち、すぐ実装可能な土台を追加した版です。
+++
+++### 追加内容
+++
+++- HP/MPの上限を `999` に変更。
+++- その他能力値の上限を `255` に変更。
+++- 主人公に `MP` ステータスを追加。
+++- 戦闘画面の主人公 `M` 表示を固定値ではなく `player_battle.mp` 表示へ変更。
+++- 成長候補を `HP / MP / ちから / まもり / とくぎ / かいふく / すばやさ` に拡張。
+++- `GrowthResult` 構造体を追加し、成長前後の値を記録する土台を追加。
+++- `battle_enemy_rank` を追加し、戦闘開始時点の敵の強さを保存。
+++- rank別成長率テーブルを追加。
+++- 上限到達時に別能力へ流れ込む挙動を廃止。
+++
+++### 制約
+++
+++- 複数キャラ成長は未実装。
+++- 技ひらめき、武器熟練度、GrowthResult配列化は未実装。
+++- MPはステータスとして追加したが、現時点では `とくぎ` / `かいふく` の使用回数制からMP消費制へは変更していない。
+++- 戦闘UIの描画方式、BGM、MAP_GFX_TILE_COUNT、jpfont.c、misakiUTF16.c は変更していない。
++diff -ruN rpg_work/rpg086_window_reset/battle_data.h rpg087_growth_rank/battle_data.h
++--- rpg_work/rpg086_window_reset/battle_data.h	2026-05-05 13:40:01.000000000 +0000
+++++ rpg087_growth_rank/battle_data.h	2026-05-06 01:58:50.730519401 +0000
++@@ -8,8 +8,8 @@
++ 
++ typedef struct BattleEnemyData {
++     char name[BATTLE_NAME_LEN];
++-    UINT8 max_hp;
++-    UINT8 hp;
+++    UINT16 max_hp;
+++    UINT16 hp;
++     UINT8 attack;
++     UINT8 defense;
++     UINT8 agility;
++diff -ruN rpg_work/rpg086_window_reset/battle_data_bank.c rpg087_growth_rank/battle_data_bank.c
++--- rpg_work/rpg086_window_reset/battle_data_bank.c	2026-05-05 14:07:10.000000000 +0000
+++++ rpg087_growth_rank/battle_data_bank.c	2026-05-06 01:58:50.731383144 +0000
++@@ -7,7 +7,7 @@
++ 
++ typedef struct BattleEnemyTemplate {
++     const char *name;
++-    UINT8 max_hp;
+++    UINT16 max_hp;
++     UINT8 attack;
++     UINT8 defense;
++     UINT8 agility;
++diff -ruN rpg_work/rpg086_window_reset/build.bat rpg087_growth_rank/build.bat
++--- rpg_work/rpg086_window_reset/build.bat	2026-05-05 16:38:45.000000000 +0000
+++++ rpg087_growth_rank/build.bat	2026-05-06 01:59:16.058301719 +0000
++@@ -1,7 +1,7 @@
++ @echo off
++ setlocal
++ 
++-set "PROJECT=rpg086_window_reset"
+++set "PROJECT=rpg087_growth_rank"
++ set "OUT=%PROJECT%.gb"
++ set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ set "ROM_BANKS=8"
++diff -ruN rpg_work/rpg086_window_reset/build.log rpg087_growth_rank/build.log
++--- rpg_work/rpg086_window_reset/build.log	2026-05-05 16:38:49.000000000 +0000
+++++ rpg087_growth_rank/build.log	2026-05-06 02:01:30.148806648 +0000
++@@ -1,3 +1,29 @@
++-Building rpg086_window_reset.gb ...
+++Building rpg087_growth_rank.gb ...
++ Sources: main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ 
+++===== prebank_check.py =====
+++main.c bytes: 87296
+++[OK] no direct set_bkg_data() call found in main.c code
+++[OK] no direct set_sprite_data() call found in main.c code
+++[OK] no static const char[] message definitions found in main.c code
+++[OK] message_show() is referenced
+++[OK] map data arrays are not defined in main.c code
+++[OK] jpfont.c is non-banked again
+++[OK] jpfont.h public APIs are non-banked
+++[OK] font_data_bank.c is bank 6
+++[OK] misakiUTF16.c uses font data wrappers
+++[OK] font_data_bank.c owns raw Misaki tables in bank 6
+++[OK] font_data_runtime.c uses NONBANKED wrappers
+++[OK] misakiUTF16.c no longer references raw fdata/ftable directly
+++[OK] actor visibility predicate is present
+++[OK] random encounter helper is present
+++[OK] battle start effect helper is present
+++[OK] normalized UTF-16 font cache key is restored
+++[INFO] exact bank overflow cannot be known before compile/link.
+++[INFO] final judgment must use compiler/linker output plus romusage.
+++
+++Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo8 -o rpg087_growth_rank.gb main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+++
+++./build.sh: 32: lcc: not found
+++
+++[ERROR] Build failed: exit=127
++diff -ruN rpg_work/rpg086_window_reset/build.sh rpg087_growth_rank/build.sh
++--- rpg_work/rpg086_window_reset/build.sh	2026-05-05 16:38:45.000000000 +0000
+++++ rpg087_growth_rank/build.sh	2026-05-06 01:59:16.057678738 +0000
++@@ -3,7 +3,7 @@
++ 
++ export PATH="/opt/gbdk/bin:$PATH"
++ 
++-OUT="rpg086_window_reset.gb"
+++OUT="rpg087_growth_rank.gb"
++ MAP="${OUT%.gb}.map"
++ SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ LOG="build.log"
++diff -ruN rpg_work/rpg086_window_reset/compile_output.log rpg087_growth_rank/compile_output.log
++--- rpg_work/rpg086_window_reset/compile_output.log	1970-01-01 00:00:00.000000000 +0000
+++++ rpg087_growth_rank/compile_output.log	2026-05-06 02:01:30.058933681 +0000
++@@ -0,0 +1 @@
+++./build.sh: 32: lcc: not found
++diff -ruN rpg_work/rpg086_window_reset/docs/checks/CHECK_087_GROWTH_RANK.md rpg087_growth_rank/docs/checks/CHECK_087_GROWTH_RANK.md
++--- rpg_work/rpg086_window_reset/docs/checks/CHECK_087_GROWTH_RANK.md	1970-01-01 00:00:00.000000000 +0000
+++++ rpg087_growth_rank/docs/checks/CHECK_087_GROWTH_RANK.md	2026-05-06 01:59:16.097981066 +0000
++@@ -0,0 +1,39 @@
+++# CHECK rpg087_growth_rank
+++
+++## 目的
+++
+++rpg086_window_reset を基準に、スレッドで検討した成長システム拡張のうち、すぐ実装可能な土台を追加する。
+++
+++## 実装確認
+++
+++- [ ] HP/MPの上限が 999 になっている
+++- [ ] ちから/まもり/とくぎ/かいふく/すばやさの上限が 255 になっている
+++- [ ] 主人公に MP ステータスが追加されている
+++- [ ] 戦闘画面の主人公 M 表示が固定値ではなく現在MPを表示している
+++- [ ] 勝利時の成長候補に MP / とくぎ / かいふく が含まれている
+++- [ ] 選ばれた能力が上限の場合、すばやさへ流れ込まず成長なしになる
+++- [ ] 敵ランク battle_enemy_rank が戦闘開始時に保存される
+++- [ ] 成長発生率が敵ランクテーブルで決まる
+++- [ ] GrowthResult に actor_id / stat_type / old_value / new_value が保存される
+++
+++## VBA確認
+++
+++- [ ] 起動して白画面にならない
+++- [ ] フィールド表示が崩れない
+++- [ ] STARTメニューの「つよさ」で HP / MP が表示される
+++- [ ] ランダムエンカウントする
+++- [ ] 戦闘突入時に主人公のH/M表示が出る
+++- [ ] 戦闘勝利後に成長メッセージが出る場合がある
+++- [ ] HPが上がった場合に次回以降の最大HPへ反映される
+++- [ ] MPが上がった場合に「つよさ」へ反映される
+++- [ ] 戦闘後にフィールドへ戻れる
+++- [ ] 戦闘UI位置が rpg086_window_reset から大きく崩れていない
+++
+++## 未実装
+++
+++- [ ] 複数キャラ成長
+++- [ ] GrowthResult配列化
+++- [ ] 技ひらめき
+++- [ ] 武器熟練度
+++- [ ] メッセージキュー連携
+++- [ ] MP消費制のとくぎ/かいふく
++diff -ruN rpg_work/rpg086_window_reset/docs/future/GROWTH_SYSTEM_DESIGN_087.md rpg087_growth_rank/docs/future/GROWTH_SYSTEM_DESIGN_087.md
++--- rpg_work/rpg086_window_reset/docs/future/GROWTH_SYSTEM_DESIGN_087.md	1970-01-01 00:00:00.000000000 +0000
+++++ rpg087_growth_rank/docs/future/GROWTH_SYSTEM_DESIGN_087.md	2026-05-06 01:59:16.109481599 +0000
++@@ -0,0 +1,35 @@
+++# rpg087 growth rank design
+++
+++## 方針
+++
+++この版では、スレッドで検討した成長システム拡張のうち、既存の戦闘UIを壊しにくい土台だけを実装する。
+++
+++- HP/MP上限: 999
+++- その他能力上限: 255
+++- 成長結果は GrowthResult に保存する
+++- 敵ランク battle_enemy_rank を戦闘開始時に保存する
+++- 成長発生率は rank 1〜5 のテーブルで管理する
+++- 上限到達時は別能力へ流れ込ませず、成長なしにする
+++
+++## 今回入れた対象能力
+++
+++- HP
+++- MP
+++- ちから
+++- まもり
+++- とくぎ
+++- かいふく
+++- すばやさ
+++
+++## 今回まだ入れないもの
+++
+++- 複数キャラ成長
+++- 複数成長ログ
+++- 技ひらめき
+++- 武器熟練度
+++- メッセージキュー
+++- MP消費制
+++
+++## 次回候補
+++
+++rpg088_growth_party では、プレイヤー単体の stat 変数を ActorStats 構造体へ整理し、複数キャラ成長へ拡張する。
++diff -ruN rpg_work/rpg086_window_reset/main.c rpg087_growth_rank/main.c
++--- rpg_work/rpg086_window_reset/main.c	2026-05-05 16:35:31.000000000 +0000
+++++ rpg087_growth_rank/main.c	2026-05-06 02:00:58.322064365 +0000
++@@ -264,9 +264,24 @@
++ 
++ #define GROWTH_NONE 0u
++ #define GROWTH_HP 1u
++-#define GROWTH_ATK 2u
++-#define GROWTH_DEF 3u
++-#define GROWTH_AGI 4u
+++#define GROWTH_MP 2u
+++#define GROWTH_ATK 3u
+++#define GROWTH_DEF 4u
+++#define GROWTH_SKILL 5u
+++#define GROWTH_HEAL 6u
+++#define GROWTH_AGI 7u
+++#define GROWTH_STAT_COUNT 7u
+++
+++#define PLAYER_HP_MP_MAX 999u
+++#define PLAYER_STAT_MAX 255u
+++#define ENEMY_RANK_MAX 5u
+++
+++typedef struct GrowthResult {
+++    UINT8 actor_id;
+++    UINT8 stat_type;
+++    UINT16 old_value;
+++    UINT16 new_value;
+++} GrowthResult;
++ 
++ #define MENU_STATUS 0u
++ #define MENU_ITEM 1u
++@@ -364,8 +379,10 @@
++ 
++ typedef struct Fighter {
++     const char *name;
++-    UINT8 max_hp;
++-    UINT8 hp;
+++    UINT16 max_hp;
+++    UINT16 hp;
+++    UINT16 max_mp;
+++    UINT16 mp;
++     UINT8 attack;
++     UINT8 defense;
++     UINT8 skill_power;
++@@ -391,15 +408,15 @@
++ /* rpg058: map collision/object arrays moved to map_data_bank.c. */
++ 
++ static Actor actors[] = {
++-    {ACTOR_KIND_NPC,   1u, 1u, 1u, 3u, 2u, DIR_DOWN, 0u, NPC0_SPRITE_BASE,   NPC0_TILE_BASE,   MSG_COMMON_NPC, {"",0u,0u,0u,0u,0u,0u,0u}},
++-    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"スライム",20u,20u,5u,2u,0u,0u,5u}},
+++    {ACTOR_KIND_NPC,   1u, 1u, 1u, 3u, 2u, DIR_DOWN, 0u, NPC0_SPRITE_BASE,   NPC0_TILE_BASE,   MSG_COMMON_NPC, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}},
+++    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"スライム",20u,20u,0u,0u,5u,2u,0u,0u,5u}},
++     /* rpg046:
++      * Minimal talkable actor data-only test.
++      * Uses OAM 12-15 and existing NPC0_TILE_BASE.
++      * active=1 displays the sprite. solid=0 keeps it passable.
++      * talkable=1 is tested without changing try_interact().
++      */
++-    {ACTOR_KIND_NPC,   1u, 0u, 1u, 10u, 8u, DIR_DOWN, 0u, TEST_ACTOR_SPRITE_BASE, NPC0_TILE_BASE, MSG_TEST_SHORT, {"",0u,0u,0u,0u,0u,0u,0u}}
+++    {ACTOR_KIND_NPC,   1u, 0u, 1u, 10u, 8u, DIR_DOWN, 0u, TEST_ACTOR_SPRITE_BASE, NPC0_TILE_BASE, MSG_TEST_SHORT, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}}
++ };
++ #define ACTOR_COUNT ((UINT8)(sizeof(actors) / sizeof(actors[0])))
++ 
++@@ -412,6 +429,9 @@
++ static UINT8 encounter_grace_steps;
++ static UINT8 event_flags[EVENT_FLAG_COUNT];
++ static UINT8 last_growth_type;
+++static GrowthResult last_growth;
+++static UINT8 battle_enemy_rank;
+++static const UINT8 growth_chance_by_rank[] = {0u, 40u, 45u, 50u, 55u, 60u};
++ /* Japanese UTF-8 battle messages can exceed 48 bytes.
++  * Keeping this too small can corrupt nearby globals such as current_enemy_index,
++  * which made the NPC disappear after defeating the enemy.
++@@ -435,7 +455,8 @@
++ static const char *battle_message_text;
++ static UINT8 battle_screen_ready;
++ #define enemy_battle (enemy_battles[battle_target_index])
++-static UINT8 player_max_hp_stat;
+++static UINT16 player_max_hp_stat;
+++static UINT16 player_max_mp_stat;
++ static UINT8 player_attack_stat;
++ static UINT8 player_defense_stat;
++ static UINT8 player_skill_power_stat;
++@@ -487,8 +508,10 @@
++ static void put_ascii(UINT8 col, UINT8 row, const char *text);
++ static void put_cursor(UINT8 col, UINT8 row, UINT8 visible);
++ static void u8_to_dec(UINT8 value, char *out);
+++static void u16_to_dec3(UINT16 value, char *out);
++ static void put_u8(UINT8 col, UINT8 row, UINT8 value);
++-static void put_hp_pair(UINT8 col, UINT8 row, UINT8 hp, UINT8 max_hp);
+++static void put_u16(UINT8 col, UINT8 row, UINT16 value);
+++static void put_hp_pair(UINT8 col, UINT8 row, UINT16 hp, UINT16 max_hp);
++ static void screen_clear(void);
++ static void wait_a_pressed(void);
++ static void draw_object_map(void);
++@@ -561,7 +584,7 @@
++ static void start_move(Direction dir);
++ static void update_player_movement(void);
++ static void map_input(void);
++-static UINT8 calc_damage(UINT8 power, UINT8 atk, UINT8 def);
+++static UINT16 calc_damage(UINT8 power, UINT8 atk, UINT8 def);
++ static void draw_battle_frame(void);
++ static void battle_clear_bg_full(void);
++ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
++@@ -597,6 +620,11 @@
++ static void enter_battle_screen(void);
++ static void init_random_battle_from_field(void);
++ static void enter_random_battle(void);
+++static void battle_prepare_enemy_rank(void);
+++static void clear_growth_result(void);
+++static UINT8 get_growth_chance(UINT8 enemy_rank);
+++static UINT8 should_growth_happen(UINT8 enemy_rank);
+++static UINT8 apply_player_stat_growth(UINT8 stat_type);
++ static void apply_battle_growth(void);
++ static void show_growth_message(void);
++ static void return_to_map_after_battle(UINT8 won);
++@@ -798,21 +826,49 @@
++     out[i] = '\0';
++ }
++ 
+++static void u16_to_dec3(UINT16 value, char *out) {
+++    UINT16 hundreds;
+++    UINT8 tens;
+++    UINT8 ones;
+++    UINT8 i = 0u;
+++
+++    if (value > PLAYER_HP_MP_MAX) value = PLAYER_HP_MP_MAX;
+++
+++    hundreds = value / 100u;
+++    tens = (UINT8)((value / 10u) % 10u);
+++    ones = (UINT8)(value % 10u);
+++
+++    if (hundreds != 0u) {
+++        out[i++] = (char)('0' + (UINT8)hundreds);
+++        out[i++] = (char)('0' + tens);
+++    } else if (tens != 0u) {
+++        out[i++] = (char)('0' + tens);
+++    }
+++    out[i++] = (char)('0' + ones);
+++    out[i] = '\0';
+++}
+++
++ static void put_u8(UINT8 col, UINT8 row, UINT8 value) {
++     char buf[4];
++     u8_to_dec(value, buf);
++     jp_put_bkg_text(col, row, buf);
++ }
++ 
++-static void put_hp_pair(UINT8 col, UINT8 row, UINT8 hp, UINT8 max_hp) {
++-    char a[4];
++-    char b[4];
++-    char buf[9];
+++static void put_u16(UINT8 col, UINT8 row, UINT16 value) {
+++    char buf[5];
+++    u16_to_dec3(value, buf);
+++    jp_put_bkg_text(col, row, buf);
+++}
+++
+++static void put_hp_pair(UINT8 col, UINT8 row, UINT16 hp, UINT16 max_hp) {
+++    char a[5];
+++    char b[5];
+++    char buf[11];
++     UINT8 i = 0u;
++     UINT8 j = 0u;
++ 
++-    u8_to_dec(hp, a);
++-    u8_to_dec(max_hp, b);
+++    u16_to_dec3(hp, a);
+++    u16_to_dec3(max_hp, b);
++ 
++     while (a[j] != '\0') {
++         buf[i++] = a[j++];
++@@ -836,12 +892,13 @@
++ static void show_status_page(void) {
++     screen_clear();
++     jp_put_bkg_text(1u, 0u, "つよさ");
++-    jp_put_bkg_text(0u, 2u, "たいりょく"); put_u8(11u, 2u, player_max_hp_stat);
++-    jp_put_bkg_text(0u, 3u, "ちから");     put_u8(11u, 3u, player_attack_stat);
++-    jp_put_bkg_text(0u, 4u, "まもり");     put_u8(11u, 4u, player_defense_stat);
++-    jp_put_bkg_text(0u, 5u, "とくぎ");     put_u8(11u, 5u, player_skill_power_stat);
++-    jp_put_bkg_text(0u, 6u, "かいふく");   put_u8(11u, 6u, player_heal_power_stat);
++-    jp_put_bkg_text(0u, 7u, "すばやさ");   put_u8(11u, 7u, player_agility_stat);
+++    jp_put_bkg_text(0u, 2u, "たいりょく"); put_u16(11u, 2u, player_max_hp_stat);
+++    jp_put_bkg_text(0u, 3u, "MP");         put_u16(11u, 3u, player_max_mp_stat);
+++    jp_put_bkg_text(0u, 4u, "ちから");     put_u8(11u, 4u, player_attack_stat);
+++    jp_put_bkg_text(0u, 5u, "まもり");     put_u8(11u, 5u, player_defense_stat);
+++    jp_put_bkg_text(0u, 6u, "とくぎ");     put_u8(11u, 6u, player_skill_power_stat);
+++    jp_put_bkg_text(0u, 7u, "かいふく");   put_u8(11u, 7u, player_heal_power_stat);
+++    jp_put_bkg_text(0u, 8u, "すばやさ");   put_u8(11u, 8u, player_agility_stat);
++     jp_put_bkg_text(0u,14u, "A/B/START もどる");
++ }
++ 
++@@ -1559,14 +1616,19 @@
++     prev_keys = keys;
++ }
++ 
++-static UINT8 calc_damage(UINT8 power, UINT8 atk, UINT8 def) {
+++static UINT16 calc_damage(UINT8 power, UINT8 atk, UINT8 def) {
++     UINT8 variance;
++-    UINT8 base;
+++    UINT16 base;
+++
++     variance = (UINT8)(random_u8() % 4u);
++-    base = (UINT8)(power + atk);
+++    base = (UINT16)power + (UINT16)atk;
+++
++     if (base <= def) return 1u;
++-    base = (UINT8)(base - def + variance);
+++
+++    base = (UINT16)(base - def + variance);
++     if (base == 0u) return 1u;
+++    if (base > PLAYER_HP_MP_MAX) return PLAYER_HP_MP_MAX;
+++
++     return base;
++ }
++ 
++@@ -1629,6 +1691,10 @@
++     put_u8(BATTLE_BG_X(col), row, value);
++ }
++ 
+++static void battle_put_u16(UINT8 col, UINT8 row, UINT16 value) {
+++    put_u16(BATTLE_BG_X(col), row, value);
+++}
+++
++ static void draw_battle_enemy_names(void) {
++     UINT8 i;
++ 
++@@ -1659,9 +1725,9 @@
++ 
++     battle_put_bkg_text(1u, 1u,  "ゆうしゃ");
++     battle_put_bkg_text(1u, 2u,  "H ");
++-    battle_put_u8(3u, 2u, player_battle.hp);
+++    battle_put_u16(3u, 2u, player_battle.hp);
++     battle_put_bkg_text(1u, 3u,  "M ");
++-    battle_put_u8(3u, 3u, 38u);
+++    battle_put_u16(3u, 3u, player_battle.mp);
++ 
++     battle_put_bkg_text(7u, 1u,  "そうりょ");
++     battle_put_bkg_text(7u, 2u,  "H ");
++@@ -1923,13 +1989,13 @@
++ static void battle_update_party_hp_dirty(UINT8 slot) {
++     if (slot != 0u) return;
++     battle_bkg_clear_area(3u, 2u, 3u, 1u);
++-    battle_put_u8(3u, 2u, player_battle.hp);
+++    battle_put_u16(3u, 2u, player_battle.hp);
++ }
++ 
++ static void battle_update_party_mp_dirty(UINT8 slot) {
++     if (slot != 0u) return;
++     battle_bkg_clear_area(3u, 3u, 3u, 1u);
++-    battle_put_u8(3u, 3u, 38u);
+++    battle_put_u16(3u, 3u, player_battle.mp);
++ }
++ 
++ static void battle_set_message_dirty(const char *text) {
++@@ -2019,6 +2085,8 @@
++     player_battle.name = "ゆうしゃ";
++     player_battle.max_hp = player_max_hp_stat;
++     player_battle.hp = player_max_hp_stat;
+++    player_battle.max_mp = player_max_mp_stat;
+++    player_battle.mp = player_max_mp_stat;
++     player_battle.attack = player_attack_stat;
++     player_battle.defense = player_defense_stat;
++     player_battle.skill_power = player_skill_power_stat;
++@@ -2037,6 +2105,8 @@
++         battle_copy_enemy_from_data(i);
++     }
++ 
+++    battle_prepare_enemy_rank();
+++
++     battle_target_index = 0u;
++     battle_select_first_alive();
++ 
++@@ -2101,6 +2171,8 @@
++     player_battle.name = "ゆうしゃ";
++     player_battle.max_hp = player_max_hp_stat;
++     player_battle.hp = player_max_hp_stat;
+++    player_battle.max_mp = player_max_mp_stat;
+++    player_battle.mp = player_max_mp_stat;
++     player_battle.attack = player_attack_stat;
++     player_battle.defense = player_defense_stat;
++     player_battle.skill_power = player_skill_power_stat;
++@@ -2115,6 +2187,8 @@
++         battle_copy_enemy_from_data(i);
++     }
++ 
+++    battle_prepare_enemy_rank();
+++
++     battle_target_index = 0u;
++     battle_select_first_alive();
++ 
++@@ -2132,36 +2206,172 @@
++     enter_battle_screen();
++ }
++ 
++-static void apply_battle_growth(void) {
++-    UINT8 roll;
+++static void battle_prepare_enemy_rank(void) {
+++    UINT8 i;
+++    UINT8 rank;
+++    UINT8 max_rank;
+++
+++    max_rank = 1u;
+++
+++    for (i = 0u; i < battle_enemy_count; i++) {
+++        rank = 1u;
+++
+++        if (enemy_battles[i].max_hp >= 28u || enemy_battles[i].attack >= 7u) {
+++            rank = 3u;
+++        } else if (enemy_battles[i].max_hp >= 20u || enemy_battles[i].attack >= 5u) {
+++            rank = 2u;
+++        }
+++
+++        if (rank > max_rank) {
+++            max_rank = rank;
+++        }
+++    }
++ 
++-    /* Small SaGa-like post-battle growth hook. Keep it conservative so the
++-     * working map/battle loop stays stable while the system is expanded. */
+++    if (max_rank > ENEMY_RANK_MAX) {
+++        max_rank = ENEMY_RANK_MAX;
+++    }
+++
+++    battle_enemy_rank = max_rank;
+++}
+++
+++static void clear_growth_result(void) {
++     last_growth_type = GROWTH_NONE;
++-    roll = (UINT8)(random_u8() % 4u);
++-    if (roll == 0u && player_max_hp_stat < 99u) {
++-        player_max_hp_stat++;
++-        last_growth_type = GROWTH_HP;
++-    } else if (roll == 1u && player_attack_stat < 30u) {
++-        player_attack_stat++;
++-        last_growth_type = GROWTH_ATK;
++-    } else if (roll == 2u && player_defense_stat < 30u) {
++-        player_defense_stat++;
++-        last_growth_type = GROWTH_DEF;
++-    } else if (player_agility_stat < 30u) {
++-        player_agility_stat++;
++-        last_growth_type = GROWTH_AGI;
+++    last_growth.actor_id = 0u;
+++    last_growth.stat_type = GROWTH_NONE;
+++    last_growth.old_value = 0u;
+++    last_growth.new_value = 0u;
+++}
+++
+++static UINT8 get_growth_chance(UINT8 enemy_rank) {
+++    if (enemy_rank == 0u) {
+++        enemy_rank = 1u;
+++    }
+++    if (enemy_rank > ENEMY_RANK_MAX) {
+++        enemy_rank = ENEMY_RANK_MAX;
++     }
+++
+++    return growth_chance_by_rank[enemy_rank];
+++}
+++
+++static UINT8 should_growth_happen(UINT8 enemy_rank) {
+++    return (UINT8)((random_u8() % 100u) < get_growth_chance(enemy_rank));
+++}
+++
+++static UINT8 apply_player_stat_growth(UINT8 stat_type) {
+++    last_growth.actor_id = 0u;
+++    last_growth.stat_type = GROWTH_NONE;
+++    last_growth.old_value = 0u;
+++    last_growth.new_value = 0u;
+++
+++    switch (stat_type) {
+++        case GROWTH_HP:
+++            if (player_max_hp_stat < PLAYER_HP_MP_MAX) {
+++                last_growth.old_value = player_max_hp_stat;
+++                player_max_hp_stat++;
+++                last_growth.new_value = player_max_hp_stat;
+++                last_growth.stat_type = GROWTH_HP;
+++                last_growth_type = GROWTH_HP;
+++                return 1u;
+++            }
+++            break;
+++
+++        case GROWTH_MP:
+++            if (player_max_mp_stat < PLAYER_HP_MP_MAX) {
+++                last_growth.old_value = player_max_mp_stat;
+++                player_max_mp_stat++;
+++                last_growth.new_value = player_max_mp_stat;
+++                last_growth.stat_type = GROWTH_MP;
+++                last_growth_type = GROWTH_MP;
+++                return 1u;
+++            }
+++            break;
+++
+++        case GROWTH_ATK:
+++            if (player_attack_stat < PLAYER_STAT_MAX) {
+++                last_growth.old_value = player_attack_stat;
+++                player_attack_stat++;
+++                last_growth.new_value = player_attack_stat;
+++                last_growth.stat_type = GROWTH_ATK;
+++                last_growth_type = GROWTH_ATK;
+++                return 1u;
+++            }
+++            break;
+++
+++        case GROWTH_DEF:
+++            if (player_defense_stat < PLAYER_STAT_MAX) {
+++                last_growth.old_value = player_defense_stat;
+++                player_defense_stat++;
+++                last_growth.new_value = player_defense_stat;
+++                last_growth.stat_type = GROWTH_DEF;
+++                last_growth_type = GROWTH_DEF;
+++                return 1u;
+++            }
+++            break;
+++
+++        case GROWTH_SKILL:
+++            if (player_skill_power_stat < PLAYER_STAT_MAX) {
+++                last_growth.old_value = player_skill_power_stat;
+++                player_skill_power_stat++;
+++                last_growth.new_value = player_skill_power_stat;
+++                last_growth.stat_type = GROWTH_SKILL;
+++                last_growth_type = GROWTH_SKILL;
+++                return 1u;
+++            }
+++            break;
+++
+++        case GROWTH_HEAL:
+++            if (player_heal_power_stat < PLAYER_STAT_MAX) {
+++                last_growth.old_value = player_heal_power_stat;
+++                player_heal_power_stat++;
+++                last_growth.new_value = player_heal_power_stat;
+++                last_growth.stat_type = GROWTH_HEAL;
+++                last_growth_type = GROWTH_HEAL;
+++                return 1u;
+++            }
+++            break;
+++
+++        case GROWTH_AGI:
+++            if (player_agility_stat < PLAYER_STAT_MAX) {
+++                last_growth.old_value = player_agility_stat;
+++                player_agility_stat++;
+++                last_growth.new_value = player_agility_stat;
+++                last_growth.stat_type = GROWTH_AGI;
+++                last_growth_type = GROWTH_AGI;
+++                return 1u;
+++            }
+++            break;
+++    }
+++
+++    return 0u;
+++}
+++
+++static void apply_battle_growth(void) {
+++    UINT8 stat_type;
+++
+++    clear_growth_result();
+++
+++    if (!should_growth_happen(battle_enemy_rank)) {
+++        return;
+++    }
+++
+++    stat_type = (UINT8)(GROWTH_HP + (random_u8() % GROWTH_STAT_COUNT));
+++    apply_player_stat_growth(stat_type);
++ }
++ 
++ static void show_growth_message(void) {
++-    if (last_growth_type == GROWTH_HP) {
+++    if (last_growth.stat_type == GROWTH_HP) {
++         dialogue_message("HPが\nあがった！");
++-    } else if (last_growth_type == GROWTH_ATK) {
+++    } else if (last_growth.stat_type == GROWTH_MP) {
+++        dialogue_message("MPが\nあがった！");
+++    } else if (last_growth.stat_type == GROWTH_ATK) {
++         dialogue_message("ちからが\nあがった！");
++-    } else if (last_growth_type == GROWTH_DEF) {
+++    } else if (last_growth.stat_type == GROWTH_DEF) {
++         dialogue_message("まもりが\nあがった！");
++-    } else if (last_growth_type == GROWTH_AGI) {
+++    } else if (last_growth.stat_type == GROWTH_SKILL) {
+++        dialogue_message("とくぎが\nあがった！");
+++    } else if (last_growth.stat_type == GROWTH_HEAL) {
+++        dialogue_message("かいふくが\nあがった！");
+++    } else if (last_growth.stat_type == GROWTH_AGI) {
++         dialogue_message("すばやさが\nあがった！");
++     }
++ }
++@@ -2186,7 +2396,7 @@
++ }
++ 
++ static void player_attack(void) {
++-    UINT8 dmg;
+++    UINT16 dmg;
++ 
++     if (!battle_select_first_alive()) {
++         battle_state = BSTATE_WIN;
++@@ -2195,7 +2405,7 @@
++ 
++     dmg = calc_damage(3u, player_battle.attack, enemy_battle.defense);
++     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
++-    else enemy_battle.hp = (UINT8)(enemy_battle.hp - dmg);
+++    else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
++ 
++     battle_show_message("ゆうしゃの こうげき！\nダメージ！");
++     battle_flash_enemy_sprite(battle_target_index);
++@@ -2208,7 +2418,7 @@
++ 
++ 
++ static void player_skill(void) {
++-    UINT8 dmg;
+++    UINT16 dmg;
++ 
++     if (skill_uses == 0u) {
++         battle_show_message("もう つかえない！");
++@@ -2224,7 +2434,7 @@
++     skill_uses--;
++     dmg = calc_damage(player_battle.skill_power, player_battle.attack, enemy_battle.defense);
++     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
++-    else enemy_battle.hp = (UINT8)(enemy_battle.hp - dmg);
+++    else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
++ 
++     battle_show_message("とくぎを つかった！\nダメージ！");
++     battle_flash_enemy_sprite(battle_target_index);
++@@ -2237,24 +2447,33 @@
++ 
++ 
++ static void player_heal(void) {
++-    UINT8 before;
+++    UINT16 healed;
++     if (heal_uses == 0u) {
++         battle_show_message("もう かいふく\nできない！");
++         battle_state = BSTATE_PLAYER;
++         return;
++     }
++     heal_uses--;
++-    before = player_battle.hp;
++-    player_battle.hp = min_u8((UINT8)(player_battle.hp + player_battle.heal_power), player_battle.max_hp);
+++    healed = (UINT16)(player_battle.hp + player_battle.heal_power);
+++    if (healed > player_battle.max_hp) {
+++        healed = player_battle.max_hp;
+++    }
+++    player_battle.hp = healed;
++     battle_show_message("かいふくした！");
++     update_battle_status();
++     battle_state = BSTATE_ENEMY;
++ }
++ 
++ static void player_run(void) {
+++    INT16 chance_i;
++     UINT8 chance;
++     UINT8 roll;
++-    chance = (UINT8)(40u + player_battle.agility - enemy_battle.agility);
+++
+++    chance_i = (INT16)40 + (INT16)player_battle.agility - (INT16)enemy_battle.agility;
+++    if (chance_i < 5) chance = 5u;
+++    else if (chance_i > 95) chance = 95u;
+++    else chance = (UINT8)chance_i;
+++
++     roll = (UINT8)(random_u8() % 100u);
++     if (roll < chance) {
++         battle_show_message("うまく\nにげだした！");
++@@ -2267,7 +2486,7 @@
++ 
++ static void enemy_turn(void) {
++     UINT8 i;
++-    UINT8 dmg;
+++    UINT16 dmg;
++ 
++     for (i = 0u; i < battle_enemy_count; i++) {
++         if (enemy_battles[i].hp == 0u) continue;
++@@ -2275,7 +2494,7 @@
++         battle_target_index = i;
++         dmg = calc_damage(2u, enemy_battles[i].attack, player_battle.defense);
++         if (dmg >= player_battle.hp) player_battle.hp = 0u;
++-        else player_battle.hp = (UINT8)(player_battle.hp - dmg);
+++        else player_battle.hp = (UINT16)(player_battle.hp - dmg);
++ 
++         battle_show_message("まもの の こうげき！\nダメージ！");
++         update_battle_status();
++@@ -2339,7 +2558,8 @@
++     rand_seed = DIV_REG;
++     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
++     init_event_flags();
++-    last_growth_type = GROWTH_NONE;
+++    clear_growth_result();
+++    battle_enemy_rank = 1u;
++     spawn_player_tx = 1u;
++     spawn_player_ty = 2u;
++     player_tx = spawn_player_tx;
++@@ -2362,6 +2582,7 @@
++     camera_target_px = 0u;
++     camera_target_py = 0u;
++     player_max_hp_stat = 38u;
+++    player_max_mp_stat = 24u;
++     player_attack_stat = 7u;
++     player_defense_stat = 3u;
++     player_skill_power_stat = 8u;
++diff -ruN rpg_work/rpg086_window_reset/precheck_output.log rpg087_growth_rank/precheck_output.log
++--- rpg_work/rpg086_window_reset/precheck_output.log	2026-05-05 16:38:49.000000000 +0000
+++++ rpg087_growth_rank/precheck_output.log	2026-05-06 02:01:29.645995090 +0000
++@@ -0,0 +1,20 @@
+++===== prebank_check.py =====
+++main.c bytes: 87296
+++[OK] no direct set_bkg_data() call found in main.c code
+++[OK] no direct set_sprite_data() call found in main.c code
+++[OK] no static const char[] message definitions found in main.c code
+++[OK] message_show() is referenced
+++[OK] map data arrays are not defined in main.c code
+++[OK] jpfont.c is non-banked again
+++[OK] jpfont.h public APIs are non-banked
+++[OK] font_data_bank.c is bank 6
+++[OK] misakiUTF16.c uses font data wrappers
+++[OK] font_data_bank.c owns raw Misaki tables in bank 6
+++[OK] font_data_runtime.c uses NONBANKED wrappers
+++[OK] misakiUTF16.c no longer references raw fdata/ftable directly
+++[OK] actor visibility predicate is present
+++[OK] random encounter helper is present
+++[OK] battle start effect helper is present
+++[OK] normalized UTF-16 font cache key is restored
+++[INFO] exact bank overflow cannot be known before compile/link.
+++[INFO] final judgment must use compiler/linker output plus romusage.

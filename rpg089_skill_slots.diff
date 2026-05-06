@@ -1,0 +1,308 @@
+Only in rpg089_skill_slots: CHECK_rpg089_skill_slots.md
+diff -ru rpg088_mp_skill/Makefile rpg089_skill_slots/Makefile
+--- rpg088_mp_skill/Makefile	2026-05-06 03:30:53.000000000 +0000
++++ rpg089_skill_slots/Makefile	2026-05-06 05:05:07.887923106 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg088_mp_skill.gb
++OUT = rpg089_skill_slots.gb
+ SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ru rpg088_mp_skill/README.md rpg089_skill_slots/README.md
+--- rpg088_mp_skill/README.md	2026-05-06 03:33:18.000000000 +0000
++++ rpg089_skill_slots/README.md	2026-05-06 05:06:31.079639337 +0000
+@@ -715,3 +715,26 @@
+ 
+ ### Bank 0注意
+ 前回の `rpg087_growth_rank` ではビルド自体は完了したものの、`romusage` により `_HOME` overflow が検出された。今回の変更では、追加コードを最小限にしつつ、成長メッセージ文字列をbank 2へ逃がしてBank 0増加を抑えている。
++
++## rpg089_skill_slots
++
++目的: rpg088_mp_skill を基準に、見た目の戦闘メニューを変えず、内部だけを複数技対応へ寄せる。
++
++### 主な変更
++- `SkillDef` を拡張し、id / kind / target / mp_cost / power / accuracy / flags を持つ構造へ変更。
++- 将来の複数技・状態異常・敵AI利用に備え、`SKILL_FIRE` / `SKILL_GUARD_BREAK` などのIDを予約。
++- `PlayerSkillSet` を追加し、固定4スロット方式の土台を導入。
++- 既存の「とくぎ」は skill slot 0、「かいふく」は skill slot 1 を参照するように変更。
++- `player_use_skill(skill_id)` に、とくぎ/かいふくの実行処理を集約。
++- rpg088に残っていた `player_run()` の重複 else 由来の構文不整合を修正。
++
++### まだ追加していないもの
++- 技一覧UI
++- 対象選択UI
++- 技習得処理
++- 状態異常
++- セーブデータへのskill slot保存
++- SkillDefのbanked data化
++
++### Bank 0注意
++main.cのコード量は増えているため、ユーザー環境で `./build.sh` を実行し、romusageで `_HOME` overflow が出ないか必ず確認する。
+diff -ru rpg088_mp_skill/build.bat rpg089_skill_slots/build.bat
+--- rpg088_mp_skill/build.bat	2026-05-06 03:30:53.000000000 +0000
++++ rpg089_skill_slots/build.bat	2026-05-06 05:05:07.888450222 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg088_mp_skill"
++set "PROJECT=rpg089_skill_slots"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+diff -ru rpg088_mp_skill/build.sh rpg089_skill_slots/build.sh
+--- rpg088_mp_skill/build.sh	2026-05-06 03:30:53.000000000 +0000
++++ rpg089_skill_slots/build.sh	2026-05-06 05:05:07.887421383 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg088_mp_skill.gb"
++OUT="rpg089_skill_slots.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+Only in rpg089_skill_slots/docs/checks: CHECK_089_SKILL_SLOTS.md
+Only in rpg089_skill_slots/docs/future: RPG_FEATURE_DESIGN_ACCUM_089.md
+diff -ru rpg088_mp_skill/main.c rpg089_skill_slots/main.c
+--- rpg088_mp_skill/main.c	2026-05-06 03:36:03.000000000 +0000
++++ rpg089_skill_slots/main.c	2026-05-06 05:05:30.496934692 +0000
+@@ -372,35 +372,59 @@
+  */
+ typedef enum SkillId {
+     SKILL_NONE = 0,
+-    SKILL_SLASH,
++    SKILL_POWER_STRIKE,
+     SKILL_HEAL_SIMPLE,
++    SKILL_FIRE,
++    SKILL_GUARD_BREAK,
+     SKILL_MAX
+ } SkillId;
+ 
+ typedef enum SkillKind {
+     SKILL_KIND_DAMAGE = 0,
+-    SKILL_KIND_HEAL
++    SKILL_KIND_HEAL,
++    SKILL_KIND_DEBUFF
+ } SkillKind;
+ 
+ typedef enum TargetType {
+     TARGET_ENEMY = 0,
+-    TARGET_SELF
++    TARGET_SELF,
++    TARGET_ALL_ENEMY,
++    TARGET_ALL_ALLY
+ } TargetType;
+ 
++#define SKILL_FLAG_FIELD_OK   0x01u
++#define SKILL_FLAG_AI_OK      0x02u
++#define SKILL_FLAG_IGNORE_DEF 0x04u
++
+ typedef struct SkillDef {
+-    UINT8 mp_cost;
+-    UINT8 power;
++    UINT8 id;
+     UINT8 kind;
+     UINT8 target;
++    UINT8 mp_cost;
++    UINT8 power;
++    UINT8 accuracy;
++    UINT8 flags;
+ } SkillDef;
+ 
+-#define PLAYER_ACTIVE_SKILL SKILL_SLASH
+-#define PLAYER_ACTIVE_HEAL  SKILL_HEAL_SIMPLE
+-
++#define PLAYER_SKILL_SLOT_COUNT 4u
++#define PLAYER_SKILL_SLOT_SPECIAL 0u
++#define PLAYER_SKILL_SLOT_HEAL    1u
++
++typedef struct PlayerSkillSet {
++    UINT8 slots[PLAYER_SKILL_SLOT_COUNT];
++} PlayerSkillSet;
++
++/* rpg089:
++ * Keep the visible 4-command menu unchanged, but route the old とくぎ / かいふく
++ * commands through fixed skill slots. This is the safe internal step before a
++ * full skill-list UI.
++ */
+ static const SkillDef skill_table[SKILL_MAX] = {
+-    {0u, 0u, SKILL_KIND_DAMAGE, TARGET_ENEMY}, /* SKILL_NONE */
+-    {2u, 4u, SKILL_KIND_DAMAGE, TARGET_ENEMY}, /* SKILL_SLASH */
+-    {4u, 6u, SKILL_KIND_HEAL,   TARGET_SELF}   /* SKILL_HEAL_SIMPLE */
++    {SKILL_NONE,         SKILL_KIND_DAMAGE, TARGET_ENEMY, 0u, 0u, 100u, 0u},
++    {SKILL_POWER_STRIKE, SKILL_KIND_DAMAGE, TARGET_ENEMY, 2u, 4u,  95u, SKILL_FLAG_AI_OK},
++    {SKILL_HEAL_SIMPLE,  SKILL_KIND_HEAL,   TARGET_SELF,  4u, 6u, 100u, SKILL_FLAG_FIELD_OK},
++    {SKILL_FIRE,         SKILL_KIND_DAMAGE, TARGET_ENEMY, 3u, 6u,  90u, SKILL_FLAG_AI_OK},
++    {SKILL_GUARD_BREAK,  SKILL_KIND_DEBUFF, TARGET_ENEMY, 3u, 0u,  85u, SKILL_FLAG_AI_OK}
+ };
+ 
+ typedef enum Direction {
+@@ -468,6 +492,7 @@
+ static GrowthResult last_growth;
+ static UINT8 battle_enemy_rank;
+ static const UINT8 growth_chance_by_rank[] = {0u, 40u, 45u, 50u, 55u, 60u};
++static PlayerSkillSet player_skills;
+ /* Japanese UTF-8 battle messages can exceed 48 bytes.
+  * Keeping this too small can corrupt nearby globals such as current_enemy_index,
+  * which made the NPC disappear after defeating the enemy.
+@@ -624,6 +649,10 @@
+ static UINT16 calc_skill_damage(const Fighter *attacker, const Fighter *defender, const SkillDef *skill);
+ static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill);
+ static UINT8 fighter_try_consume_mp(Fighter *actor, UINT16 cost);
++static const SkillDef *skill_get_def(UINT8 skill_id);
++static UINT8 player_get_skill_slot(UINT8 slot);
++static void init_player_skills(void);
++static void player_use_skill(UINT8 skill_id);
+ static void draw_battle_frame(void);
+ static void battle_clear_bg_full(void);
+ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
+@@ -1704,6 +1733,27 @@
+     return 1u;
+ }
+ 
++static const SkillDef *skill_get_def(UINT8 skill_id) {
++    if (skill_id >= SKILL_MAX) {
++        skill_id = SKILL_NONE;
++    }
++    return &skill_table[skill_id];
++}
++
++static UINT8 player_get_skill_slot(UINT8 slot) {
++    if (slot >= PLAYER_SKILL_SLOT_COUNT) {
++        return SKILL_NONE;
++    }
++    return player_skills.slots[slot];
++}
++
++static void init_player_skills(void) {
++    player_skills.slots[0] = SKILL_POWER_STRIKE;
++    player_skills.slots[1] = SKILL_HEAL_SIMPLE;
++    player_skills.slots[2] = SKILL_NONE;
++    player_skills.slots[3] = SKILL_NONE;
++}
++
+ /*
+  * rpg074:
+  * Keep battle UI updates in this small helper zone.  Do not add BG tiles or
+@@ -2480,16 +2530,53 @@
+ }
+ 
+ 
+-static void player_skill(void) {
++static void player_use_skill(UINT8 skill_id) {
+     const SkillDef *skill;
+-    UINT16 dmg;
++    UINT16 amount;
++    UINT16 after;
++
++    if (skill_id == SKILL_NONE) {
++        battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
++        battle_state = BSTATE_PLAYER;
++        update_battle_status();
++        return;
++    }
++
++    skill = skill_get_def(skill_id);
++
++    if (skill->kind == SKILL_KIND_HEAL) {
++        if (player_battle.hp >= player_battle.max_hp) {
++            battle_show_message(message_get_buffered(MSG_BATTLE_HP_FULL));
++            battle_state = BSTATE_PLAYER;
++            update_battle_status();
++            return;
++        }
++
++        if (!fighter_try_consume_mp(&player_battle, (UINT16)skill->mp_cost)) {
++            battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
++            battle_state = BSTATE_PLAYER;
++            update_battle_status();
++            return;
++        }
++
++        amount = calc_heal_amount(&player_battle, skill);
++        after = (UINT16)(player_battle.hp + amount);
++        if (after > player_battle.max_hp || after < player_battle.hp) {
++            after = player_battle.max_hp;
++        }
++        player_battle.hp = after;
++
++        battle_show_message(message_get_buffered(MSG_BATTLE_HEAL_DONE));
++        update_battle_status();
++        battle_state = BSTATE_ENEMY;
++        return;
++    }
+ 
+     if (!battle_select_first_alive()) {
+         battle_state = BSTATE_WIN;
+         return;
+     }
+ 
+-    skill = &skill_table[PLAYER_ACTIVE_SKILL];
+     if (!fighter_try_consume_mp(&player_battle, (UINT16)skill->mp_cost)) {
+         battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
+         battle_state = BSTATE_PLAYER;
+@@ -2497,9 +2584,9 @@
+         return;
+     }
+ 
+-    dmg = calc_skill_damage(&player_battle, &enemy_battle, skill);
+-    if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
+-    else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
++    amount = calc_skill_damage(&player_battle, &enemy_battle, skill);
++    if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
++    else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
+ 
+     battle_show_message(message_get_buffered(MSG_BATTLE_SKILL));
+     battle_flash_enemy_sprite(battle_target_index);
+@@ -2510,37 +2597,12 @@
+     update_battle_status();
+ }
+ 
++static void player_skill(void) {
++    player_use_skill(player_get_skill_slot(PLAYER_SKILL_SLOT_SPECIAL));
++}
+ 
+ static void player_heal(void) {
+-    const SkillDef *skill;
+-    UINT16 amount;
+-    UINT16 healed;
+-
+-    if (player_battle.hp >= player_battle.max_hp) {
+-        battle_show_message(message_get_buffered(MSG_BATTLE_HP_FULL));
+-        battle_state = BSTATE_PLAYER;
+-        update_battle_status();
+-        return;
+-    }
+-
+-    skill = &skill_table[PLAYER_ACTIVE_HEAL];
+-    if (!fighter_try_consume_mp(&player_battle, (UINT16)skill->mp_cost)) {
+-        battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
+-        battle_state = BSTATE_PLAYER;
+-        update_battle_status();
+-        return;
+-    }
+-
+-    amount = calc_heal_amount(&player_battle, skill);
+-    healed = (UINT16)(player_battle.hp + amount);
+-    if (healed > player_battle.max_hp || healed < player_battle.hp) {
+-        healed = player_battle.max_hp;
+-    }
+-    player_battle.hp = healed;
+-
+-    battle_show_message(message_get_buffered(MSG_BATTLE_HEAL_DONE));
+-    update_battle_status();
+-    battle_state = BSTATE_ENEMY;
++    player_use_skill(player_get_skill_slot(PLAYER_SKILL_SLOT_HEAL));
+ }
+ 
+ static void player_run(void) {
+@@ -2667,6 +2729,7 @@
+     player_skill_power_stat = 8u;
+     player_heal_power_stat = 10u;
+     player_agility_stat = 8u;
++    init_player_skills();
+     player_moving = 0u;
+     player_vx = 0;
+     player_vy = 0;
+Only in rpg089_skill_slots: rpg089_skill_slots.diff

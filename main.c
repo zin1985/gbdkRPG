@@ -264,9 +264,24 @@ BANKREF_EXTERN(sprite_data_bank)
 
 #define GROWTH_NONE 0u
 #define GROWTH_HP 1u
-#define GROWTH_ATK 2u
-#define GROWTH_DEF 3u
-#define GROWTH_AGI 4u
+#define GROWTH_MP 2u
+#define GROWTH_ATK 3u
+#define GROWTH_DEF 4u
+#define GROWTH_SKILL 5u
+#define GROWTH_HEAL 6u
+#define GROWTH_AGI 7u
+#define GROWTH_STAT_COUNT 7u
+
+#define PLAYER_HP_MP_MAX 999u
+#define PLAYER_STAT_MAX 255u
+#define ENEMY_RANK_MAX 5u
+
+typedef struct GrowthResult {
+    UINT8 actor_id;
+    UINT8 stat_type;
+    UINT16 old_value;
+    UINT16 new_value;
+} GrowthResult;
 
 #define MENU_STATUS 0u
 #define MENU_ITEM 1u
@@ -350,6 +365,68 @@ typedef enum CommandType {
     CMD_COUNT
 } CommandType;
 
+/* rpg088:
+ * Keep the visible 4-command menu, but move special actions toward a small
+ * SkillDef table.  This is the first step toward multiple skills without
+ * adding a skill-list UI yet.
+ */
+typedef enum SkillId {
+    SKILL_NONE = 0,
+    SKILL_POWER_STRIKE,
+    SKILL_HEAL_SIMPLE,
+    SKILL_FIRE,
+    SKILL_GUARD_BREAK,
+    SKILL_MAX
+} SkillId;
+
+typedef enum SkillKind {
+    SKILL_KIND_DAMAGE = 0,
+    SKILL_KIND_HEAL,
+    SKILL_KIND_DEBUFF
+} SkillKind;
+
+typedef enum TargetType {
+    TARGET_ENEMY = 0,
+    TARGET_SELF,
+    TARGET_ALL_ENEMY,
+    TARGET_ALL_ALLY
+} TargetType;
+
+#define SKILL_FLAG_FIELD_OK   0x01u
+#define SKILL_FLAG_AI_OK      0x02u
+#define SKILL_FLAG_IGNORE_DEF 0x04u
+
+typedef struct SkillDef {
+    UINT8 id;
+    UINT8 kind;
+    UINT8 target;
+    UINT8 mp_cost;
+    UINT8 power;
+    UINT8 accuracy;
+    UINT8 flags;
+} SkillDef;
+
+#define PLAYER_SKILL_SLOT_COUNT 4u
+#define PLAYER_SKILL_SLOT_SPECIAL 0u
+#define PLAYER_SKILL_SLOT_HEAL    1u
+
+typedef struct PlayerSkillSet {
+    UINT8 slots[PLAYER_SKILL_SLOT_COUNT];
+} PlayerSkillSet;
+
+/* rpg089:
+ * Keep the visible 4-command menu unchanged, but route the old とくぎ / かいふく
+ * commands through fixed skill slots. This is the safe internal step before a
+ * full skill-list UI.
+ */
+static const SkillDef skill_table[SKILL_MAX] = {
+    {SKILL_NONE,         SKILL_KIND_DAMAGE, TARGET_ENEMY, 0u, 0u, 100u, 0u},
+    {SKILL_POWER_STRIKE, SKILL_KIND_DAMAGE, TARGET_ENEMY, 2u, 4u,  95u, SKILL_FLAG_AI_OK},
+    {SKILL_HEAL_SIMPLE,  SKILL_KIND_HEAL,   TARGET_SELF,  4u, 6u, 100u, SKILL_FLAG_FIELD_OK},
+    {SKILL_FIRE,         SKILL_KIND_DAMAGE, TARGET_ENEMY, 3u, 6u,  90u, SKILL_FLAG_AI_OK},
+    {SKILL_GUARD_BREAK,  SKILL_KIND_DEBUFF, TARGET_ENEMY, 3u, 0u,  85u, SKILL_FLAG_AI_OK}
+};
+
 typedef enum Direction {
     DIR_DOWN = 0,
     DIR_UP,
@@ -364,8 +441,10 @@ typedef enum ActorKind {
 
 typedef struct Fighter {
     const char *name;
-    UINT8 max_hp;
-    UINT8 hp;
+    UINT16 max_hp;
+    UINT16 hp;
+    UINT16 max_mp;
+    UINT16 mp;
     UINT8 attack;
     UINT8 defense;
     UINT8 skill_power;
@@ -391,27 +470,29 @@ typedef struct Actor {
 /* rpg058: map collision/object arrays moved to map_data_bank.c. */
 
 static Actor actors[] = {
-    {ACTOR_KIND_NPC,   1u, 1u, 1u, 3u, 2u, DIR_DOWN, 0u, NPC0_SPRITE_BASE,   NPC0_TILE_BASE,   MSG_COMMON_NPC, {"",0u,0u,0u,0u,0u,0u,0u}},
-    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"スライム",20u,20u,5u,2u,0u,0u,5u}},
+    {ACTOR_KIND_NPC,   1u, 1u, 1u, 3u, 2u, DIR_DOWN, 0u, NPC0_SPRITE_BASE,   NPC0_TILE_BASE,   MSG_COMMON_NPC, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}},
+    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"",20u,20u,0u,0u,5u,2u,0u,0u,5u}},
     /* rpg046:
      * Minimal talkable actor data-only test.
      * Uses OAM 12-15 and existing NPC0_TILE_BASE.
      * active=1 displays the sprite. solid=0 keeps it passable.
      * talkable=1 is tested without changing try_interact().
      */
-    {ACTOR_KIND_NPC,   1u, 0u, 1u, 10u, 8u, DIR_DOWN, 0u, TEST_ACTOR_SPRITE_BASE, NPC0_TILE_BASE, MSG_TEST_SHORT, {"",0u,0u,0u,0u,0u,0u,0u}}
+    {ACTOR_KIND_NPC,   1u, 0u, 1u, 10u, 8u, DIR_DOWN, 0u, TEST_ACTOR_SPRITE_BASE, NPC0_TILE_BASE, MSG_TEST_SHORT, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}}
 };
 #define ACTOR_COUNT ((UINT8)(sizeof(actors) / sizeof(actors[0])))
 
 static GameMode game_mode;
 static BattleState battle_state;
 static UINT8 menu_index;
-static UINT8 skill_uses;
-static UINT8 heal_uses;
 static UINT8 rand_seed;
 static UINT8 encounter_grace_steps;
 static UINT8 event_flags[EVENT_FLAG_COUNT];
 static UINT8 last_growth_type;
+static GrowthResult last_growth;
+static UINT8 battle_enemy_rank;
+static const UINT8 growth_chance_by_rank[] = {0u, 40u, 45u, 50u, 55u, 60u};
+static PlayerSkillSet player_skills;
 /* Japanese UTF-8 battle messages can exceed 48 bytes.
  * Keeping this too small can corrupt nearby globals such as current_enemy_index,
  * which made the NPC disappear after defeating the enemy.
@@ -435,7 +516,8 @@ static UINT8 battle_dirty_flags;
 static const char *battle_message_text;
 static UINT8 battle_screen_ready;
 #define enemy_battle (enemy_battles[battle_target_index])
-static UINT8 player_max_hp_stat;
+static UINT16 player_max_hp_stat;
+static UINT16 player_max_mp_stat;
 static UINT8 player_attack_stat;
 static UINT8 player_defense_stat;
 static UINT8 player_skill_power_stat;
@@ -487,8 +569,10 @@ static void show_simple_page(const char *title, const char *line1, const char *l
 static void put_ascii(UINT8 col, UINT8 row, const char *text);
 static void put_cursor(UINT8 col, UINT8 row, UINT8 visible);
 static void u8_to_dec(UINT8 value, char *out);
+static void u16_to_dec3(UINT16 value, char *out);
 static void put_u8(UINT8 col, UINT8 row, UINT8 value);
-static void put_hp_pair(UINT8 col, UINT8 row, UINT8 hp, UINT8 max_hp);
+static void put_u16(UINT8 col, UINT8 row, UINT16 value);
+static void put_hp_pair(UINT8 col, UINT8 row, UINT16 hp, UINT16 max_hp);
 static void screen_clear(void);
 static void wait_a_pressed(void);
 static void draw_object_map(void);
@@ -561,7 +645,14 @@ static void try_interact(void);
 static void start_move(Direction dir);
 static void update_player_movement(void);
 static void map_input(void);
-static UINT8 calc_damage(UINT8 power, UINT8 atk, UINT8 def);
+static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defender);
+static UINT16 calc_skill_damage(const Fighter *attacker, const Fighter *defender, const SkillDef *skill);
+static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill);
+static UINT8 fighter_try_consume_mp(Fighter *actor, UINT16 cost);
+static const SkillDef *skill_get_def(UINT8 skill_id);
+static UINT8 player_get_skill_slot(UINT8 slot);
+static void init_player_skills(void);
+static void player_use_skill(UINT8 skill_id);
 static void draw_battle_frame(void);
 static void battle_clear_bg_full(void);
 static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
@@ -597,6 +688,11 @@ static void battle_start_effect(void);
 static void enter_battle_screen(void);
 static void init_random_battle_from_field(void);
 static void enter_random_battle(void);
+static void battle_prepare_enemy_rank(void);
+static void clear_growth_result(void);
+static UINT8 get_growth_chance(UINT8 enemy_rank);
+static UINT8 should_growth_happen(UINT8 enemy_rank);
+static UINT8 apply_player_stat_growth(UINT8 stat_type);
 static void apply_battle_growth(void);
 static void show_growth_message(void);
 static void return_to_map_after_battle(UINT8 won);
@@ -742,19 +838,19 @@ static void revive_enemy_actor(void) {
 
 static void prompt_enemy_revive_choice(void) {
     if (actors[ENEMY_ACTOR_INDEX].active) {
-        dialogue_message("まだ まものは\nそこに いるよ。");
+        message_show(MSG_ENEMY_STILL);
         return;
     }
 
-    dialogue_message_nowait_window("まものを ふっかつ?\nA:はい  B:いいえ");
+    dialogue_message_nowait_window(message_get_buffered(MSG_PROMPT_REVIVE));
     if (wait_choice_ab()) {
         dialogue_hide();
         revive_enemy_actor();
         draw_all_actors();
-        dialogue_message("まものが\nふっかつした！");
+        message_show(MSG_ENEMY_REVIVED);
     } else {
         dialogue_hide();
-        dialogue_message("そのままに\nしておこう。");
+        message_show(MSG_LEAVE_AS_IS);
     }
     draw_all_actors();
 }
@@ -798,21 +894,49 @@ static void u8_to_dec(UINT8 value, char *out) {
     out[i] = '\0';
 }
 
+static void u16_to_dec3(UINT16 value, char *out) {
+    UINT16 hundreds;
+    UINT8 tens;
+    UINT8 ones;
+    UINT8 i = 0u;
+
+    if (value > PLAYER_HP_MP_MAX) value = PLAYER_HP_MP_MAX;
+
+    hundreds = value / 100u;
+    tens = (UINT8)((value / 10u) % 10u);
+    ones = (UINT8)(value % 10u);
+
+    if (hundreds != 0u) {
+        out[i++] = (char)('0' + (UINT8)hundreds);
+        out[i++] = (char)('0' + tens);
+    } else if (tens != 0u) {
+        out[i++] = (char)('0' + tens);
+    }
+    out[i++] = (char)('0' + ones);
+    out[i] = '\0';
+}
+
 static void put_u8(UINT8 col, UINT8 row, UINT8 value) {
     char buf[4];
     u8_to_dec(value, buf);
     jp_put_bkg_text(col, row, buf);
 }
 
-static void put_hp_pair(UINT8 col, UINT8 row, UINT8 hp, UINT8 max_hp) {
-    char a[4];
-    char b[4];
-    char buf[9];
+static void put_u16(UINT8 col, UINT8 row, UINT16 value) {
+    char buf[5];
+    u16_to_dec3(value, buf);
+    jp_put_bkg_text(col, row, buf);
+}
+
+static void put_hp_pair(UINT8 col, UINT8 row, UINT16 hp, UINT16 max_hp) {
+    char a[5];
+    char b[5];
+    char buf[11];
     UINT8 i = 0u;
     UINT8 j = 0u;
 
-    u8_to_dec(hp, a);
-    u8_to_dec(max_hp, b);
+    u16_to_dec3(hp, a);
+    u16_to_dec3(max_hp, b);
 
     while (a[j] != '\0') {
         buf[i++] = a[j++];
@@ -836,12 +960,13 @@ static void screen_clear(void) {
 static void show_status_page(void) {
     screen_clear();
     jp_put_bkg_text(1u, 0u, "つよさ");
-    jp_put_bkg_text(0u, 2u, "たいりょく"); put_u8(11u, 2u, player_max_hp_stat);
-    jp_put_bkg_text(0u, 3u, "ちから");     put_u8(11u, 3u, player_attack_stat);
-    jp_put_bkg_text(0u, 4u, "まもり");     put_u8(11u, 4u, player_defense_stat);
-    jp_put_bkg_text(0u, 5u, "とくぎ");     put_u8(11u, 5u, player_skill_power_stat);
-    jp_put_bkg_text(0u, 6u, "かいふく");   put_u8(11u, 6u, player_heal_power_stat);
-    jp_put_bkg_text(0u, 7u, "すばやさ");   put_u8(11u, 7u, player_agility_stat);
+    jp_put_bkg_text(0u, 2u, "たいりょく"); put_u16(11u, 2u, player_max_hp_stat);
+    jp_put_bkg_text(0u, 3u, "MP");         put_u16(11u, 3u, player_max_mp_stat);
+    jp_put_bkg_text(0u, 4u, "ちから");     put_u8(11u, 4u, player_attack_stat);
+    jp_put_bkg_text(0u, 5u, "まもり");     put_u8(11u, 5u, player_defense_stat);
+    jp_put_bkg_text(0u, 6u, "とくぎ");     put_u8(11u, 6u, player_skill_power_stat);
+    jp_put_bkg_text(0u, 7u, "かいふく");   put_u8(11u, 7u, player_heal_power_stat);
+    jp_put_bkg_text(0u, 8u, "すばやさ");   put_u8(11u, 8u, player_agility_stat);
     jp_put_bkg_text(0u,14u, "A/B/START もどる");
 }
 
@@ -1300,7 +1425,7 @@ static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
 }
 
 static void enter_town_marker(void) {
-    dialogue_message("まちへ\nはいります。");
+    message_show(MSG_ENTER_TOWN);
 
     /* v3f/rpg067:
      * Switch the area selector only. Actor visibility is decided by
@@ -1310,12 +1435,12 @@ static void enter_town_marker(void) {
     audio_play_music(AUDIO_TRACK_TOWN);
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
     warp_player_to_tile(2u, 13u, DIR_DOWN);
-    dialogue_message("まちに\nつきました。");
+    message_show(MSG_ARRIVE_TOWN);
     draw_all_actors();
 }
 
 static void leave_town_marker(void) {
-    dialogue_message("フィールドへ\nもどります。");
+    message_show(MSG_BACK_FIELD);
     /* rpg067:
      * Returning to field re-enables field-visible actors and hides town NPCs.
      */
@@ -1323,7 +1448,7 @@ static void leave_town_marker(void) {
     audio_play_music(AUDIO_TRACK_FIELD);
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
     warp_player_to_tile(13u, 2u, DIR_RIGHT);
-    dialogue_message("フィールドに\nでました。");
+    message_show(MSG_LEFT_FIELD);
     draw_all_actors();
 }
 
@@ -1370,27 +1495,27 @@ static void check_step_event(void) {
 
 static void inspect_map_event(UINT8 event_id) {
     if (event_id == MAP_EVENT_TOWN) {
-        dialogue_message_nowait_window("まちに はいりますか?\nA:はい  B:いいえ");
+        dialogue_message_nowait_window(message_get_buffered(MSG_PROMPT_ENTER_TOWN));
         if (wait_choice_ab()) {
             dialogue_hide();
             enter_town_marker();
         } else {
             dialogue_hide();
-            dialogue_message("また あとで\nこよう。");
+            message_show(MSG_LATER);
             draw_all_actors();
         }
     } else if (event_id == MAP_EVENT_FIELD_EXIT) {
-        dialogue_message_nowait_window("フィールドへ でますか?\nA:はい  B:いいえ");
+        dialogue_message_nowait_window(message_get_buffered(MSG_PROMPT_EXIT_TOWN));
         if (wait_choice_ab()) {
             dialogue_hide();
             leave_town_marker();
         } else {
             dialogue_hide();
-            dialogue_message("もうすこし\nまちにいよう。");
+            message_show(MSG_STAY_TOWN);
             draw_all_actors();
         }
     } else if (event_id == MAP_EVENT_DUNGEON) {
-        dialogue_message("くらい どうくつが\nつづいている。");
+        message_show(MSG_DARK_CAVE);
     }
 }
 
@@ -1409,7 +1534,7 @@ static void try_interact(void) {
         actors[(UINT8)index].dir = opposite_dir(player_dir);
         draw_all_actors();
         if (check_event_flag(FLAG_ENEMY_DEFEATED)) {
-            dialogue_message("まものは たおした。\nふっかつ する？");
+            message_show(MSG_ENEMY_DEFEATED_REVIVE);
         } else {
             message_show(actors[(UINT8)index].message_id);
         }
@@ -1559,15 +1684,74 @@ static void map_input(void) {
     prev_keys = keys;
 }
 
-static UINT8 calc_damage(UINT8 power, UINT8 atk, UINT8 def) {
-    UINT8 variance;
-    UINT8 base;
-    variance = (UINT8)(random_u8() % 4u);
-    base = (UINT8)(power + atk);
-    if (base <= def) return 1u;
-    base = (UINT8)(base - def + variance);
-    if (base == 0u) return 1u;
-    return base;
+static UINT16 clamp_damage_i16(INT16 damage) {
+    if (damage < 1) {
+        return 1u;
+    }
+    if ((UINT16)damage > PLAYER_HP_MP_MAX) {
+        return PLAYER_HP_MP_MAX;
+    }
+    return (UINT16)damage;
+}
+
+static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defender) {
+    INT16 damage;
+
+    damage = (INT16)((UINT16)attacker->attack * 2u);
+    damage -= (INT16)defender->defense;
+
+    return clamp_damage_i16(damage);
+}
+
+static UINT16 calc_skill_damage(const Fighter *attacker, const Fighter *defender, const SkillDef *skill) {
+    INT16 damage;
+
+    damage = (INT16)((UINT16)attacker->skill_power * 3u);
+    damage += (INT16)attacker->attack;
+    damage += (INT16)skill->power;
+    damage -= (INT16)(defender->defense >> 1);
+
+    return clamp_damage_i16(damage);
+}
+
+static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill) {
+    UINT16 amount;
+
+    amount = (UINT16)((UINT16)actor->heal_power * 2u);
+    amount = (UINT16)(amount + skill->power);
+    if (amount > PLAYER_HP_MP_MAX) {
+        return PLAYER_HP_MP_MAX;
+    }
+    return amount;
+}
+
+static UINT8 fighter_try_consume_mp(Fighter *actor, UINT16 cost) {
+    if (actor->mp < cost) {
+        return 0u;
+    }
+    actor->mp = (UINT16)(actor->mp - cost);
+    return 1u;
+}
+
+static const SkillDef *skill_get_def(UINT8 skill_id) {
+    if (skill_id >= SKILL_MAX) {
+        skill_id = SKILL_NONE;
+    }
+    return &skill_table[skill_id];
+}
+
+static UINT8 player_get_skill_slot(UINT8 slot) {
+    if (slot >= PLAYER_SKILL_SLOT_COUNT) {
+        return SKILL_NONE;
+    }
+    return player_skills.slots[slot];
+}
+
+static void init_player_skills(void) {
+    player_skills.slots[0] = SKILL_POWER_STRIKE;
+    player_skills.slots[1] = SKILL_HEAL_SIMPLE;
+    player_skills.slots[2] = SKILL_NONE;
+    player_skills.slots[3] = SKILL_NONE;
 }
 
 /*
@@ -1629,6 +1813,10 @@ static void battle_put_u8(UINT8 col, UINT8 row, UINT8 value) {
     put_u8(BATTLE_BG_X(col), row, value);
 }
 
+static void battle_put_u16(UINT8 col, UINT8 row, UINT16 value) {
+    put_u16(BATTLE_BG_X(col), row, value);
+}
+
 static void draw_battle_enemy_names(void) {
     UINT8 i;
 
@@ -1659,9 +1847,9 @@ static void draw_party_status_box(void) {
 
     battle_put_bkg_text(1u, 1u,  "ゆうしゃ");
     battle_put_bkg_text(1u, 2u,  "H ");
-    battle_put_u8(3u, 2u, player_battle.hp);
+    battle_put_u16(3u, 2u, player_battle.hp);
     battle_put_bkg_text(1u, 3u,  "M ");
-    battle_put_u8(3u, 3u, 38u);
+    battle_put_u16(3u, 3u, player_battle.mp);
 
     battle_put_bkg_text(7u, 1u,  "そうりょ");
     battle_put_bkg_text(7u, 2u,  "H ");
@@ -1923,13 +2111,13 @@ static void battle_hide_window_and_reset_scroll(void) {
 static void battle_update_party_hp_dirty(UINT8 slot) {
     if (slot != 0u) return;
     battle_bkg_clear_area(3u, 2u, 3u, 1u);
-    battle_put_u8(3u, 2u, player_battle.hp);
+    battle_put_u16(3u, 2u, player_battle.hp);
 }
 
 static void battle_update_party_mp_dirty(UINT8 slot) {
     if (slot != 0u) return;
     battle_bkg_clear_area(3u, 3u, 3u, 1u);
-    battle_put_u8(3u, 3u, 38u);
+    battle_put_u16(3u, 3u, player_battle.mp);
 }
 
 static void battle_set_message_dirty(const char *text) {
@@ -2019,6 +2207,8 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     player_battle.name = "ゆうしゃ";
     player_battle.max_hp = player_max_hp_stat;
     player_battle.hp = player_max_hp_stat;
+    player_battle.max_mp = player_max_mp_stat;
+    player_battle.mp = player_max_mp_stat;
     player_battle.attack = player_attack_stat;
     player_battle.defense = player_defense_stat;
     player_battle.skill_power = player_skill_power_stat;
@@ -2030,19 +2220,18 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
      * removed from the map after victory.
      */
     battle_data_load_random((UINT8)(enemy_index + 5u), battle_enemy_data_slots, &battle_enemy_count);
-    battle_enemy_count = 3u;
-    if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
+    battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
 
     for (i = 0u; i < battle_enemy_count; i++) {
         battle_copy_enemy_from_data(i);
     }
 
+    battle_prepare_enemy_rank();
+
     battle_target_index = 0u;
     battle_select_first_alive();
 
     menu_index = 0u;
-    skill_uses = 3u;
-    heal_uses = 2u;
     battle_state = BSTATE_PLAYER;
 }
 
@@ -2082,7 +2271,7 @@ static void enter_battle_screen(void) {
     audio_play_music(AUDIO_TRACK_BATTLE);
     battle_start_effect();
     battle_enter_render_once();
-    battle_show_message("まものが\nあらわれた！");
+    battle_show_message(message_get_buffered(MSG_BATTLE_APPEAR));
 }
 
 
@@ -2101,6 +2290,8 @@ static void init_random_battle_from_field(void) {
     player_battle.name = "ゆうしゃ";
     player_battle.max_hp = player_max_hp_stat;
     player_battle.hp = player_max_hp_stat;
+    player_battle.max_mp = player_max_mp_stat;
+    player_battle.mp = player_max_mp_stat;
     player_battle.attack = player_attack_stat;
     player_battle.defense = player_defense_stat;
     player_battle.skill_power = player_skill_power_stat;
@@ -2115,12 +2306,12 @@ static void init_random_battle_from_field(void) {
         battle_copy_enemy_from_data(i);
     }
 
+    battle_prepare_enemy_rank();
+
     battle_target_index = 0u;
     battle_select_first_alive();
 
     menu_index = 0u;
-    skill_uses = 3u;
-    heal_uses = 2u;
     battle_state = BSTATE_PLAYER;
 }
 
@@ -2132,37 +2323,169 @@ static void enter_random_battle(void) {
     enter_battle_screen();
 }
 
-static void apply_battle_growth(void) {
-    UINT8 roll;
+static void battle_prepare_enemy_rank(void) {
+    UINT8 i;
+    UINT8 rank;
+    UINT8 max_rank;
 
-    /* Small SaGa-like post-battle growth hook. Keep it conservative so the
-     * working map/battle loop stays stable while the system is expanded. */
-    last_growth_type = GROWTH_NONE;
-    roll = (UINT8)(random_u8() % 4u);
-    if (roll == 0u && player_max_hp_stat < 99u) {
-        player_max_hp_stat++;
-        last_growth_type = GROWTH_HP;
-    } else if (roll == 1u && player_attack_stat < 30u) {
-        player_attack_stat++;
-        last_growth_type = GROWTH_ATK;
-    } else if (roll == 2u && player_defense_stat < 30u) {
-        player_defense_stat++;
-        last_growth_type = GROWTH_DEF;
-    } else if (player_agility_stat < 30u) {
-        player_agility_stat++;
-        last_growth_type = GROWTH_AGI;
+    max_rank = 1u;
+
+    for (i = 0u; i < battle_enemy_count; i++) {
+        rank = 1u;
+
+        if (enemy_battles[i].max_hp >= 28u || enemy_battles[i].attack >= 7u) {
+            rank = 3u;
+        } else if (enemy_battles[i].max_hp >= 20u || enemy_battles[i].attack >= 5u) {
+            rank = 2u;
+        }
+
+        if (rank > max_rank) {
+            max_rank = rank;
+        }
     }
+
+    battle_enemy_rank = max_rank;
+}
+
+static void clear_growth_result(void) {
+    last_growth_type = GROWTH_NONE;
+    last_growth.actor_id = 0u;
+    last_growth.stat_type = GROWTH_NONE;
+    last_growth.old_value = 0u;
+    last_growth.new_value = 0u;
+}
+
+static UINT8 get_growth_chance(UINT8 enemy_rank) {
+    if (enemy_rank == 0u) {
+        enemy_rank = 1u;
+    }
+    if (enemy_rank > ENEMY_RANK_MAX) {
+        enemy_rank = ENEMY_RANK_MAX;
+    }
+
+    return growth_chance_by_rank[enemy_rank];
+}
+
+static UINT8 should_growth_happen(UINT8 enemy_rank) {
+    return (UINT8)((random_u8() % 100u) < get_growth_chance(enemy_rank));
+}
+
+static UINT8 apply_player_stat_growth(UINT8 stat_type) {
+    last_growth.actor_id = 0u;
+    last_growth.stat_type = GROWTH_NONE;
+    last_growth.old_value = 0u;
+    last_growth.new_value = 0u;
+
+    switch (stat_type) {
+        case GROWTH_HP:
+            if (player_max_hp_stat < PLAYER_HP_MP_MAX) {
+                last_growth.old_value = player_max_hp_stat;
+                player_max_hp_stat++;
+                last_growth.new_value = player_max_hp_stat;
+                last_growth.stat_type = GROWTH_HP;
+                last_growth_type = GROWTH_HP;
+                return 1u;
+            }
+            break;
+
+        case GROWTH_MP:
+            if (player_max_mp_stat < PLAYER_HP_MP_MAX) {
+                last_growth.old_value = player_max_mp_stat;
+                player_max_mp_stat++;
+                last_growth.new_value = player_max_mp_stat;
+                last_growth.stat_type = GROWTH_MP;
+                last_growth_type = GROWTH_MP;
+                return 1u;
+            }
+            break;
+
+        case GROWTH_ATK:
+            if (player_attack_stat < PLAYER_STAT_MAX) {
+                last_growth.old_value = player_attack_stat;
+                player_attack_stat++;
+                last_growth.new_value = player_attack_stat;
+                last_growth.stat_type = GROWTH_ATK;
+                last_growth_type = GROWTH_ATK;
+                return 1u;
+            }
+            break;
+
+        case GROWTH_DEF:
+            if (player_defense_stat < PLAYER_STAT_MAX) {
+                last_growth.old_value = player_defense_stat;
+                player_defense_stat++;
+                last_growth.new_value = player_defense_stat;
+                last_growth.stat_type = GROWTH_DEF;
+                last_growth_type = GROWTH_DEF;
+                return 1u;
+            }
+            break;
+
+        case GROWTH_SKILL:
+            if (player_skill_power_stat < PLAYER_STAT_MAX) {
+                last_growth.old_value = player_skill_power_stat;
+                player_skill_power_stat++;
+                last_growth.new_value = player_skill_power_stat;
+                last_growth.stat_type = GROWTH_SKILL;
+                last_growth_type = GROWTH_SKILL;
+                return 1u;
+            }
+            break;
+
+        case GROWTH_HEAL:
+            if (player_heal_power_stat < PLAYER_STAT_MAX) {
+                last_growth.old_value = player_heal_power_stat;
+                player_heal_power_stat++;
+                last_growth.new_value = player_heal_power_stat;
+                last_growth.stat_type = GROWTH_HEAL;
+                last_growth_type = GROWTH_HEAL;
+                return 1u;
+            }
+            break;
+
+        case GROWTH_AGI:
+            if (player_agility_stat < PLAYER_STAT_MAX) {
+                last_growth.old_value = player_agility_stat;
+                player_agility_stat++;
+                last_growth.new_value = player_agility_stat;
+                last_growth.stat_type = GROWTH_AGI;
+                last_growth_type = GROWTH_AGI;
+                return 1u;
+            }
+            break;
+    }
+
+    return 0u;
+}
+
+static void apply_battle_growth(void) {
+    UINT8 stat_type;
+
+    clear_growth_result();
+
+    if (!should_growth_happen(battle_enemy_rank)) {
+        return;
+    }
+
+    stat_type = (UINT8)(GROWTH_HP + (random_u8() % GROWTH_STAT_COUNT));
+    apply_player_stat_growth(stat_type);
 }
 
 static void show_growth_message(void) {
-    if (last_growth_type == GROWTH_HP) {
-        dialogue_message("HPが\nあがった！");
-    } else if (last_growth_type == GROWTH_ATK) {
-        dialogue_message("ちからが\nあがった！");
-    } else if (last_growth_type == GROWTH_DEF) {
-        dialogue_message("まもりが\nあがった！");
-    } else if (last_growth_type == GROWTH_AGI) {
-        dialogue_message("すばやさが\nあがった！");
+    if (last_growth.stat_type == GROWTH_HP) {
+        message_show(MSG_GROWTH_HP);
+    } else if (last_growth.stat_type == GROWTH_MP) {
+        message_show(MSG_GROWTH_MP);
+    } else if (last_growth.stat_type == GROWTH_ATK) {
+        message_show(MSG_GROWTH_ATK);
+    } else if (last_growth.stat_type == GROWTH_DEF) {
+        message_show(MSG_GROWTH_DEF);
+    } else if (last_growth.stat_type == GROWTH_SKILL) {
+        message_show(MSG_GROWTH_SKILL);
+    } else if (last_growth.stat_type == GROWTH_HEAL) {
+        message_show(MSG_GROWTH_HEAL);
+    } else if (last_growth.stat_type == GROWTH_AGI) {
+        message_show(MSG_GROWTH_AGI);
     }
 }
 
@@ -2186,18 +2509,18 @@ static void return_to_map_after_battle(UINT8 won) {
 }
 
 static void player_attack(void) {
-    UINT8 dmg;
+    UINT16 dmg;
 
     if (!battle_select_first_alive()) {
         battle_state = BSTATE_WIN;
         return;
     }
 
-    dmg = calc_damage(3u, player_battle.attack, enemy_battle.defense);
+    dmg = calc_attack_damage(&player_battle, &enemy_battle);
     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
-    else enemy_battle.hp = (UINT8)(enemy_battle.hp - dmg);
+    else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
 
-    battle_show_message("ゆうしゃの こうげき！\nダメージ！");
+    battle_show_message(message_get_buffered(MSG_BATTLE_ATTACK));
     battle_flash_enemy_sprite(battle_target_index);
 
     if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
@@ -2206,78 +2529,115 @@ static void player_attack(void) {
     update_battle_status();
 }
 
+
+static void player_use_skill(UINT8 skill_id) {
+    const SkillDef *skill;
+    UINT16 amount;
+    UINT16 after;
+
+    if (skill_id == SKILL_NONE) {
+        battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
+        battle_state = BSTATE_PLAYER;
+        update_battle_status();
+        return;
+    }
+
+    skill = skill_get_def(skill_id);
+
+    if (skill->kind == SKILL_KIND_HEAL) {
+        if (player_battle.hp >= player_battle.max_hp) {
+            battle_show_message(message_get_buffered(MSG_BATTLE_HP_FULL));
+            battle_state = BSTATE_PLAYER;
+            update_battle_status();
+            return;
+        }
+
+        if (!fighter_try_consume_mp(&player_battle, (UINT16)skill->mp_cost)) {
+            battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
+            battle_state = BSTATE_PLAYER;
+            update_battle_status();
+            return;
+        }
+
+        amount = calc_heal_amount(&player_battle, skill);
+        after = (UINT16)(player_battle.hp + amount);
+        if (after > player_battle.max_hp || after < player_battle.hp) {
+            after = player_battle.max_hp;
+        }
+        player_battle.hp = after;
+
+        battle_show_message(message_get_buffered(MSG_BATTLE_HEAL_DONE));
+        update_battle_status();
+        battle_state = BSTATE_ENEMY;
+        return;
+    }
+
+    if (!battle_select_first_alive()) {
+        battle_state = BSTATE_WIN;
+        return;
+    }
+
+    if (!fighter_try_consume_mp(&player_battle, (UINT16)skill->mp_cost)) {
+        battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
+        battle_state = BSTATE_PLAYER;
+        update_battle_status();
+        return;
+    }
+
+    amount = calc_skill_damage(&player_battle, &enemy_battle, skill);
+    if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
+    else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
+
+    battle_show_message(message_get_buffered(MSG_BATTLE_SKILL));
+    battle_flash_enemy_sprite(battle_target_index);
+
+    if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
+    else battle_state = BSTATE_ENEMY;
+
+    update_battle_status();
+}
 
 static void player_skill(void) {
-    UINT8 dmg;
-
-    if (skill_uses == 0u) {
-        battle_show_message("もう つかえない！");
-        battle_state = BSTATE_PLAYER;
-        return;
-    }
-
-    if (!battle_select_first_alive()) {
-        battle_state = BSTATE_WIN;
-        return;
-    }
-
-    skill_uses--;
-    dmg = calc_damage(player_battle.skill_power, player_battle.attack, enemy_battle.defense);
-    if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
-    else enemy_battle.hp = (UINT8)(enemy_battle.hp - dmg);
-
-    battle_show_message("とくぎを つかった！\nダメージ！");
-    battle_flash_enemy_sprite(battle_target_index);
-
-    if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
-    else battle_state = BSTATE_ENEMY;
-
-    update_battle_status();
+    player_use_skill(player_get_skill_slot(PLAYER_SKILL_SLOT_SPECIAL));
 }
 
-
 static void player_heal(void) {
-    UINT8 before;
-    if (heal_uses == 0u) {
-        battle_show_message("もう かいふく\nできない！");
-        battle_state = BSTATE_PLAYER;
-        return;
-    }
-    heal_uses--;
-    before = player_battle.hp;
-    player_battle.hp = min_u8((UINT8)(player_battle.hp + player_battle.heal_power), player_battle.max_hp);
-    battle_show_message("かいふくした！");
-    update_battle_status();
-    battle_state = BSTATE_ENEMY;
+    player_use_skill(player_get_skill_slot(PLAYER_SKILL_SLOT_HEAL));
 }
 
 static void player_run(void) {
+    INT16 chance_i;
     UINT8 chance;
     UINT8 roll;
-    chance = (UINT8)(40u + player_battle.agility - enemy_battle.agility);
+
+    chance_i = (INT16)40 + (INT16)player_battle.agility - (INT16)enemy_battle.agility;
+    if (chance_i < 5) chance = 5u;
+    else if (chance_i > 95) chance = 95u;
+    else chance = (UINT8)chance_i;
+
     roll = (UINT8)(random_u8() % 100u);
     if (roll < chance) {
-        battle_show_message("うまく\nにげだした！");
+        battle_show_message(message_get_buffered(MSG_BATTLE_ESCAPE_OK));
         battle_state = BSTATE_ESCAPE;
     } else {
-        battle_show_message("にげられない！");
+        battle_show_message(message_get_buffered(MSG_BATTLE_ESCAPE_NG));
         battle_state = BSTATE_ENEMY;
     }
 }
 
 static void enemy_turn(void) {
     UINT8 i;
-    UINT8 dmg;
+    UINT16 dmg;
 
     for (i = 0u; i < battle_enemy_count; i++) {
         if (enemy_battles[i].hp == 0u) continue;
 
         battle_target_index = i;
-        dmg = calc_damage(2u, enemy_battles[i].attack, player_battle.defense);
+        dmg = calc_attack_damage(&enemy_battles[i], &player_battle);
         if (dmg >= player_battle.hp) player_battle.hp = 0u;
-        else player_battle.hp = (UINT8)(player_battle.hp - dmg);
+        else player_battle.hp = (UINT16)(player_battle.hp - dmg);
 
-        battle_show_message("まもの の こうげき！\nダメージ！");
+        battle_show_message(message_get_buffered(MSG_BATTLE_ENEMY_ATTACK));
         update_battle_status();
 
         if (player_battle.hp == 0u) {
@@ -2339,7 +2699,8 @@ static void init_game(void) {
     rand_seed = DIV_REG;
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
     init_event_flags();
-    last_growth_type = GROWTH_NONE;
+    clear_growth_result();
+    battle_enemy_rank = 1u;
     spawn_player_tx = 1u;
     spawn_player_ty = 2u;
     player_tx = spawn_player_tx;
@@ -2362,11 +2723,13 @@ static void init_game(void) {
     camera_target_px = 0u;
     camera_target_py = 0u;
     player_max_hp_stat = 38u;
+    player_max_mp_stat = 24u;
     player_attack_stat = 7u;
     player_defense_stat = 3u;
     player_skill_power_stat = 8u;
     player_heal_power_stat = 10u;
     player_agility_stat = 8u;
+    init_player_skills();
     player_moving = 0u;
     player_vx = 0;
     player_vy = 0;
@@ -2404,11 +2767,11 @@ void main(void) {
                         }
                         break;
                     case BSTATE_WIN:
-                        battle_show_message("まものを\nたおした！");
+                        battle_show_message(message_get_buffered(MSG_BATTLE_WIN));
                         return_to_map_after_battle(1u);
                         break;
                     case BSTATE_LOSE:
-                        battle_show_message("ゆうしゃは\nたおれた…");
+                        battle_show_message(message_get_buffered(MSG_BATTLE_LOSE));
                         player_tx = spawn_player_tx;
                         player_ty = spawn_player_ty;
                         player_px = actor_px(player_tx);

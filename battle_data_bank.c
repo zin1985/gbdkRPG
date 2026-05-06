@@ -7,7 +7,7 @@ BANKREF(battle_data_bank)
 
 typedef struct BattleEnemyTemplate {
     const char *name;
-    UINT8 max_hp;
+    UINT16 max_hp;
     UINT8 attack;
     UINT8 defense;
     UINT8 agility;

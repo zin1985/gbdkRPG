@@ -46,3 +46,12 @@ void message_show(UINT8 id) NONBANKED {
     message_copy_from_bank(id);
     dialogue_message(message_buffer);
 }
+
+const char *message_get_buffered(UINT8 id) NONBANKED {
+    if (id == MSG_NONE) {
+        message_buffer[0] = '\0';
+        return message_buffer;
+    }
+    message_copy_from_bank(id);
+    return message_buffer;
+}

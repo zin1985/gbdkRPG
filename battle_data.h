@@ -8,8 +8,8 @@
 
 typedef struct BattleEnemyData {
     char name[BATTLE_NAME_LEN];
-    UINT8 max_hp;
-    UINT8 hp;
+    UINT16 max_hp;
+    UINT16 hp;
     UINT8 attack;
     UINT8 defense;
     UINT8 agility;

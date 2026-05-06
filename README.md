@@ -666,3 +666,75 @@ No new BG tiles, map actors, object kinds, or sprite sheets were added.
 - 戦闘突入時のパーティ欄、敵名欄、コマンド欄、メッセージ欄が画面内の自然な位置に戻ること。
 - BG枠と文字がずれずに重なること。
 - 敵・味方アイコン・カーソルOBJが大きく外れないこと。
+
+## rpg087_growth_rank
+
+### 目的
+
+`rpg086_window_reset` を基準に、スレッドで検討した成長システム拡張のうち、すぐ実装可能な土台を追加した版です。
+
+### 追加内容
+
+- HP/MPの上限を `999` に変更。
+- その他能力値の上限を `255` に変更。
+- 主人公に `MP` ステータスを追加。
+- 戦闘画面の主人公 `M` 表示を固定値ではなく `player_battle.mp` 表示へ変更。
+- 成長候補を `HP / MP / ちから / まもり / とくぎ / かいふく / すばやさ` に拡張。
+- `GrowthResult` 構造体を追加し、成長前後の値を記録する土台を追加。
+- `battle_enemy_rank` を追加し、戦闘開始時点の敵の強さを保存。
+- rank別成長率テーブルを追加。
+- 上限到達時に別能力へ流れ込む挙動を廃止。
+
+### 制約
+
+- 複数キャラ成長は未実装。
+- 技ひらめき、武器熟練度、GrowthResult配列化は未実装。
+- MPはステータスとして追加したが、現時点では `とくぎ` / `かいふく` の使用回数制からMP消費制へは変更していない。
+- 戦闘UIの描画方式、BGM、MAP_GFX_TILE_COUNT、jpfont.c、misakiUTF16.c は変更していない。
+
+## rpg088_mp_skill
+
+目的: rpg087_growth_rank の成長システム拡張を前提に、スレッドで検討したMP消費制・SkillDefテーブル方式・軽量な効果計算式を取り込む。
+
+### 主な変更
+- `とくぎ` / `かいふく` を使用回数制からMP消費制へ移行した。
+- とくぎの消費MPは2、かいふくの消費MPは4とした。
+- MP不足時は「Mがたりない」と表示し、敵ターンへ進めずプレイヤー選択へ戻す。
+- HP満タン時のかいふくは「Hまんたん」と表示し、MPを消費しない。
+- `SkillId` / `SkillKind` / `TargetType` / `SkillDef` を追加し、将来の複数技テーブル化に備えた。
+- 通常攻撃、とくぎ、かいふくの効果計算を分離した。
+- ダメージ計算は `INT16` を経由し、最低1ダメージを保証する。
+- 成長メッセージ文字列を `messages_bank.c` へ移動し、Bank 0圧迫を軽減した。
+
+### 効果式
+```c
+通常攻撃 = attack * 2 - defense
+とくぎ   = skill * 3 + attack + power - defense / 2
+かいふく = heal * 2 + power
+```
+
+### Bank 0注意
+前回の `rpg087_growth_rank` ではビルド自体は完了したものの、`romusage` により `_HOME` overflow が検出された。今回の変更では、追加コードを最小限にしつつ、成長メッセージ文字列をbank 2へ逃がしてBank 0増加を抑えている。
+
+## rpg089_skill_slots
+
+目的: rpg088_mp_skill を基準に、見た目の戦闘メニューを変えず、内部だけを複数技対応へ寄せる。
+
+### 主な変更
+- `SkillDef` を拡張し、id / kind / target / mp_cost / power / accuracy / flags を持つ構造へ変更。
+- 将来の複数技・状態異常・敵AI利用に備え、`SKILL_FIRE` / `SKILL_GUARD_BREAK` などのIDを予約。
+- `PlayerSkillSet` を追加し、固定4スロット方式の土台を導入。
+- 既存の「とくぎ」は skill slot 0、「かいふく」は skill slot 1 を参照するように変更。
+- `player_use_skill(skill_id)` に、とくぎ/かいふくの実行処理を集約。
+- rpg088に残っていた `player_run()` の重複 else 由来の構文不整合を修正。
+
+### まだ追加していないもの
+- 技一覧UI
+- 対象選択UI
+- 技習得処理
+- 状態異常
+- セーブデータへのskill slot保存
+- SkillDefのbanked data化
+
+### Bank 0注意
+main.cのコード量は増えているため、ユーザー環境で `./build.sh` を実行し、romusageで `_HOME` overflow が出ないか必ず確認する。
