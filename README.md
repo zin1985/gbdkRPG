@@ -747,3 +747,36 @@ Battle window/UI position reset patch.
 - Removes reliance on old right-shift SCX compensation during battle.
 - Keeps the rpg089 skill-slot internal structure unchanged.
 - Does not change MAP_GFX_TILE_COUNT, jpfont.c, misakiUTF16.c, OAM allocation, or BG tile data.
+
+
+## rpg097_foundation_features
+
+将来RPG機能の土台として、以下の小型banked moduleを追加。
+
+- `game_flags.c/h`
+  - 512bit / 64byte のイベントフラグ管理
+  - `game_flag_set()`, `game_flag_clear()`, `game_flag_get()`
+  - セーブ用 `copy_to/copy_from`
+
+- `quest.c/h`
+  - 16件分のクエスト状態管理
+  - `QST_NONE / QST_START / QST_PROG / QST_READY / QST_DONE`
+  - `QUEST_HERB`, `QUEST_SLIME`, `QUEST_LOST_KEY` の初期ID
+
+- `inventory.c/h`
+  - 64種類分の簡易所持数管理
+  - 最大99個スタック
+  - `ITEM_HERB`, `ITEM_POTION`, `ITEM_CASTLE_KEY` の初期ID
+
+これらはまだ既存ゲーム進行へ強く接続していない。
+既存戦闘UI安定版を壊さないため、まずは将来実装用APIとして追加している。
+
+
+## rpg098_build_fix
+
+`rpg097_foundation_features` のビルドエラー修正版。
+
+修正内容:
+- `show_one_battle_enemy_sprite()` / `hide_one_battle_body()` のプロトタイプを追加し、初回コマンドUI補正関数内の暗黙宣言を解消。
+- `battle_text.c` に混入していた実NUL文字/実改行文字リテラルを除去し、`'\0'`, `'\n'`, `'\r'` の通常表記へ修正。
+- rpg097で追加した `game_flags.c`, `quest.c`, `inventory.c` は維持。

@@ -1,0 +1,1 @@
+battle_text.c NUL byte count: 0

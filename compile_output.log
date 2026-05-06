@@ -1,6 +1,6 @@
 main.c:
-main.c:1736: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
-main.c:1737: warning 126: unreachable code
+main.c:1784: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
+main.c:1785: warning 126: unreachable code
 audio.c:
 sprites.c:
 dialogue.c:
@@ -16,25 +16,7 @@ font_data_runtime.c:
 battle_data_bank.c:
 battle_data_runtime.c:
 battle_text.c:
-battle_text.c:80:30: warning: null character(s) preserved in literal
-   80 |         while (prefix[si] != ' ' && glyphs < 18u && di < 70u) {
-      |                              ^
-battle_text.c:82:29: warning: missing terminating ' character
-   82 |             if (c == (UINT8)'
-      |                             ^
-battle_text.c:84:1: warning: missing terminating ' character
-   84 | 
-      | ^
-battle_text.c:93:48: warning: null character(s) preserved in literal
-   93 |                 battle_message_buffer[di++] = prefix[(UINT8)(si + j)];
-      |                                                ^
-battle_text.c:101:35: warning: missing terminating ' character
-  101 | ';
-      |                                   ^
-battle_text.c:102:1: warning: missing terminating ' character
-  102 | 
-      | ^
-battle_text.c:129:33: warning: null character(s) preserved in literal
-  129 |     return battle_message_buffer;
-      |                                 ^
 battle_text.c:29: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
+game_flags.c:
+quest.c:
+inventory.c:

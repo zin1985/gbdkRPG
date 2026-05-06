@@ -663,6 +663,11 @@ static void draw_battle_enemy_names(void);
 static void draw_party_status_box(void);
 static void draw_battle_message_area(void);
 static void battle_prepare_player_turn_ui(void);
+static void battle_prepare_first_command_ui(void);
+static void battle_reposition_party_icons_only(void);
+static void battle_reposition_enemy_sprites_only(void);
+static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UINT8 sprite_kind);
+static void hide_one_battle_body(UINT8 sprite_base);
 static void battle_enter_render_once(void);
 static void battle_update_dirty(void);
 static void battle_set_message_dirty(const char *text);
@@ -672,6 +677,49 @@ static void battle_update_party_mp_dirty(UINT8 slot);
 static void battle_move_command_cursor_obj(void);
 static void battle_hide_command_cursor_obj(void);
 static void battle_flash_enemy_sprite(UINT8 enemy_index);
+static void battle_reposition_enemy_sprites_only(void) {
+    /* rpg096:
+     * Do not hide/reload enemies during the first command transition.
+     * Only refresh tile indices and OAM positions for alive enemies.
+     */
+    if (battle_enemy_count == 0u) return;
+
+    if (battle_enemy_count == 1u) {
+        if (enemy_battles[0].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+        } else {
+            hide_one_battle_body(BATTLE_ENEMY0_SPRITE_BASE);
+        }
+    } else if (battle_enemy_count == 2u) {
+        if (enemy_battles[0].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+        } else {
+            hide_one_battle_body(BATTLE_ENEMY0_SPRITE_BASE);
+        }
+        if (enemy_battles[1].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
+        } else {
+            hide_one_battle_body(BATTLE_ENEMY1_SPRITE_BASE);
+        }
+    } else {
+        if (enemy_battles[0].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 36u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+        } else {
+            hide_one_battle_body(BATTLE_ENEMY0_SPRITE_BASE);
+        }
+        if (enemy_battles[1].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 76u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
+        } else {
+            hide_one_battle_body(BATTLE_ENEMY1_SPRITE_BASE);
+        }
+        if (enemy_battles[2].hp > 0u) {
+            show_one_battle_enemy_sprite(BATTLE_ENEMY2_SPRITE_BASE, 116u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[2]);
+        } else {
+            hide_one_battle_body(BATTLE_ENEMY2_SPRITE_BASE);
+        }
+    }
+}
+
 static void battle_reset_bg_origin(void);
 static void battle_hide_window_and_reset_scroll(void);
 static void hide_battle_enemy_sprites(void);
@@ -1924,6 +1972,17 @@ static void show_battle_party_icons(void) {
     show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u), 136u, 16u);
 }
 
+static void battle_reposition_party_icons_only(void) {
+    /* rpg096:
+     * First command transition must not reload OBJ tile data while LCD is on.
+     * Re-apply only OAM tile indices/positions, using data already loaded by
+     * battle_enter_render_once().
+     */
+    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u),  40u, 16u);
+    show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
+    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u), 136u, 16u);
+}
+
 static void load_battle_enemy_sprite_data(void) {
     /* rpg077: battle-only load of the first 12 enemy OBJ tiles.
      * Map return still calls init_map_sprites(), so normal field sprite state is
@@ -2039,26 +2098,27 @@ static void draw_battle_message_area(void) {
 }
 
 static void draw_battle_menu(void) {
-    /* rpg082:
-     * The command text is static BG.  The selected marker is no longer a BG
-     * ">" glyph, because rewriting BG text on every cursor move caused
-     * visible flicker.  OAM 24 is moved instead.
+    /* rpg096:
+     * Move the command window one BG row up.
+     * rpg095 expanded the bottom message frame to rows 14-17, so the old
+     * command box at rows 11-14 overlapped the message top border during the
+     * first command transition.  Keep the same x layout but use rows 10-13.
      */
-    draw_bkg_box(9u, 11u, 11u, 4u);
+    draw_bkg_box(9u, 10u, 11u, 4u);
 
-    battle_put_bkg_text(11u, 12u, "こうげき");
-    battle_put_bkg_text(16u, 12u, "とくぎ");
-    battle_put_bkg_text(11u, 13u, "かいふく");
-    battle_put_bkg_text(16u, 13u, "にげる");
+    battle_put_bkg_text(11u, 11u, "こうげき");
+    battle_put_bkg_text(16u, 11u, "とくぎ");
+    battle_put_bkg_text(11u, 12u, "かいふく");
+    battle_put_bkg_text(16u, 12u, "にげる");
 }
 
 static void battle_command_cursor_bg_pos(UINT8 index, UINT8 *col, UINT8 *row) {
     switch (index) {
-        case CMD_ATTACK: *col = 10u; *row = 12u; break;
-        case CMD_SKILL:  *col = 15u; *row = 12u; break;
-        case CMD_HEAL:   *col = 10u; *row = 13u; break;
-        case CMD_RUN:    *col = 15u; *row = 13u; break;
-        default:         *col = 10u; *row = 12u; break;
+        case CMD_ATTACK: *col = 10u; *row = 11u; break;
+        case CMD_SKILL:  *col = 15u; *row = 11u; break;
+        case CMD_HEAL:   *col = 10u; *row = 12u; break;
+        case CMD_RUN:    *col = 15u; *row = 12u; break;
+        default:         *col = 10u; *row = 11u; break;
     }
 }
 
@@ -2198,6 +2258,26 @@ static void battle_update_dirty(void) {
     audio_wait_vbl();
 }
 
+static void battle_prepare_first_command_ui(void) {
+    /*
+     * rpg096:
+     * Fix the one-time UI drift when the appear message hands off to the first
+     * command cursor.  This is intentionally not a full redraw:
+     * no DISPLAY_OFF/ON, no battle_clear_bg_full(), no jp_init(), no sprite data
+     * reload.  Only align scroll, redraw the two non-overlapping BG windows,
+     * reposition existing OAM, and leave message text empty.
+     */
+    battle_hide_window_and_reset_scroll();
+
+    battle_message_text = "";
+    draw_battle_menu();
+    draw_battle_message_area();
+
+    battle_reposition_party_icons_only();
+    battle_reposition_enemy_sprites_only();
+    battle_move_command_cursor_obj();
+}
+
 static void battle_prepare_player_turn_ui(void) {
     battle_hide_window_and_reset_scroll();
     draw_battle_frame();
@@ -2329,7 +2409,7 @@ static void enter_battle_screen(void) {
     battle_start_effect();
     battle_enter_render_once();
     battle_show_message(message_get_buffered(MSG_BATTLE_APPEAR));
-    battle_first_player_refresh_pending = 0u;
+    battle_first_player_refresh_pending = 1u;
 }
 
 
@@ -2715,8 +2795,7 @@ static void battle_input(void) {
 
     if (battle_first_player_refresh_pending) {
         battle_first_player_refresh_pending = 0u;
-        battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
-        battle_update_dirty();
+        battle_prepare_first_command_ui();
     }
 
     keys = joypad();
