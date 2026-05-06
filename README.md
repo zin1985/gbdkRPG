@@ -716,7 +716,7 @@ No new BG tiles, map actors, object kinds, or sprite sheets were added.
 ### Bank 0注意
 前回の `rpg087_growth_rank` ではビルド自体は完了したものの、`romusage` により `_HOME` overflow が検出された。今回の変更では、追加コードを最小限にしつつ、成長メッセージ文字列をbank 2へ逃がしてBank 0増加を抑えている。
 
-## rpg089_skill_slots
+## rpg090_battle_window_fix
 
 目的: rpg088_mp_skill を基準に、見た目の戦闘メニューを変えず、内部だけを複数技対応へ寄せる。
 
@@ -738,3 +738,12 @@ No new BG tiles, map actors, object kinds, or sprite sheets were added.
 
 ### Bank 0注意
 main.cのコード量は増えているため、ユーザー環境で `./build.sh` を実行し、romusageで `_HOME` overflow が出ないか必ず確認する。
+
+## rpg090_battle_window_fix
+
+Battle window/UI position reset patch.
+
+- Forces battle BG origin to `(0,0)` with `battle_reset_bg_origin()`.
+- Removes reliance on old right-shift SCX compensation during battle.
+- Keeps the rpg089 skill-slot internal structure unchanged.
+- Does not change MAP_GFX_TILE_COUNT, jpfont.c, misakiUTF16.c, OAM allocation, or BG tile data.

@@ -225,15 +225,16 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_MSG_W 20u
 #define BATTLE_MSG_H 3u
 
-/* rpg084:
- * Battle BG windows are drawn 10 BG tiles to the right and SCX is set to
- * the same 10-tile offset.  This keeps the visible layout stable while
- * avoiding the battle window drift seen when field BG scroll state leaks
- * into battle rendering.
+/* rpg090:
+ * Keep battle UI at the real visible BG origin.  Earlier right-shift
+ * experiments used SCX compensation, but that made the battle windows look
+ * offset on some paths.  Battle UI code must now draw with raw tile
+ * coordinates and force BG scroll to 0 while battle is active.
  */
 #define BATTLE_BG_SHIFT_X 0u
-#define BATTLE_BG_SCROLL_X ((UINT8)(BATTLE_BG_SHIFT_X * 8u))
-#define BATTLE_BG_X(x) ((UINT8)((x) + BATTLE_BG_SHIFT_X))
+#define BATTLE_BG_SCROLL_X 0u
+#define BATTLE_BG_X(x) ((UINT8)(x))
+#define BATTLE_BG_Y(y) ((UINT8)(y))
 
 #define BATTLE_DIRTY_NONE      0x00u
 #define BATTLE_DIRTY_PARTY_HP  0x01u
@@ -668,6 +669,7 @@ static void battle_update_party_mp_dirty(UINT8 slot);
 static void battle_move_command_cursor_obj(void);
 static void battle_hide_command_cursor_obj(void);
 static void battle_flash_enemy_sprite(UINT8 enemy_index);
+static void battle_reset_bg_origin(void);
 static void battle_hide_window_and_reset_scroll(void);
 static void hide_battle_enemy_sprites(void);
 static void hide_all_sprites_safe(void);
@@ -1774,8 +1776,7 @@ static void battle_clear_bg_full(void) {
         bg[i] = blank;
     }
 
-    /* rpg084: battle BG is rendered from tile X+10, so keep SCX at +80px. */
-    move_bkg(BATTLE_BG_SCROLL_X, 0u);
+    battle_reset_bg_origin();
     set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
 }
 
@@ -2099,11 +2100,20 @@ static void battle_flash_enemy_sprite(UINT8 enemy_index) {
     }
 }
 
+static void battle_reset_bg_origin(void) {
+    /* rpg090: force battle BG windows back to the visible origin.
+     * move_bkg() is the normal GBDK path; SCX/SCY are also assigned so
+     * no field-camera scroll residue can survive the battle transition.
+     */
+    move_bkg(0u, 0u);
+    SCX_REG = 0u;
+    SCY_REG = 0u;
+}
+
 static void battle_hide_window_and_reset_scroll(void) {
     HIDE_WIN;
     move_win(JP_WIN_X, 144u);
-    /* rpg084: use a 10-tile BG origin while in battle. */
-    move_bkg(BATTLE_BG_SCROLL_X, 0u);
+    battle_reset_bg_origin();
     SHOW_BKG;
     SHOW_SPRITES;
 }
