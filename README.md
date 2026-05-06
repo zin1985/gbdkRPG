@@ -749,7 +749,7 @@ Battle window/UI position reset patch.
 - Does not change MAP_GFX_TILE_COUNT, jpfont.c, misakiUTF16.c, OAM allocation, or BG tile data.
 
 
-## rpg097_foundation_features
+## rpg099_party_sprite_replace
 
 将来RPG機能の土台として、以下の小型banked moduleを追加。
 
@@ -772,11 +772,27 @@ Battle window/UI position reset patch.
 既存戦闘UI安定版を壊さないため、まずは将来実装用APIとして追加している。
 
 
-## rpg098_build_fix
+## rpg099_party_sprite_replace
 
-`rpg097_foundation_features` のビルドエラー修正版。
+`rpg099_party_sprite_replace` のビルドエラー修正版。
 
 修正内容:
 - `show_one_battle_enemy_sprite()` / `hide_one_battle_body()` のプロトタイプを追加し、初回コマンドUI補正関数内の暗黙宣言を解消。
 - `battle_text.c` に混入していた実NUL文字/実改行文字リテラルを除去し、`'\0'`, `'\n'`, `'\r'` の通常表記へ修正。
 - rpg097で追加した `game_flags.c`, `quest.c`, `inventory.c` は維持。
+
+
+## rpg099_party_sprite_replace
+
+戦闘パーティ表示アイコン `battle_party_display_tiles` を、ユーザー提供の 16x16 画像 3枚から差し替え。
+
+変換ルール:
+- 外周からつながっている白背景は透明 (OBJ color 0)
+- 純白は明色
+- 純黒は黒
+- 黒でも白でもない色はすべて中間色へ寄せる
+
+対象:
+- まほう
+- ゆうしゃ
+- そうりょ
