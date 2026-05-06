@@ -1,0 +1,110 @@
+--- /tmp/rpg092_orig_for_diff/rpg092_ui_fix/main.c	2026-05-06 11:15:55.000000000 +0000
++++ main.c	2026-05-06 12:24:17.374131875 +0000
+@@ -515,6 +515,8 @@
+ static UINT8 battle_target_index;
+ static UINT8 battle_dirty_flags;
+ static const char *battle_message_text;
++static char battle_message_buffer[96];
++static UINT8 battle_first_player_refresh_pending;
+ static UINT8 battle_screen_ready;
+ #define enemy_battle (enemy_battles[battle_target_index])
+ static UINT16 player_max_hp_stat;
+@@ -2150,7 +2152,10 @@
+ static const char *battle_compact_message(const char *text) {
+     UINT8 si;
+     UINT8 di;
+-    char c;
++    UINT8 glyphs;
++    UINT8 len;
++    UINT8 j;
++    UINT8 c;
+ 
+     if (text == 0) {
+         battle_message_buffer[0] = '\0';
+@@ -2159,16 +2164,32 @@
+ 
+     si = 0u;
+     di = 0u;
+-    while (text[si] != '\0' && di < 18u) {
+-        c = text[si++];
+-        if (c == '\n' || c == '\r') {
+-            if (di != 0u && battle_message_buffer[di - 1u] != ' ') {
++    glyphs = 0u;
++    while (text[si] != '\0' && glyphs < 18u && di < 94u) {
++        c = (UINT8)text[si];
++        if (c == (UINT8)'\n' || c == (UINT8)'\r') {
++            if (di != 0u && battle_message_buffer[di - 1u] != ' ' && di < 94u) {
+                 battle_message_buffer[di++] = ' ';
++                glyphs++;
+             }
++            si++;
+             continue;
+         }
+-        battle_message_buffer[di++] = c;
++
++        if ((c & 0x80u) == 0u) len = 1u;
++        else if ((c & 0xE0u) == 0xC0u) len = 2u;
++        else if ((c & 0xF0u) == 0xE0u) len = 3u;
++        else len = 1u;
++
++        if ((UINT8)(di + len) >= 95u) break;
++        for (j = 0u; j < len; j++) {
++            if (text[(UINT8)(si + j)] == '\0') break;
++            battle_message_buffer[di++] = text[(UINT8)(si + j)];
++        }
++        si = (UINT8)(si + len);
++        glyphs++;
+     }
++
+     while (di > 0u && battle_message_buffer[di - 1u] == ' ') {
+         di--;
+     }
+@@ -2183,10 +2204,10 @@
+ 
+     battle_compact_message(prefix);
+     di = 0u;
+-    while (battle_message_buffer[di] != '\0' && di < 18u) {
++    while (battle_message_buffer[di] != '\0' && di < 90u) {
+         di++;
+     }
+-    if (di < 18u) {
++    if (di < 90u) {
+         battle_message_buffer[di++] = ' ';
+     }
+ 
+@@ -2196,7 +2217,7 @@
+         value /= 10u;
+     } while (value != 0u && ti < sizeof(tmp));
+ 
+-    while (ti > 0u && di < 18u) {
++    while (ti > 0u && di < 94u) {
+         battle_message_buffer[di++] = tmp[--ti];
+     }
+     battle_message_buffer[di] = '\0';
+@@ -2626,7 +2647,7 @@
+     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
+     else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
+ 
+-    battle_show_damage_message("ゆうしゃの こうげき!", dmg);
++    battle_show_damage_message("ダメージ", dmg);
+     battle_flash_enemy_sprite(battle_target_index);
+ 
+     if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
+@@ -2694,7 +2715,7 @@
+     if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
+     else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
+ 
+-    battle_show_damage_message("とくぎを つかった!", amount);
++    battle_show_damage_message("ダメージ", amount);
+     battle_flash_enemy_sprite(battle_target_index);
+ 
+     if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
+@@ -2743,7 +2764,7 @@
+         if (dmg >= player_battle.hp) player_battle.hp = 0u;
+         else player_battle.hp = (UINT16)(player_battle.hp - dmg);
+ 
+-        battle_show_damage_message("まものの こうげき!", dmg);
++        battle_show_damage_message("ダメージ", dmg);
+         update_battle_status();
+ 
+         if (player_battle.hp == 0u) {

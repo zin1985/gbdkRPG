@@ -1,6 +1,6 @@
 main.c:
-main.c:1733: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
-main.c:1734: warning 126: unreachable code
+main.c:1736: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
+main.c:1737: warning 126: unreachable code
 audio.c:
 sprites.c:
 dialogue.c:
@@ -15,3 +15,5 @@ font_data_bank.c:
 font_data_runtime.c:
 battle_data_bank.c:
 battle_data_runtime.c:
+battle_text.c:
+battle_text.c:29: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG

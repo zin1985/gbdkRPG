@@ -8,6 +8,7 @@
 #include "banked_graphics.h"
 #include "map_data.h"
 #include "battle_data.h"
+#include "battle_text.h"
 
 /*
  * ============================================================================
@@ -515,6 +516,7 @@ static UINT8 battle_enemy_count;
 static UINT8 battle_target_index;
 static UINT8 battle_dirty_flags;
 static const char *battle_message_text;
+static UINT8 battle_first_player_refresh_pending;
 static UINT8 battle_screen_ready;
 #define enemy_battle (enemy_battles[battle_target_index])
 static UINT16 player_max_hp_stat;
@@ -660,6 +662,7 @@ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
 static void draw_battle_enemy_names(void);
 static void draw_party_status_box(void);
 static void draw_battle_message_area(void);
+static void battle_prepare_player_turn_ui(void);
 static void battle_enter_render_once(void);
 static void battle_update_dirty(void);
 static void battle_set_message_dirty(const char *text);
@@ -2025,7 +2028,8 @@ static void draw_battle_frame(void) {
 }
 
 static void draw_battle_message_area(void) {
-    battle_bkg_clear_area(BATTLE_MSG_X, BATTLE_MSG_Y, BATTLE_MSG_W, BATTLE_MSG_H);
+    draw_bkg_box(BATTLE_MSG_X, BATTLE_MSG_Y, BATTLE_MSG_W, BATTLE_MSG_H);
+    battle_bkg_clear_area((UINT8)(BATTLE_MSG_X + 1u), (UINT8)(BATTLE_MSG_Y + 1u), (UINT8)(BATTLE_MSG_W - 2u), 1u);
 }
 
 static void draw_battle_menu(void) {
@@ -2177,8 +2181,8 @@ static void battle_update_dirty(void) {
     }
     if (flags & BATTLE_DIRTY_MESSAGE) {
         draw_battle_message_area();
-        if (battle_message_text != 0) {
-            battle_put_bkg_text(1u, 15u, battle_message_text);
+        if (battle_message_text != 0 && battle_message_text[0] != '\0') {
+            battle_put_bkg_text(1u, 16u, battle_compact_message(battle_message_text));
         }
     }
     if (flags & BATTLE_DIRTY_CURSOR) {
@@ -2186,6 +2190,16 @@ static void battle_update_dirty(void) {
     }
 
     audio_wait_vbl();
+}
+
+static void battle_prepare_player_turn_ui(void) {
+    battle_hide_window_and_reset_scroll();
+    draw_battle_frame();
+    show_battle_party_icons();
+    show_battle_enemy_sprites();
+    battle_move_command_cursor_obj();
+    battle_set_message_dirty("");
+    battle_update_dirty();
 }
 
 static void battle_show_message(const char *text) {
@@ -2198,6 +2212,10 @@ static void battle_show_message(const char *text) {
     battle_update_dirty();
 }
 
+static void battle_show_damage_message(const char *prefix, UINT16 value) {
+    battle_show_message(battle_format_damage_message(prefix, value));
+}
+
 static void battle_enter_render_once(void) {
     /* rpg082:
      * The only full battle BG/OAM construction point.  After this, command
@@ -2207,6 +2225,7 @@ static void battle_enter_render_once(void) {
     battle_screen_ready = 0u;
     battle_dirty_flags = BATTLE_DIRTY_NONE;
     battle_message_text = "";
+    battle_first_player_refresh_pending = 0u;
 
     hide_all_sprites_safe();
     battle_hide_window_and_reset_scroll();
@@ -2304,6 +2323,7 @@ static void enter_battle_screen(void) {
     battle_start_effect();
     battle_enter_render_once();
     battle_show_message(message_get_buffered(MSG_BATTLE_APPEAR));
+    battle_first_player_refresh_pending = 1u;
 }
 
 
@@ -2552,7 +2572,7 @@ static void player_attack(void) {
     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
 
-    battle_show_message(message_get_buffered(MSG_BATTLE_ATTACK));
+    battle_show_damage_message("ダメージ", dmg);
     battle_flash_enemy_sprite(battle_target_index);
 
     if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
@@ -2598,7 +2618,7 @@ static void player_use_skill(UINT8 skill_id) {
         }
         player_battle.hp = after;
 
-        battle_show_message(message_get_buffered(MSG_BATTLE_HEAL_DONE));
+        battle_show_message("かいふくした!");
         update_battle_status();
         battle_state = BSTATE_ENEMY;
         return;
@@ -2620,7 +2640,7 @@ static void player_use_skill(UINT8 skill_id) {
     if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
 
-    battle_show_message(message_get_buffered(MSG_BATTLE_SKILL));
+    battle_show_damage_message("ダメージ", amount);
     battle_flash_enemy_sprite(battle_target_index);
 
     if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
@@ -2669,7 +2689,7 @@ static void enemy_turn(void) {
         if (dmg >= player_battle.hp) player_battle.hp = 0u;
         else player_battle.hp = (UINT16)(player_battle.hp - dmg);
 
-        battle_show_message(message_get_buffered(MSG_BATTLE_ENEMY_ATTACK));
+        battle_show_damage_message("ダメージ", dmg);
         update_battle_status();
 
         if (player_battle.hp == 0u) {
@@ -2686,6 +2706,11 @@ static void enemy_turn(void) {
 static void battle_input(void) {
     UINT8 keys;
     UINT8 old_menu_index;
+
+    if (battle_first_player_refresh_pending) {
+        battle_first_player_refresh_pending = 0u;
+        battle_prepare_player_turn_ui();
+    }
 
     keys = joypad();
     old_menu_index = menu_index;
@@ -2767,6 +2792,7 @@ static void init_game(void) {
     player_vy = 0;
     move_pixels_remaining = 0u;
     walk_anim_counter = 0u;
+    battle_first_player_refresh_pending = 0u;
     game_mode = MODE_MAP;
 }
 

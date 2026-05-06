@@ -1,0 +1,83 @@
+#pragma bank 7
+
+#include <gb/gb.h>
+#include "battle_text.h"
+
+BANKREF(battle_text_bank)
+
+static char battle_message_buffer[96];
+
+const char *battle_compact_message(const char *text) BANKED {
+    UINT8 si;
+    UINT8 di;
+    UINT8 glyphs;
+    UINT8 len;
+    UINT8 j;
+    UINT8 c;
+
+    if (text == 0) {
+        battle_message_buffer[0] = '\0';
+        return battle_message_buffer;
+    }
+
+    si = 0u;
+    di = 0u;
+    glyphs = 0u;
+    while (text[si] != '\0' && glyphs < 18u && di < 94u) {
+        c = (UINT8)text[si];
+        if (c == (UINT8)'\n' || c == (UINT8)'\r') {
+            if (di != 0u && battle_message_buffer[di - 1u] != ' ' && di < 94u) {
+                battle_message_buffer[di++] = ' ';
+                glyphs++;
+            }
+            si++;
+            continue;
+        }
+
+        if ((c & 0x80u) == 0u) len = 1u;
+        else if ((c & 0xE0u) == 0xC0u) len = 2u;
+        else if ((c & 0xF0u) == 0xE0u) len = 3u;
+        else len = 1u;
+
+        if ((UINT8)(di + len) >= 95u) break;
+        for (j = 0u; j < len; j++) {
+            if (text[(UINT8)(si + j)] == '\0') break;
+            battle_message_buffer[di++] = text[(UINT8)(si + j)];
+        }
+        si = (UINT8)(si + len);
+        glyphs++;
+    }
+
+    while (di > 0u && battle_message_buffer[di - 1u] == ' ') {
+        di--;
+    }
+    battle_message_buffer[di] = '\0';
+    return battle_message_buffer;
+}
+
+const char *battle_format_damage_message(const char *prefix, UINT16 value) BANKED {
+    UINT8 di;
+    char tmp[6];
+    UINT8 ti;
+
+    battle_compact_message(prefix);
+    di = 0u;
+    while (battle_message_buffer[di] != '\0' && di < 90u) {
+        di++;
+    }
+    if (di < 90u) {
+        battle_message_buffer[di++] = ' ';
+    }
+
+    ti = 0u;
+    do {
+        tmp[ti++] = (char)('0' + (value % 10u));
+        value /= 10u;
+    } while (value != 0u && ti < sizeof(tmp));
+
+    while (ti > 0u && di < 94u) {
+        battle_message_buffer[di++] = tmp[--ti];
+    }
+    battle_message_buffer[di] = '\0';
+    return battle_message_buffer;
+}
