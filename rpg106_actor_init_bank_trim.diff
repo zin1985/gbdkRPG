@@ -1,0 +1,200 @@
+--- rpg105/main.c
++++ rpg106/main.c
+@@ -10,6 +10,7 @@
+ #include "battle_data.h"
+ #include "battle_text.h"
+ #include "party_runtime.h"
++#include "actor_runtime.h"
+ 
+ /*
+  * ============================================================================
+@@ -473,17 +474,7 @@
+ 
+ /* rpg058: map collision/object arrays moved to map_data_bank.c. */
+ 
+-static Actor actors[] = {
+-    {ACTOR_KIND_NPC,   1u, 1u, 1u, 3u, 2u, DIR_DOWN, 0u, NPC0_SPRITE_BASE,   NPC0_TILE_BASE,   MSG_COMMON_NPC, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}},
+-    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"",20u,20u,0u,0u,5u,2u,0u,0u,5u}},
+-    /* rpg046:
+-     * Minimal talkable actor data-only test.
+-     * Uses OAM 12-15 and existing NPC0_TILE_BASE.
+-     * active=1 displays the sprite. solid=0 keeps it passable.
+-     * talkable=1 is tested without changing try_interact().
+-     */
+-    {ACTOR_KIND_NPC,   1u, 0u, 1u, 10u, 8u, DIR_DOWN, 0u, TEST_ACTOR_SPRITE_BASE, NPC0_TILE_BASE, MSG_TEST_SHORT, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}}
+-};
++Actor actors[3u];
+ #define ACTOR_COUNT ((UINT8)(sizeof(actors) / sizeof(actors[0])))
+ 
+ static GameMode game_mode;
+@@ -1768,14 +1759,13 @@
+ }
+ 
+ static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill) {
+-    UINT16 amount;
+-
+-    amount = (UINT16)((UINT16)actor->heal_power * 2u);
+-    amount = (UINT16)(amount + skill->power);
+-    if (amount > PLAYER_HP_MP_MAX) {
+-        return PLAYER_HP_MP_MAX;
+-    }
+-    return amount;
++    /*
++     * rpg106:
++     * actor->heal_power and skill->power are UINT8.
++     * Max possible value is 255*2+255 = 765, below HP/MP cap 999.
++     * Removing the unreachable clamp also shaves a few Bank0 bytes.
++     */
++    return (UINT16)((UINT16)actor->heal_power * 2u + (UINT16)skill->power);
+ }
+ 
+ static UINT8 fighter_try_consume_mp(Fighter *actor, UINT16 cost) {
+@@ -2837,6 +2827,7 @@
+     rand_seed = DIV_REG;
+     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
+     init_event_flags();
++    actor_runtime_init_actors();
+     party_init_roster_defaults();
+     clear_growth_result();
+     battle_enemy_rank = 1u;
+
+--- /dev/null
++++ rpg106/actor_runtime.h
+#ifndef ACTOR_RUNTIME_H
+#define ACTOR_RUNTIME_H
+
+#include <gb/gb.h>
+
+BANKREF_EXTERN(actor_runtime_bank)
+
+void actor_runtime_init_actors(void) BANKED;
+
+#endif
+
+--- /dev/null
++++ rpg106/actor_runtime.c
+#pragma bank 7
+
+#include <gb/gb.h>
+#include "messages.h"
+#include "actor_runtime.h"
+
+BANKREF(actor_runtime_bank)
+
+/*
+ * rpg106:
+ * Actor initialization moved out of main.c's static initializer.
+ * This removes roughly 88 bytes from _INITIALIZER/_INITIALIZED pressure.
+ *
+ * The struct layout below intentionally mirrors main.c.
+ * Keep this file updated if Actor/Fighter layout changes.
+ */
+typedef enum DirectionRuntime {
+    DIR_DOWN_RT = 0
+} DirectionRuntime;
+
+typedef enum ActorKindRuntime {
+    ACTOR_KIND_NPC_RT = 0,
+    ACTOR_KIND_ENEMY_RT = 1
+} ActorKindRuntime;
+
+typedef struct FighterRuntime {
+    const char *name;
+    UINT16 max_hp;
+    UINT16 hp;
+    UINT16 max_mp;
+    UINT16 mp;
+    UINT8 attack;
+    UINT8 defense;
+    UINT8 skill_power;
+    UINT8 heal_power;
+    UINT8 agility;
+} FighterRuntime;
+
+typedef struct ActorRuntime {
+    ActorKindRuntime kind;
+    UINT8 active;
+    UINT8 solid;
+    UINT8 talkable;
+    UINT8 tx;
+    UINT8 ty;
+    DirectionRuntime dir;
+    UINT8 walk_frame;
+    UINT8 sprite_base;
+    UINT8 tile_base;
+    UINT8 message_id;
+    FighterRuntime stats;
+} ActorRuntime;
+
+#define NPC0_SPRITE_BASE_RT   4u
+#define ENEMY0_SPRITE_BASE_RT 8u
+#define TEST_ACTOR_SPRITE_BASE_RT 12u
+
+#define NPC0_TILE_BASE_RT     32u
+#define ENEMY0_TILE_BASE_RT   64u
+
+extern ActorRuntime actors[3u];
+
+static void actor_runtime_clear_fighter(FighterRuntime *f) BANKED {
+    f->name = "";
+    f->max_hp = 0u;
+    f->hp = 0u;
+    f->max_mp = 0u;
+    f->mp = 0u;
+    f->attack = 0u;
+    f->defense = 0u;
+    f->skill_power = 0u;
+    f->heal_power = 0u;
+    f->agility = 0u;
+}
+
+void actor_runtime_init_actors(void) BANKED {
+    actor_runtime_clear_fighter(&actors[0].stats);
+    actors[0].kind = ACTOR_KIND_NPC_RT;
+    actors[0].active = 1u;
+    actors[0].solid = 1u;
+    actors[0].talkable = 1u;
+    actors[0].tx = 3u;
+    actors[0].ty = 2u;
+    actors[0].dir = DIR_DOWN_RT;
+    actors[0].walk_frame = 0u;
+    actors[0].sprite_base = NPC0_SPRITE_BASE_RT;
+    actors[0].tile_base = NPC0_TILE_BASE_RT;
+    actors[0].message_id = MSG_COMMON_NPC;
+
+    actor_runtime_clear_fighter(&actors[1].stats);
+    actors[1].kind = ACTOR_KIND_ENEMY_RT;
+    actors[1].active = 1u;
+    actors[1].solid = 1u;
+    actors[1].talkable = 0u;
+    actors[1].tx = 7u;
+    actors[1].ty = 2u;
+    actors[1].dir = DIR_DOWN_RT;
+    actors[1].walk_frame = 0u;
+    actors[1].sprite_base = ENEMY0_SPRITE_BASE_RT;
+    actors[1].tile_base = ENEMY0_TILE_BASE_RT;
+    actors[1].message_id = MSG_NONE;
+    actors[1].stats.name = "";
+    actors[1].stats.max_hp = 20u;
+    actors[1].stats.hp = 20u;
+    actors[1].stats.max_mp = 0u;
+    actors[1].stats.mp = 0u;
+    actors[1].stats.attack = 5u;
+    actors[1].stats.defense = 2u;
+    actors[1].stats.skill_power = 0u;
+    actors[1].stats.heal_power = 0u;
+    actors[1].stats.agility = 5u;
+
+    actor_runtime_clear_fighter(&actors[2].stats);
+    actors[2].kind = ACTOR_KIND_NPC_RT;
+    actors[2].active = 1u;
+    actors[2].solid = 0u;
+    actors[2].talkable = 1u;
+    actors[2].tx = 10u;
+    actors[2].ty = 8u;
+    actors[2].dir = DIR_DOWN_RT;
+    actors[2].walk_frame = 0u;
+    actors[2].sprite_base = TEST_ACTOR_SPRITE_BASE_RT;
+    actors[2].tile_base = NPC0_TILE_BASE_RT;
+    actors[2].message_id = MSG_TEST_SHORT;
+}

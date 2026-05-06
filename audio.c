@@ -58,11 +58,11 @@ static const MusicStep music_battle[] = {
     {N_G4, N_G3, 6u}, {N_E4, N_C3, 6u}, {N_D4, N_G3, 6u}, {N_C4, N_C3, 6u}
 };
 
-static UINT8 audio_current_track = AUDIO_TRACK_NONE;
-static UINT8 audio_step_index = 0u;
-static UINT8 audio_step_frames = 0u;
-static UINT8 audio_started = 0u;
-static UINT8 audio_battle_noise_flip = 0u;
+static UINT8 audio_current_track;
+static UINT8 audio_step_index;
+static UINT8 audio_step_frames;
+static UINT8 audio_started;
+static UINT8 audio_battle_noise_flip;
 
 static UINT8 audio_track_length(UINT8 track) {
     if (track == AUDIO_TRACK_FIELD) return (UINT8)(sizeof(music_field) / sizeof(music_field[0]));
@@ -140,6 +140,7 @@ void audio_init(void) {
     audio_current_track = AUDIO_TRACK_NONE;
     audio_step_index = 0u;
     audio_step_frames = 0u;
+    audio_battle_noise_flip = 0u;
     audio_started = 1u;
 }
 

@@ -1,0 +1,185 @@
+--- rpg103/main.c
++++ rpg104/main.c
+@@ -679,47 +679,36 @@
+ static void battle_move_command_cursor_obj(void);
+ static void battle_hide_command_cursor_obj(void);
+ static void battle_flash_enemy_sprite(UINT8 enemy_index);
++static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
++    UINT8 i;
++    UINT8 x;
++    UINT8 base;
++
++    if (hide_first) hide_battle_enemy_sprites();
++    if (battle_enemy_count == 0u) return;
++
++    for (i = 0u; i < 3u; i++) {
++        base = (UINT8)(BATTLE_ENEMY0_SPRITE_BASE + (UINT8)(i * 4u));
++
++        if (i >= battle_enemy_count || enemy_battles[i].hp == 0u) {
++            if (!hide_first) hide_one_battle_body(base);
++            continue;
++        }
++
++        if (battle_enemy_count == 1u) {
++            x = 72u;
++        } else if (battle_enemy_count == 2u) {
++            x = (UINT8)(56u + (UINT8)(i * 40u));
++        } else {
++            x = (UINT8)(36u + (UINT8)(i * 40u));
++        }
++
++        show_one_battle_enemy_sprite(base, x, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[i]);
++    }
++}
++
+ static void battle_reposition_enemy_sprites_only(void) {
+-    /* rpg096:
+-     * Do not hide/reload enemies during the first command transition.
+-     * Only refresh tile indices and OAM positions for alive enemies.
+-     */
+-    if (battle_enemy_count == 0u) return;
+-
+-    if (battle_enemy_count == 1u) {
+-        if (enemy_battles[0].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+-        } else {
+-            hide_one_battle_body(BATTLE_ENEMY0_SPRITE_BASE);
+-        }
+-    } else if (battle_enemy_count == 2u) {
+-        if (enemy_battles[0].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+-        } else {
+-            hide_one_battle_body(BATTLE_ENEMY0_SPRITE_BASE);
+-        }
+-        if (enemy_battles[1].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
+-        } else {
+-            hide_one_battle_body(BATTLE_ENEMY1_SPRITE_BASE);
+-        }
+-    } else {
+-        if (enemy_battles[0].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 36u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+-        } else {
+-            hide_one_battle_body(BATTLE_ENEMY0_SPRITE_BASE);
+-        }
+-        if (enemy_battles[1].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 76u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
+-        } else {
+-            hide_one_battle_body(BATTLE_ENEMY1_SPRITE_BASE);
+-        }
+-        if (enemy_battles[2].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY2_SPRITE_BASE, 116u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[2]);
+-        } else {
+-            hide_one_battle_body(BATTLE_ENEMY2_SPRITE_BASE);
+-        }
+-    }
++    battle_refresh_enemy_sprites_compact(0u);
+ }
+ 
+ static void battle_reset_bg_origin(void);
+@@ -1957,28 +1946,20 @@
+     move_sprite(sprite_base + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
+ }
+ 
+-static void show_battle_party_icons(void) {
+-    load_battle_party_icon_sprite_data();
+-
+-    /* order shown on screen: ゆうしゃ, そうりょ, まほう. rpg100 swaps hero/mage icon tiles.
+-     * rpg081: y=16 raises the icons by one BG row from rpg080, so the 16x16
+-     * icon sits beside the H/M numeric area instead of dropping into the
+-     * bottom border of the party strip.
+-     */
++static void battle_place_party_icons(void) {
++    /* rpg104: shared party icon placement to avoid duplicate HOME code. */
+     show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u),  40u, 16u);
+     show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
+     show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u), 136u, 16u);
+ }
+ 
++static void show_battle_party_icons(void) {
++    load_battle_party_icon_sprite_data();
++    battle_place_party_icons();
++}
++
+ static void battle_reposition_party_icons_only(void) {
+-    /* rpg096:
+-     * First command transition must not reload OBJ tile data while LCD is on.
+-     * Re-apply only OAM tile indices/positions, using data already loaded by
+-     * battle_enter_render_once().
+-     */
+-    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u),  40u, 16u);
+-    show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
+-    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u), 136u, 16u);
++    battle_place_party_icons();
+ }
+ 
+ static void load_battle_enemy_sprite_data(void) {
+@@ -2007,32 +1988,7 @@
+ }
+ 
+ static void show_battle_enemy_sprites(void) {
+-    hide_battle_enemy_sprites();
+-
+-    if (battle_enemy_count == 0u) return;
+-
+-    if (battle_enemy_count == 1u) {
+-        if (enemy_battles[0].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+-        }
+-    } else if (battle_enemy_count == 2u) {
+-        if (enemy_battles[0].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+-        }
+-        if (enemy_battles[1].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
+-        }
+-    } else {
+-        if (enemy_battles[0].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 36u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+-        }
+-        if (enemy_battles[1].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 76u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
+-        }
+-        if (enemy_battles[2].hp > 0u) {
+-            show_one_battle_enemy_sprite(BATTLE_ENEMY2_SPRITE_BASE, 116u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[2]);
+-        }
+-    }
++    battle_refresh_enemy_sprites_compact(1u);
+ }
+ 
+ static void battle_copy_enemy_from_data(UINT8 slot) {
+
+--- /dev/null
++++ rpg104/CHECK_rpg104_enemy_sprite_loop_trim.md
+# CHECK rpg104_enemy_sprite_loop_trim
+
+## 目的
+rpg103_bank0_thunk_trim で残った Bank 0 overflow warning を解消する。
+
+## rpg103 の状態
+
+```text
+_HOME (0x4000 -> 0x40d8)
+_INITIALIZER (0x40d9 -> 0x4130)
+_GSINIT (0x4131 -> 0x413c)
+_GSFINAL (0x413d -> 0x413d)
+```
+
+## 修正内容
+- `main.c` の戦闘パーティアイコン配置重複を `battle_place_party_icons()` に集約
+- `main.c` の敵スプライト表示/再配置重複を `battle_refresh_enemy_sprites_compact()` に集約
+- 既存と同じ敵配置座標を維持
+  - 1体: 72
+  - 2体: 56, 96
+  - 3体: 36, 76, 116
+
+## 狙い
+`rpg096` 以降で安全対策として重複実装していた初回コマンド時の再配置処理を、同じ挙動のまま短くし、Bank 0 の `_HOME` 越境を削る。
+
+## 確認観点
+- romusage の Bank 0 overflow warning が消えるか
+- 戦闘開始直後の初回コマンドUIズレが再発しないか
+- 敵1体/2体/3体の表示位置が変わっていないか
+- 敵撃破後にスプライトが消えるか
+- ゆうしゃ/そうりょ/まほうのアイコン位置が変わっていないか
+- フィールドプレイヤースプライトが rpg101 と同じく差し替わっているか

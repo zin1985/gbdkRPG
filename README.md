@@ -749,7 +749,7 @@ Battle window/UI position reset patch.
 - Does not change MAP_GFX_TILE_COUNT, jpfont.c, misakiUTF16.c, OAM allocation, or BG tile data.
 
 
-## rpg099_party_sprite_replace
+## rpg100_party_roster_fix
 
 将来RPG機能の土台として、以下の小型banked moduleを追加。
 
@@ -772,9 +772,9 @@ Battle window/UI position reset patch.
 既存戦闘UI安定版を壊さないため、まずは将来実装用APIとして追加している。
 
 
-## rpg099_party_sprite_replace
+## rpg100_party_roster_fix
 
-`rpg099_party_sprite_replace` のビルドエラー修正版。
+`rpg100_party_roster_fix` のビルドエラー修正版。
 
 修正内容:
 - `show_one_battle_enemy_sprite()` / `hide_one_battle_body()` のプロトタイプを追加し、初回コマンドUI補正関数内の暗黙宣言を解消。
@@ -782,7 +782,7 @@ Battle window/UI position reset patch.
 - rpg097で追加した `game_flags.c`, `quest.c`, `inventory.c` は維持。
 
 
-## rpg099_party_sprite_replace
+## rpg100_party_roster_fix
 
 戦闘パーティ表示アイコン `battle_party_display_tiles` を、ユーザー提供の 16x16 画像 3枚から差し替え。
 
@@ -796,3 +796,142 @@ Battle window/UI position reset patch.
 - まほう
 - ゆうしゃ
 - そうりょ
+
+
+## rpg100_party_roster_fix
+
+- JP font cacheを48→96へ拡張し、長い戦闘メッセージ後に上部の仲間名が別文字へ化ける症状を抑制。
+- パーティステータス欄を固定値ではなく `party_roster[]` から描画するよう変更。
+- アクティブ仲間3名: ゆうしゃ / そうりょ / まほう。
+- 予備仲間3名: せんし / かりうど / ぶとうか。
+- `party_swap_active_with_reserve()` を追加し、将来の入れ替えUIから呼べる下準備を実装。
+- 敵攻撃がアクティブ仲間の生存者からランダムに対象選択するよう変更。
+- ゆうしゃとまほうの戦闘アイコン表示を交換。
+
+
+## rpg101_field_player_sheet_replace
+
+ユーザー提供の 12x4 スプライトシートを分割し、プレイヤー系フィールドスプライトへ反映。
+
+### 分割ルール
+- 横12分割 / 縦4分割
+- 左上から連番
+- 1-12   = ゆうしゃ
+- 13-24  = まほう
+- 25-36  = そうりょ
+- 37-48  = 4人目の仲間
+
+### 採用フレーム
+各キャラの 3x4 ブロック内で、以下を使用:
+- 下: 1,2
+- 左: 4,5
+- 右: 7,8
+- 上: 10,11
+
+### 実装内容
+- `player_tiles` を ゆうしゃシートへ差し替え
+- `mage_field_tiles`
+- `priest_field_tiles`
+- `fourth_party_field_tiles`
+  を追加（将来の仲間表示や切替用の下準備）
+
+### 色変換ルール
+- 外周からつながる白背景 → 透明
+- 純白 → 白
+- 純黒 → 黒
+- 黒でも白でもない色 → 中間色
+
+
+## rpg102_party_bank0_trim
+
+rpg100/rpg101で追加した仲間ロスター処理により Bank 0 が大きく増えたため、
+`party_runtime.c/h` を追加して、仲間データ・生存判定・敵攻撃対象選択・予備仲間入れ替えAPIを bank 7 へ分離。
+
+目的:
+- rpg100 の Bank 0 overflow を解消する
+- rpg101 のフィールドスプライト差し替えは維持する
+- そうりょ/まほう/予備3名のデータ実装は維持する
+
+
+## rpg103_bank0_thunk_trim
+
+rpg102 は Bank 0 の越境が `0x4000 -> 0x40d8` まで縮小したが、まだ romusage の危険判定が残った。
+原因候補は、まだ既存処理から呼んでいない将来用モジュール
+`game_flags.c`, `quest.c`, `inventory.c` の多数の `BANKED` 公開関数が、SDCC/GBDK の banked call trampoline を `_HOME` に生成していること。
+
+今回の対応:
+- `game_flags` / `quest` / `inventory` は、まだ main.c から未接続の将来用モジュールなので、関数の `BANKED` 指定を一旦外す。
+- `#pragma bank 7` は維持し、実装本体は Bank 7 側に置いたままにする。
+- 既存戦闘・仲間処理で使っている `party_runtime.c` の `BANKED` API は維持する。
+
+目的:
+- Bank 0 の `_HOME` trampoline を削る
+- 既存挙動を変えずに romusage warning を消す
+
+
+## rpg104_enemy_sprite_loop_trim
+
+目的: rpg103で残った Bank 0 overflow (`_HOME 0x4000 -> 0x40d8`) を削るため、main.c内の重複した戦闘OBJ再配置処理をループ化して縮小。
+
+修正内容:
+- `show_battle_party_icons()` と `battle_reposition_party_icons_only()` の重複を `battle_place_party_icons()` に集約。
+- `show_battle_enemy_sprites()` と `battle_reposition_enemy_sprites_only()` の重複分岐を `battle_refresh_enemy_sprites_compact()` に集約。
+- 敵1体/2体/3体のX座標は従来と同じ: 72 / 56,96 / 36,76,116。
+- 既存の仲間・スプライト・Banked module構成は維持。
+
+
+## rpg105_prototype_bank0_fix
+
+rpg104 のビルドログで出ていた `hide_battle_enemy_sprites()` の implicit declaration を修正。
+
+原因:
+- `battle_refresh_enemy_sprites_compact()` が `hide_battle_enemy_sprites()` のプロトタイプ宣言より前に定義されていた。
+- SDCC が暗黙宣言として扱い、warning 112 / warning 84 が出ていた。
+
+対応:
+- `hide_battle_enemy_sprites()` のプロトタイプを `battle_refresh_enemy_sprites_compact()` より前へ移動。
+- 後ろ側の重複宣言を削除。
+
+期待:
+- implicit declaration warning が消える。
+- rpg104 の `_HOME 0x4000 -> 0x4001` という残り2byte相当の越境も、暗黙宣言由来なら解消する可能性がある。
+
+
+## rpg106_actor_init_bank_trim
+
+rpg105 で残っていた Bank 0 overflow warning を解消するため、
+`actors[]` の大きな静的初期化をやめ、BSS配置 + banked runtime初期化へ変更。
+
+修正:
+- `static Actor actors[] = {...}` を `Actor actors[3u];` に変更
+- `actor_runtime.c/h` を追加
+- `actor_runtime_init_actors()` を bank 7 へ配置
+- `init_game()` で actor 初期化を呼び出し
+- `calc_heal_amount()` の到達不能 clamp を削除
+
+狙い:
+- `_INITIALIZER` / `_INITIALIZED` の 88 bytes を削減
+- rpg105 の `_HOME 0x4000 -> 0x4001` と `_INITIALIZER` warning をまとめて解消する
+
+
+## rpg107_bank0_final_trim
+
+rpg106 で残っていた Bank 0 overflow warning をさらに削るための最小整理版。
+
+背景:
+- rpg106 では `_INITIALIZER` が 10 bytes まで縮小したが、まだ romusage の dangerous warning が残った。
+- 残りは明示初期化された小さな static 変数群と、未使用関数による Bank 0 コードが主因と判断。
+
+修正:
+- `audio.c` の static UINT8 明示初期化をBSS化し、`audio_init()` で初期化
+- `dialogue.c` の `dialogue_active = 0u` をBSS化
+- `jpfont.c` の `jp_cache_clock = 1u`, `jp_next_tile = JP_TILE_BASE` をBSS化し、既存の `jp_reset_cache()` 初期化に一本化
+- `main.c` の未使用関数を削除
+  - `min_u8()`
+  - `put_hp_pair()`
+  - `battle_update_party_hp_dirty()`
+  - `battle_update_party_mp_dirty()`
+
+期待:
+- `_INITIALIZER` / `_INITIALIZED` を0に近づける
+- main.c側の数十byte程度のコード削減で、rpg106 の `_HOME 0x4000 -> 0x4008` を吸収する

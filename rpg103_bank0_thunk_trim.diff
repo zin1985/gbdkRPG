@@ -1,0 +1,403 @@
+--- rpg102/game_flags.h
++++ rpg103/game_flags.h
+@@ -6,13 +6,11 @@
+ #define GAME_FLAG_COUNT 512u
+ #define GAME_FLAG_BYTES 64u
+ 
+-BANKREF_EXTERN(game_flags_bank)
+-
+-void game_flags_clear_all(void) BANKED;
+-void game_flag_set(UINT16 flag_id) BANKED;
+-void game_flag_clear(UINT16 flag_id) BANKED;
+-UINT8 game_flag_get(UINT16 flag_id) BANKED;
+-void game_flags_copy_to(UINT8 *dst) BANKED;
+-void game_flags_copy_from(const UINT8 *src) BANKED;
++void game_flags_clear_all(void);
++void game_flag_set(UINT16 flag_id);
++void game_flag_clear(UINT16 flag_id);
++UINT8 game_flag_get(UINT16 flag_id);
++void game_flags_copy_to(UINT8 *dst);
++void game_flags_copy_from(const UINT8 *src);
+ 
+ #endif
+
+--- rpg102/game_flags.c
++++ rpg103/game_flags.c
+@@ -3,7 +3,6 @@
+ #include <gb/gb.h>
+ #include "game_flags.h"
+ 
+-BANKREF(game_flags_bank)
+ 
+ static UINT8 g_game_flags[GAME_FLAG_BYTES];
+ 
+@@ -15,7 +14,7 @@
+     return (UINT8)(1u << (flag_id & 7u));
+ }
+ 
+-void game_flags_clear_all(void) BANKED {
++void game_flags_clear_all(void) {
+     UINT8 i;
+ 
+     for (i = 0u; i < GAME_FLAG_BYTES; i++) {
+@@ -23,7 +22,7 @@
+     }
+ }
+ 
+-void game_flag_set(UINT16 flag_id) BANKED {
++void game_flag_set(UINT16 flag_id) {
+     UINT8 bi;
+ 
+     if (flag_id >= GAME_FLAG_COUNT) return;
+@@ -32,7 +31,7 @@
+     g_game_flags[bi] |= game_flag_mask(flag_id);
+ }
+ 
+-void game_flag_clear(UINT16 flag_id) BANKED {
++void game_flag_clear(UINT16 flag_id) {
+     UINT8 bi;
+ 
+     if (flag_id >= GAME_FLAG_COUNT) return;
+@@ -41,7 +40,7 @@
+     g_game_flags[bi] &= (UINT8)(~game_flag_mask(flag_id));
+ }
+ 
+-UINT8 game_flag_get(UINT16 flag_id) BANKED {
++UINT8 game_flag_get(UINT16 flag_id) {
+     UINT8 bi;
+ 
+     if (flag_id >= GAME_FLAG_COUNT) return 0u;
+@@ -50,7 +49,7 @@
+     return (g_game_flags[bi] & game_flag_mask(flag_id)) ? 1u : 0u;
+ }
+ 
+-void game_flags_copy_to(UINT8 *dst) BANKED {
++void game_flags_copy_to(UINT8 *dst) {
+     UINT8 i;
+ 
+     if (dst == 0) return;
+@@ -60,7 +59,7 @@
+     }
+ }
+ 
+-void game_flags_copy_from(const UINT8 *src) BANKED {
++void game_flags_copy_from(const UINT8 *src) {
+     UINT8 i;
+ 
+     if (src == 0) return;
+
+--- rpg102/quest.h
++++ rpg103/quest.h
+@@ -15,17 +15,15 @@
+ #define QST_READY  3u
+ #define QST_DONE   4u
+ 
+-BANKREF_EXTERN(quest_bank)
+-
+-void quest_init(void) BANKED;
+-UINT8 quest_get_state(UINT8 quest_id) BANKED;
+-void quest_set_state(UINT8 quest_id, UINT8 state) BANKED;
+-void quest_start(UINT8 quest_id) BANKED;
+-void quest_advance(UINT8 quest_id) BANKED;
+-void quest_ready(UINT8 quest_id) BANKED;
+-void quest_complete(UINT8 quest_id) BANKED;
+-UINT8 quest_is_done(UINT8 quest_id) BANKED;
+-void quest_copy_to(UINT8 *dst) BANKED;
+-void quest_copy_from(const UINT8 *src) BANKED;
++void quest_init(void);
++UINT8 quest_get_state(UINT8 quest_id);
++void quest_set_state(UINT8 quest_id, UINT8 state);
++void quest_start(UINT8 quest_id);
++void quest_advance(UINT8 quest_id);
++void quest_ready(UINT8 quest_id);
++void quest_complete(UINT8 quest_id);
++UINT8 quest_is_done(UINT8 quest_id);
++void quest_copy_to(UINT8 *dst);
++void quest_copy_from(const UINT8 *src);
+ 
+ #endif
+
+--- rpg102/quest.c
++++ rpg103/quest.c
+@@ -3,11 +3,10 @@
+ #include <gb/gb.h>
+ #include "quest.h"
+ 
+-BANKREF(quest_bank)
+ 
+ static UINT8 g_quest_states[QUEST_MAX];
+ 
+-void quest_init(void) BANKED {
++void quest_init(void) {
+     UINT8 i;
+ 
+     for (i = 0u; i < QUEST_MAX; i++) {
+@@ -15,19 +14,19 @@
+     }
+ }
+ 
+-UINT8 quest_get_state(UINT8 quest_id) BANKED {
++UINT8 quest_get_state(UINT8 quest_id) {
+     if (quest_id >= QUEST_MAX) return QST_NONE;
+     return g_quest_states[quest_id];
+ }
+ 
+-void quest_set_state(UINT8 quest_id, UINT8 state) BANKED {
++void quest_set_state(UINT8 quest_id, UINT8 state) {
+     if (quest_id >= QUEST_MAX) return;
+     if (state > QST_DONE) state = QST_DONE;
+ 
+     g_quest_states[quest_id] = state;
+ }
+ 
+-void quest_start(UINT8 quest_id) BANKED {
++void quest_start(UINT8 quest_id) {
+     if (quest_id >= QUEST_MAX) return;
+ 
+     if (g_quest_states[quest_id] == QST_NONE) {
+@@ -35,7 +34,7 @@
+     }
+ }
+ 
+-void quest_advance(UINT8 quest_id) BANKED {
++void quest_advance(UINT8 quest_id) {
+     if (quest_id >= QUEST_MAX) return;
+ 
+     if (g_quest_states[quest_id] == QST_NONE) {
+@@ -45,24 +44,24 @@
+     }
+ }
+ 
+-void quest_ready(UINT8 quest_id) BANKED {
++void quest_ready(UINT8 quest_id) {
+     if (quest_id >= QUEST_MAX) return;
+     if (g_quest_states[quest_id] != QST_DONE) {
+         g_quest_states[quest_id] = QST_READY;
+     }
+ }
+ 
+-void quest_complete(UINT8 quest_id) BANKED {
++void quest_complete(UINT8 quest_id) {
+     if (quest_id >= QUEST_MAX) return;
+     g_quest_states[quest_id] = QST_DONE;
+ }
+ 
+-UINT8 quest_is_done(UINT8 quest_id) BANKED {
++UINT8 quest_is_done(UINT8 quest_id) {
+     if (quest_id >= QUEST_MAX) return 0u;
+     return (g_quest_states[quest_id] == QST_DONE) ? 1u : 0u;
+ }
+ 
+-void quest_copy_to(UINT8 *dst) BANKED {
++void quest_copy_to(UINT8 *dst) {
+     UINT8 i;
+ 
+     if (dst == 0) return;
+@@ -72,7 +71,7 @@
+     }
+ }
+ 
+-void quest_copy_from(const UINT8 *src) BANKED {
++void quest_copy_from(const UINT8 *src) {
+     UINT8 i;
+ 
+     if (src == 0) return;
+
+--- rpg102/inventory.h
++++ rpg103/inventory.h
+@@ -11,14 +11,12 @@
+ #define ITEM_POTION     2u
+ #define ITEM_CASTLE_KEY 3u
+ 
+-BANKREF_EXTERN(inventory_bank)
+-
+-void inventory_clear(void) BANKED;
+-UINT8 inventory_get_count(UINT8 item_id) BANKED;
+-UINT8 inventory_has(UINT8 item_id, UINT8 amount) BANKED;
+-UINT8 inventory_add(UINT8 item_id, UINT8 amount) BANKED;
+-UINT8 inventory_remove(UINT8 item_id, UINT8 amount) BANKED;
+-void inventory_copy_to(UINT8 *dst) BANKED;
+-void inventory_copy_from(const UINT8 *src) BANKED;
++void inventory_clear(void);
++UINT8 inventory_get_count(UINT8 item_id);
++UINT8 inventory_has(UINT8 item_id, UINT8 amount);
++UINT8 inventory_add(UINT8 item_id, UINT8 amount);
++UINT8 inventory_remove(UINT8 item_id, UINT8 amount);
++void inventory_copy_to(UINT8 *dst);
++void inventory_copy_from(const UINT8 *src);
+ 
+ #endif
+
+--- rpg102/inventory.c
++++ rpg103/inventory.c
+@@ -3,11 +3,10 @@
+ #include <gb/gb.h>
+ #include "inventory.h"
+ 
+-BANKREF(inventory_bank)
+ 
+ static UINT8 g_inventory_counts[INVENTORY_ITEM_MAX];
+ 
+-void inventory_clear(void) BANKED {
++void inventory_clear(void) {
+     UINT8 i;
+ 
+     for (i = 0u; i < INVENTORY_ITEM_MAX; i++) {
+@@ -15,17 +14,17 @@
+     }
+ }
+ 
+-UINT8 inventory_get_count(UINT8 item_id) BANKED {
++UINT8 inventory_get_count(UINT8 item_id) {
+     if (item_id >= INVENTORY_ITEM_MAX) return 0u;
+     return g_inventory_counts[item_id];
+ }
+ 
+-UINT8 inventory_has(UINT8 item_id, UINT8 amount) BANKED {
++UINT8 inventory_has(UINT8 item_id, UINT8 amount) {
+     if (item_id >= INVENTORY_ITEM_MAX) return 0u;
+     return (g_inventory_counts[item_id] >= amount) ? 1u : 0u;
+ }
+ 
+-UINT8 inventory_add(UINT8 item_id, UINT8 amount) BANKED {
++UINT8 inventory_add(UINT8 item_id, UINT8 amount) {
+     UINT16 total;
+ 
+     if (item_id == ITEM_NONE) return 0u;
+@@ -42,7 +41,7 @@
+     return 1u;
+ }
+ 
+-UINT8 inventory_remove(UINT8 item_id, UINT8 amount) BANKED {
++UINT8 inventory_remove(UINT8 item_id, UINT8 amount) {
+     if (item_id >= INVENTORY_ITEM_MAX) return 0u;
+     if (amount == 0u) return 1u;
+     if (g_inventory_counts[item_id] < amount) return 0u;
+@@ -51,7 +50,7 @@
+     return 1u;
+ }
+ 
+-void inventory_copy_to(UINT8 *dst) BANKED {
++void inventory_copy_to(UINT8 *dst) {
+     UINT8 i;
+ 
+     if (dst == 0) return;
+@@ -61,7 +60,7 @@
+     }
+ }
+ 
+-void inventory_copy_from(const UINT8 *src) BANKED {
++void inventory_copy_from(const UINT8 *src) {
+     UINT8 i;
+ 
+     if (src == 0) return;
+
+--- rpg102/README.md
++++ rpg103/README.md
+@@ -851,3 +851,19 @@
+ - rpg100 の Bank 0 overflow を解消する
+ - rpg101 のフィールドスプライト差し替えは維持する
+ - そうりょ/まほう/予備3名のデータ実装は維持する
++
++
++## rpg103_bank0_thunk_trim
++
++rpg102 は Bank 0 の越境が `0x4000 -> 0x40d8` まで縮小したが、まだ romusage の危険判定が残った。
++原因候補は、まだ既存処理から呼んでいない将来用モジュール
++`game_flags.c`, `quest.c`, `inventory.c` の多数の `BANKED` 公開関数が、SDCC/GBDK の banked call trampoline を `_HOME` に生成していること。
++
++今回の対応:
++- `game_flags` / `quest` / `inventory` は、まだ main.c から未接続の将来用モジュールなので、関数の `BANKED` 指定を一旦外す。
++- `#pragma bank 7` は維持し、実装本体は Bank 7 側に置いたままにする。
++- 既存戦闘・仲間処理で使っている `party_runtime.c` の `BANKED` API は維持する。
++
++目的:
++- Bank 0 の `_HOME` trampoline を削る
++- 既存挙動を変えずに romusage warning を消す
+
+--- rpg102/build.sh
++++ rpg103/build.sh
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg102_party_bank0_trim.gb"
++OUT="rpg103_bank0_thunk_trim.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c"
+ LOG="build.log"
+
+--- rpg102/build.bat
++++ rpg103/build.bat
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg102_party_bank0_trim"
++set "PROJECT=rpg103_bank0_thunk_trim"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c"
+ set "ROM_BANKS=8"
+
+--- rpg102/Makefile
++++ rpg103/Makefile
+@@ -1,4 +1,4 @@
+-OUT = rpg102_party_bank0_trim.gb
++OUT = rpg103_bank0_thunk_trim.gb
+ SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+
+
+--- /dev/null
++++ rpg103/CHECK_rpg103_bank0_thunk_trim.md
+# CHECK rpg103_bank0_thunk_trim
+
+## 目的
+rpg102_party_bank0_trim で残った Bank 0 overflow warning を解消する。
+
+## rpg102 の状態
+romusage で以下が残っていた。
+
+```text
+_HOME (0x4000 -> 0x40d8)
+_INITIALIZER (0x40d9 -> 0x4130)
+_GSINIT (0x4131 -> 0x413c)
+_GSFINAL (0x413d -> 0x413d)
+```
+
+## 原因仮説
+`game_flags.c`, `quest.c`, `inventory.c` はまだ既存処理から未接続だが、全APIを `BANKED` 公開関数として定義していたため、
+GBDK/SDCC が banked call 用 trampoline を `_HOME` に生成している可能性が高い。
+
+## 修正内容
+- `game_flags.h/c`
+  - 未接続APIの `BANKED` 指定を解除
+  - `BANKREF_EXTERN` / `BANKREF` を削除
+  - `#pragma bank 7` は維持
+
+- `quest.h/c`
+  - 未接続APIの `BANKED` 指定を解除
+  - `BANKREF_EXTERN` / `BANKREF` を削除
+  - `#pragma bank 7` は維持
+
+- `inventory.h/c`
+  - 未接続APIの `BANKED` 指定を解除
+  - `BANKREF_EXTERN` / `BANKREF` を削除
+  - `#pragma bank 7` は維持
+
+## 維持
+- `party_runtime.c` は既存戦闘から呼ばれているため `BANKED` 維持
+- rpg101 のフィールドプレイヤースプライト差し替え維持
+- rpg100 の仲間データ・敵攻撃対象選択維持
+
+## 確認観点
+- romusage の Bank 0 overflow warning が消えるか
+- build が通るか
+- 戦闘UIが崩れないか
+- 仲間HP/MP表示が動くか
+- フィールドプレイヤースプライトが差し替わっているか
+
+## 将来の注意
+`game_flags` / `quest` / `inventory` を main.c や他bankから実際に呼ぶ段階では、
+単純に `BANKED` を戻すのではなく、公開APIを少数の集約関数へまとめてから banked call 化すること。

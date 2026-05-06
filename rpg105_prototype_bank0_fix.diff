@@ -1,0 +1,18 @@
+--- rpg104/main.c
++++ rpg105/main.c
+@@ -668,6 +668,7 @@
+ static void battle_prepare_first_command_ui(void);
+ static void battle_reposition_party_icons_only(void);
+ static void battle_reposition_enemy_sprites_only(void);
++static void hide_battle_enemy_sprites(void);
+ static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UINT8 sprite_kind);
+ static void hide_one_battle_body(UINT8 sprite_base);
+ static void battle_enter_render_once(void);
+@@ -713,7 +714,6 @@
+ 
+ static void battle_reset_bg_origin(void);
+ static void battle_hide_window_and_reset_scroll(void);
+-static void hide_battle_enemy_sprites(void);
+ static void hide_all_sprites_safe(void);
+ static void load_battle_party_icon_sprite_data(void);
+ static void show_battle_party_icons(void);

@@ -15,17 +15,15 @@
 #define QST_READY  3u
 #define QST_DONE   4u
 
-BANKREF_EXTERN(quest_bank)
-
-void quest_init(void) BANKED;
-UINT8 quest_get_state(UINT8 quest_id) BANKED;
-void quest_set_state(UINT8 quest_id, UINT8 state) BANKED;
-void quest_start(UINT8 quest_id) BANKED;
-void quest_advance(UINT8 quest_id) BANKED;
-void quest_ready(UINT8 quest_id) BANKED;
-void quest_complete(UINT8 quest_id) BANKED;
-UINT8 quest_is_done(UINT8 quest_id) BANKED;
-void quest_copy_to(UINT8 *dst) BANKED;
-void quest_copy_from(const UINT8 *src) BANKED;
+void quest_init(void);
+UINT8 quest_get_state(UINT8 quest_id);
+void quest_set_state(UINT8 quest_id, UINT8 state);
+void quest_start(UINT8 quest_id);
+void quest_advance(UINT8 quest_id);
+void quest_ready(UINT8 quest_id);
+void quest_complete(UINT8 quest_id);
+UINT8 quest_is_done(UINT8 quest_id);
+void quest_copy_to(UINT8 *dst);
+void quest_copy_from(const UINT8 *src);
 
 #endif

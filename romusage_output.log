@@ -1,24 +1,24 @@
 
 Bank         Range                Size     Used  Used%     Free  Free% 
 --------     ----------------  -------  -------  -----  -------  -----
-ROM_0        0x0000 -> 0x3FFF    16384    15992    98%      392     2% |-##########################-|
+ROM_0        0x0000 -> 0x3FFF    16384    15797    96%      587     4% |-##########################-|
 |
-+ _CODE                           0x0200 -> 0x3B12   14611
-+ _HOME                           0x3B13 -> 0x3F67    1109
-+ _INITIALIZER                    0x3F68 -> 0x3FBF      88
-+ _GSINIT                         0x3FC0 -> 0x3FCB      12
-+ _GSFINAL                        0x3FCC -> 0x3FCC       1
++ _CODE                           0x0200 -> 0x3AA6   14503
++ _HOME                           0x3AA7 -> 0x3EFB    1109
++ _INITIALIZER                    0x3EFC -> 0x3EFC       1
++ _GSINIT                         0x3EFD -> 0x3F08      12
++ _GSFINAL                        0x3F09 -> 0x3F09       1
 
-ROM_7/7      0x4000 -> 0x7FFF   114688    21979    19%    92709    81% |....-...-...........###--...|
+ROM_7/7      0x4000 -> 0x7FFF   114688    25150    22%    89538    78% |....-...-...........###--...|
 |
 + _CODE_2                         0x8000 -> 0x84E7    1256
-+ _CODE_3                         0xC000 -> 0xC7DF    2016
++ _CODE_3                         0xC000 -> 0xCDDF    3552
 + _CODE_4                         0x10000 -> 0x103FF    1024
 + _CODE_6                         0x18000 -> 0x1BC61   15458
-+ _CODE_7                         0x1C000 -> 0x1C8B0    2225
++ _CODE_7                         0x1C000 -> 0x1CF13    3860
 
-WRAM_LO      0xC000 -> 0xCFFF     4096     2993    73%     1103    27% |.-###################-......|
+WRAM_LO      0xC000 -> 0xCFFF     4096     3380    83%      716    17% |.-######################....|
 |
-+ _DATA                           0xC0A0 -> 0xCBF8    2905
-+ _INITIALIZED                    0xCBF9 -> 0xCC50      88
++ _DATA                           0xC0A0 -> 0xCDD2    3379
++ _INITIALIZED                    0xCDD3 -> 0xCDD3       1
 

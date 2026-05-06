@@ -1,0 +1,3 @@
+main.c source length rpg103: 98665
+main.c source length rpg104: 95865
+source chars reduced: 2800

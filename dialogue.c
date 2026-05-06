@@ -3,7 +3,7 @@
 #include "jpfont.h"
 #include "audio.h"
 
-static UINT8 dialogue_active = 0u;
+static UINT8 dialogue_active;
 
 static void dialogue_wait_a_newpress(void) {
     audio_waitpadup();

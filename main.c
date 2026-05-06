@@ -9,6 +9,8 @@
 #include "map_data.h"
 #include "battle_data.h"
 #include "battle_text.h"
+#include "party_runtime.h"
+#include "actor_runtime.h"
 
 /*
  * ============================================================================
@@ -454,6 +456,7 @@ typedef struct Fighter {
     UINT8 agility;
 } Fighter;
 
+
 typedef struct Actor {
     ActorKind kind;
     UINT8 active;
@@ -471,17 +474,7 @@ typedef struct Actor {
 
 /* rpg058: map collision/object arrays moved to map_data_bank.c. */
 
-static Actor actors[] = {
-    {ACTOR_KIND_NPC,   1u, 1u, 1u, 3u, 2u, DIR_DOWN, 0u, NPC0_SPRITE_BASE,   NPC0_TILE_BASE,   MSG_COMMON_NPC, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}},
-    {ACTOR_KIND_ENEMY, 1u, 1u, 0u, 7u, 2u, DIR_DOWN, 0u, ENEMY0_SPRITE_BASE, ENEMY0_TILE_BASE, MSG_NONE, {"",20u,20u,0u,0u,5u,2u,0u,0u,5u}},
-    /* rpg046:
-     * Minimal talkable actor data-only test.
-     * Uses OAM 12-15 and existing NPC0_TILE_BASE.
-     * active=1 displays the sprite. solid=0 keeps it passable.
-     * talkable=1 is tested without changing try_interact().
-     */
-    {ACTOR_KIND_NPC,   1u, 0u, 1u, 10u, 8u, DIR_DOWN, 0u, TEST_ACTOR_SPRITE_BASE, NPC0_TILE_BASE, MSG_TEST_SHORT, {"",0u,0u,0u,0u,0u,0u,0u,0u,0u}}
-};
+Actor actors[3u];
 #define ACTOR_COUNT ((UINT8)(sizeof(actors) / sizeof(actors[0])))
 
 static GameMode game_mode;
@@ -544,7 +537,6 @@ static INT8 player_vy;
 static UINT8 move_pixels_remaining;
 static UINT8 walk_anim_counter;
 
-static UINT8 min_u8(UINT8 a, UINT8 b);
 static UINT8 random_u8(void);
 static void init_event_flags(void);
 static void set_event_flag(UINT8 id);
@@ -575,7 +567,6 @@ static void u8_to_dec(UINT8 value, char *out);
 static void u16_to_dec3(UINT16 value, char *out);
 static void put_u8(UINT8 col, UINT8 row, UINT8 value);
 static void put_u16(UINT8 col, UINT8 row, UINT16 value);
-static void put_hp_pair(UINT8 col, UINT8 row, UINT16 hp, UINT16 max_hp);
 static void screen_clear(void);
 static void wait_a_pressed(void);
 static void draw_object_map(void);
@@ -666,63 +657,50 @@ static void battle_prepare_player_turn_ui(void);
 static void battle_prepare_first_command_ui(void);
 static void battle_reposition_party_icons_only(void);
 static void battle_reposition_enemy_sprites_only(void);
+static void hide_battle_enemy_sprites(void);
 static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UINT8 sprite_kind);
 static void hide_one_battle_body(UINT8 sprite_base);
 static void battle_enter_render_once(void);
 static void battle_update_dirty(void);
 static void battle_set_message_dirty(const char *text);
 static void battle_show_message(const char *text);
-static void battle_update_party_hp_dirty(UINT8 slot);
-static void battle_update_party_mp_dirty(UINT8 slot);
 static void battle_move_command_cursor_obj(void);
 static void battle_hide_command_cursor_obj(void);
 static void battle_flash_enemy_sprite(UINT8 enemy_index);
-static void battle_reposition_enemy_sprites_only(void) {
-    /* rpg096:
-     * Do not hide/reload enemies during the first command transition.
-     * Only refresh tile indices and OAM positions for alive enemies.
-     */
+static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
+    UINT8 i;
+    UINT8 x;
+    UINT8 base;
+
+    if (hide_first) hide_battle_enemy_sprites();
     if (battle_enemy_count == 0u) return;
 
-    if (battle_enemy_count == 1u) {
-        if (enemy_battles[0].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
-        } else {
-            hide_one_battle_body(BATTLE_ENEMY0_SPRITE_BASE);
+    for (i = 0u; i < 3u; i++) {
+        base = (UINT8)(BATTLE_ENEMY0_SPRITE_BASE + (UINT8)(i * 4u));
+
+        if (i >= battle_enemy_count || enemy_battles[i].hp == 0u) {
+            if (!hide_first) hide_one_battle_body(base);
+            continue;
         }
-    } else if (battle_enemy_count == 2u) {
-        if (enemy_battles[0].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
+
+        if (battle_enemy_count == 1u) {
+            x = 72u;
+        } else if (battle_enemy_count == 2u) {
+            x = (UINT8)(56u + (UINT8)(i * 40u));
         } else {
-            hide_one_battle_body(BATTLE_ENEMY0_SPRITE_BASE);
+            x = (UINT8)(36u + (UINT8)(i * 40u));
         }
-        if (enemy_battles[1].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
-        } else {
-            hide_one_battle_body(BATTLE_ENEMY1_SPRITE_BASE);
-        }
-    } else {
-        if (enemy_battles[0].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 36u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
-        } else {
-            hide_one_battle_body(BATTLE_ENEMY0_SPRITE_BASE);
-        }
-        if (enemy_battles[1].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 76u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
-        } else {
-            hide_one_battle_body(BATTLE_ENEMY1_SPRITE_BASE);
-        }
-        if (enemy_battles[2].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY2_SPRITE_BASE, 116u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[2]);
-        } else {
-            hide_one_battle_body(BATTLE_ENEMY2_SPRITE_BASE);
-        }
+
+        show_one_battle_enemy_sprite(base, x, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[i]);
     }
+}
+
+static void battle_reposition_enemy_sprites_only(void) {
+    battle_refresh_enemy_sprites_compact(0u);
 }
 
 static void battle_reset_bg_origin(void);
 static void battle_hide_window_and_reset_scroll(void);
-static void hide_battle_enemy_sprites(void);
 static void hide_all_sprites_safe(void);
 static void load_battle_party_icon_sprite_data(void);
 static void show_battle_party_icons(void);
@@ -757,7 +735,6 @@ static void enemy_turn(void);
 static void battle_input(void);
 static void init_game(void);
 
-static UINT8 min_u8(UINT8 a, UINT8 b) { return (a < b) ? a : b; }
 static UINT8 random_u8(void) { rand_seed = (UINT8)(rand_seed * 17u + 29u); return rand_seed; }
 
 static UINT8 current_collision16_at(UINT8 tx, UINT8 ty) {
@@ -978,31 +955,6 @@ static void put_u8(UINT8 col, UINT8 row, UINT8 value) {
 static void put_u16(UINT8 col, UINT8 row, UINT16 value) {
     char buf[5];
     u16_to_dec3(value, buf);
-    jp_put_bkg_text(col, row, buf);
-}
-
-static void put_hp_pair(UINT8 col, UINT8 row, UINT16 hp, UINT16 max_hp) {
-    char a[5];
-    char b[5];
-    char buf[11];
-    UINT8 i = 0u;
-    UINT8 j = 0u;
-
-    u16_to_dec3(hp, a);
-    u16_to_dec3(max_hp, b);
-
-    while (a[j] != '\0') {
-        buf[i++] = a[j++];
-    }
-    buf[i++] = '/';
-    j = 0u;
-    while (b[j] != '\0') {
-        buf[i++] = b[j++];
-    }
-    buf[i++] = ' ';
-    buf[i++] = ' ';
-    buf[i] = '\0';
-
     jp_put_bkg_text(col, row, buf);
 }
 
@@ -1777,14 +1729,13 @@ static UINT16 calc_skill_damage(const Fighter *attacker, const Fighter *defender
 }
 
 static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill) {
-    UINT16 amount;
-
-    amount = (UINT16)((UINT16)actor->heal_power * 2u);
-    amount = (UINT16)(amount + skill->power);
-    if (amount > PLAYER_HP_MP_MAX) {
-        return PLAYER_HP_MP_MAX;
-    }
-    return amount;
+    /*
+     * rpg106:
+     * actor->heal_power and skill->power are UINT8.
+     * Max possible value is 255*2+255 = 765, below HP/MP cap 999.
+     * Removing the unreachable clamp also shaves a few Bank0 bytes.
+     */
+    return (UINT16)((UINT16)actor->heal_power * 2u + (UINT16)skill->power);
 }
 
 static UINT8 fighter_try_consume_mp(Fighter *actor, UINT16 cost) {
@@ -1894,35 +1845,31 @@ static void draw_battle_enemy_names(void) {
     }
 }
 
+static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
+    const char *name;
+
+    name = party_get_active_name(slot);
+    if (name == 0) return;
+
+    battle_put_bkg_text(x, 1u, name);
+    battle_put_bkg_text(x, 2u, "H ");
+    battle_put_u16((UINT8)(x + 2u), 2u, party_get_active_hp(slot));
+    battle_put_bkg_text(x, 3u, "M ");
+    battle_put_u16((UINT8)(x + 2u), 3u, party_get_active_mp(slot));
+}
+
 static void draw_party_status_box(void) {
-    /* rpg081:
-     * One continuous party strip, no per-character vertical separators.
-     * Layout is intentionally compact:
-     *   name
-     *   H nn
-     *   M nn  + 16x16 OBJ icon on the right
-     * Keeping the whole party inside the top 20x5 BG area prevents the first
-     * command screen from inheriting field BG/window residue.
+    /*
+     * rpg100:
+     * Render active party from party_roster[] instead of hard-coded dummy values.
+     * Redrawing the strip also repairs BG text if the JP glyph cache has been
+     * reused by long battle messages.
      */
     draw_bkg_box(0u, 0u, 20u, 5u);
 
-    battle_put_bkg_text(1u, 1u,  "ゆうしゃ");
-    battle_put_bkg_text(1u, 2u,  "H ");
-    battle_put_u16(3u, 2u, player_battle.hp);
-    battle_put_bkg_text(1u, 3u,  "M ");
-    battle_put_u16(3u, 3u, player_battle.mp);
-
-    battle_put_bkg_text(7u, 1u,  "そうりょ");
-    battle_put_bkg_text(7u, 2u,  "H ");
-    battle_put_u8(9u, 2u, 10u);
-    battle_put_bkg_text(7u, 3u,  "M ");
-    battle_put_u8(9u, 3u, 10u);
-
-    battle_put_bkg_text(13u, 1u, "まほう");
-    battle_put_bkg_text(13u, 2u, "H ");
-    battle_put_u8(15u, 2u, 12u);
-    battle_put_bkg_text(13u, 3u, "M ");
-    battle_put_u8(15u, 3u, 24u);
+    draw_battle_party_member_status(0u, 1u);
+    draw_battle_party_member_status(1u, 7u);
+    draw_battle_party_member_status(2u, 13u);
 }
 
 static void hide_battle_enemy_sprites(void) {
@@ -1959,28 +1906,20 @@ static void show_party_icon_16(UINT8 sprite_base, UINT8 tile_base, UINT8 x, UINT
     move_sprite(sprite_base + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
 }
 
+static void battle_place_party_icons(void) {
+    /* rpg104: shared party icon placement to avoid duplicate HOME code. */
+    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u),  40u, 16u);
+    show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
+    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u), 136u, 16u);
+}
+
 static void show_battle_party_icons(void) {
     load_battle_party_icon_sprite_data();
-
-    /* order shown on screen: ゆうしゃ, そうりょ, まほう.
-     * rpg081: y=16 raises the icons by one BG row from rpg080, so the 16x16
-     * icon sits beside the H/M numeric area instead of dropping into the
-     * bottom border of the party strip.
-     */
-    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u),  40u, 16u);
-    show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
-    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u), 136u, 16u);
+    battle_place_party_icons();
 }
 
 static void battle_reposition_party_icons_only(void) {
-    /* rpg096:
-     * First command transition must not reload OBJ tile data while LCD is on.
-     * Re-apply only OAM tile indices/positions, using data already loaded by
-     * battle_enter_render_once().
-     */
-    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u),  40u, 16u);
-    show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
-    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u), 136u, 16u);
+    battle_place_party_icons();
 }
 
 static void load_battle_enemy_sprite_data(void) {
@@ -2009,32 +1948,7 @@ static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UI
 }
 
 static void show_battle_enemy_sprites(void) {
-    hide_battle_enemy_sprites();
-
-    if (battle_enemy_count == 0u) return;
-
-    if (battle_enemy_count == 1u) {
-        if (enemy_battles[0].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 72u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
-        }
-    } else if (battle_enemy_count == 2u) {
-        if (enemy_battles[0].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 56u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
-        }
-        if (enemy_battles[1].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 96u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
-        }
-    } else {
-        if (enemy_battles[0].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY0_SPRITE_BASE, 36u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[0]);
-        }
-        if (enemy_battles[1].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY1_SPRITE_BASE, 76u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[1]);
-        }
-        if (enemy_battles[2].hp > 0u) {
-            show_one_battle_enemy_sprite(BATTLE_ENEMY2_SPRITE_BASE, 116u, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[2]);
-        }
-    }
+    battle_refresh_enemy_sprites_compact(1u);
 }
 
 static void battle_copy_enemy_from_data(UINT8 slot) {
@@ -2203,18 +2117,6 @@ static void battle_hide_window_and_reset_scroll(void) {
     SHOW_SPRITES;
 }
 
-static void battle_update_party_hp_dirty(UINT8 slot) {
-    if (slot != 0u) return;
-    battle_bkg_clear_area(3u, 2u, 3u, 1u);
-    battle_put_u16(3u, 2u, player_battle.hp);
-}
-
-static void battle_update_party_mp_dirty(UINT8 slot) {
-    if (slot != 0u) return;
-    battle_bkg_clear_area(3u, 3u, 3u, 1u);
-    battle_put_u16(3u, 3u, player_battle.mp);
-}
-
 static void battle_set_message_dirty(const char *text) {
     battle_message_text = text;
     battle_dirty_flags |= BATTLE_DIRTY_MESSAGE;
@@ -2235,11 +2137,9 @@ static void battle_update_dirty(void) {
     flags = battle_dirty_flags;
     battle_dirty_flags = BATTLE_DIRTY_NONE;
 
-    if (flags & BATTLE_DIRTY_PARTY_HP) {
-        battle_update_party_hp_dirty(0u);
-    }
-    if (flags & BATTLE_DIRTY_PARTY_MP) {
-        battle_update_party_mp_dirty(0u);
+    if (flags & (UINT8)(BATTLE_DIRTY_PARTY_HP | BATTLE_DIRTY_PARTY_MP)) {
+        draw_party_status_box();
+        battle_reposition_party_icons_only();
     }
     if (flags & BATTLE_DIRTY_ENEMY_OAM) {
         draw_battle_enemy_names();
@@ -2351,6 +2251,10 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     player_battle.skill_power = player_skill_power_stat;
     player_battle.heal_power = player_heal_power_stat;
     player_battle.agility = player_agility_stat;
+    party_prepare_battle_members(player_max_hp_stat, player_max_mp_stat,
+                                 player_attack_stat, player_defense_stat,
+                                 player_skill_power_stat, player_heal_power_stat,
+                                 player_agility_stat);
 
     /* rpg081: field-touch battles also use the 3-body encounter table.
      * The touched actor is still remembered in current_enemy_index so it can be
@@ -2703,6 +2607,11 @@ static void player_use_skill(UINT8 skill_id) {
             after = player_battle.max_hp;
         }
         player_battle.hp = after;
+        party_sync_hero_from_values(player_battle.max_hp, player_battle.hp,
+                                    player_battle.max_mp, player_battle.mp,
+                                    player_battle.attack, player_battle.defense,
+                                    player_battle.skill_power, player_battle.heal_power,
+                                    player_battle.agility);
 
         battle_show_message("かいふくした!");
         update_battle_status();
@@ -2721,6 +2630,13 @@ static void player_use_skill(UINT8 skill_id) {
         update_battle_status();
         return;
     }
+    party_sync_hero_from_values(player_battle.max_hp, player_battle.hp,
+                                    player_battle.max_mp, player_battle.mp,
+                                    player_battle.attack, player_battle.defense,
+                                    player_battle.skill_power, player_battle.heal_power,
+                                    player_battle.agility);
+
+    
 
     amount = calc_skill_damage(&player_battle, &enemy_battle, skill);
     if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
@@ -2765,20 +2681,47 @@ static void player_run(void) {
 
 static void enemy_turn(void) {
     UINT8 i;
+    UINT8 target_slot;
+    UINT8 target_id;
     UINT16 dmg;
+    Fighter target_fighter;
+    PartyBattleFighter party_target;
 
     for (i = 0u; i < battle_enemy_count; i++) {
         if (enemy_battles[i].hp == 0u) continue;
+        if (party_active_alive_count() == 0u) {
+            battle_state = BSTATE_LOSE;
+            return;
+        }
 
         battle_target_index = i;
-        dmg = calc_attack_damage(&enemy_battles[i], &player_battle);
-        if (dmg >= player_battle.hp) player_battle.hp = 0u;
-        else player_battle.hp = (UINT16)(player_battle.hp - dmg);
+        target_slot = party_choose_random_alive_active_slot(random_u8());
+        party_get_active_fighter(target_slot, &party_target);
+
+        target_fighter.name = party_target.name;
+        target_fighter.max_hp = party_target.max_hp;
+        target_fighter.hp = party_target.hp;
+        target_fighter.max_mp = party_target.max_mp;
+        target_fighter.mp = party_target.mp;
+        target_fighter.attack = party_target.attack;
+        target_fighter.defense = party_target.defense;
+        target_fighter.skill_power = party_target.skill_power;
+        target_fighter.heal_power = party_target.heal_power;
+        target_fighter.agility = party_target.agility;
+
+        dmg = calc_attack_damage(&enemy_battles[i], &target_fighter);
+        party_damage_active(target_slot, dmg);
+
+        target_id = party_get_active_member_id(target_slot);
+        if (target_id == PARTY_MEMBER_HERO) {
+            if (dmg >= player_battle.hp) player_battle.hp = 0u;
+            else player_battle.hp = (UINT16)(player_battle.hp - dmg);
+        }
 
         battle_show_damage_message("まものの こうげき!", dmg);
         update_battle_status();
 
-        if (player_battle.hp == 0u) {
+        if (party_active_alive_count() == 0u) {
             battle_state = BSTATE_LOSE;
             return;
         }
@@ -2842,6 +2785,8 @@ static void init_game(void) {
     rand_seed = DIV_REG;
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
     init_event_flags();
+    actor_runtime_init_actors();
+    party_init_roster_defaults();
     clear_growth_result();
     battle_enemy_rank = 1u;
     spawn_player_tx = 1u;

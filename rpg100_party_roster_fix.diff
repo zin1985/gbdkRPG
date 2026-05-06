@@ -1,0 +1,427 @@
+--- rpg099/main.c
++++ rpg100/main.c
+@@ -453,6 +453,34 @@
+     UINT8 heal_power;
+     UINT8 agility;
+ } Fighter;
++
++#define PARTY_ACTIVE_COUNT 3u
++#define PARTY_ROSTER_COUNT 6u
++
++#define PARTY_MEMBER_HERO    0u
++#define PARTY_MEMBER_PRIEST  1u
++#define PARTY_MEMBER_MAGE    2u
++#define PARTY_MEMBER_WARRIOR 3u
++#define PARTY_MEMBER_ARCHER  4u
++#define PARTY_MEMBER_MONK    5u
++
++typedef struct PartyMember {
++    const char *name;
++    UINT16 max_hp;
++    UINT16 hp;
++    UINT16 max_mp;
++    UINT16 mp;
++    UINT8 attack;
++    UINT8 defense;
++    UINT8 skill_power;
++    UINT8 heal_power;
++    UINT8 agility;
++    UINT8 sprite_tile_offset;
++} PartyMember;
++
++static PartyMember party_roster[PARTY_ROSTER_COUNT];
++static UINT8 party_active_slots[PARTY_ACTIVE_COUNT];
++
+ 
+ typedef struct Actor {
+     ActorKind kind;
+@@ -677,6 +705,16 @@
+ static void battle_move_command_cursor_obj(void);
+ static void battle_hide_command_cursor_obj(void);
+ static void battle_flash_enemy_sprite(UINT8 enemy_index);
++static void party_init_roster_defaults(void);
++static void party_prepare_battle_members(void);
++static UINT8 party_get_active_member_id(UINT8 active_slot);
++static PartyMember *party_get_active_member(UINT8 active_slot);
++static void party_sync_hero_from_player_battle(void);
++static void party_sync_player_battle_from_hero(void);
++static UINT8 party_active_alive_count(void);
++static UINT8 party_choose_random_alive_active_slot(void);
++static void party_member_to_fighter(const PartyMember *member, Fighter *out);
++static UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id);
+ static void battle_reposition_enemy_sprites_only(void) {
+     /* rpg096:
+      * Do not hide/reload enemies during the first command transition.
+@@ -1878,6 +1916,177 @@
+     put_u16(BATTLE_BG_X(col), row, value);
+ }
+ 
++static void party_init_member(UINT8 id, const char *name, UINT16 hp, UINT16 mp,
++                              UINT8 atk, UINT8 def, UINT8 skill, UINT8 heal,
++                              UINT8 agi, UINT8 sprite_tile_offset) {
++    if (id >= PARTY_ROSTER_COUNT) return;
++
++    party_roster[id].name = name;
++    party_roster[id].max_hp = hp;
++    party_roster[id].hp = hp;
++    party_roster[id].max_mp = mp;
++    party_roster[id].mp = mp;
++    party_roster[id].attack = atk;
++    party_roster[id].defense = def;
++    party_roster[id].skill_power = skill;
++    party_roster[id].heal_power = heal;
++    party_roster[id].agility = agi;
++    party_roster[id].sprite_tile_offset = sprite_tile_offset;
++}
++
++static void party_init_roster_defaults(void) {
++    party_active_slots[0] = PARTY_MEMBER_HERO;
++    party_active_slots[1] = PARTY_MEMBER_PRIEST;
++    party_active_slots[2] = PARTY_MEMBER_MAGE;
++
++    /* rpg100:
++     * Active party: ゆうしゃ / そうりょ / まほう.
++     * Reserve members are data-only for now; a later menu can call
++     * party_swap_active_with_reserve().
++     */
++    party_init_member(PARTY_MEMBER_HERO,    "ゆうしゃ", 38u, 24u, 7u, 3u, 8u, 10u, 8u, 0u);
++    party_init_member(PARTY_MEMBER_PRIEST,  "そうりょ", 24u, 18u, 4u, 3u, 4u, 14u, 5u, 8u);
++    party_init_member(PARTY_MEMBER_MAGE,    "まほう",   20u, 30u, 3u, 2u, 15u, 6u, 6u, 4u);
++
++    party_init_member(PARTY_MEMBER_WARRIOR, "せんし",   42u,  6u, 9u, 5u, 3u, 3u, 4u, 0u);
++    party_init_member(PARTY_MEMBER_ARCHER,  "かりうど", 30u, 12u, 7u, 3u, 6u, 5u, 9u, 4u);
++    party_init_member(PARTY_MEMBER_MONK,    "ぶとうか", 34u, 10u, 8u, 4u, 5u, 5u, 10u, 8u);
++}
++
++static void party_prepare_battle_members(void) {
++    PartyMember *hero;
++
++    hero = &party_roster[PARTY_MEMBER_HERO];
++
++    hero->max_hp = player_max_hp_stat;
++    hero->hp = player_max_hp_stat;
++    hero->max_mp = player_max_mp_stat;
++    hero->mp = player_max_mp_stat;
++    hero->attack = player_attack_stat;
++    hero->defense = player_defense_stat;
++    hero->skill_power = player_skill_power_stat;
++    hero->heal_power = player_heal_power_stat;
++    hero->agility = player_agility_stat;
++}
++
++static UINT8 party_get_active_member_id(UINT8 active_slot) {
++    if (active_slot >= PARTY_ACTIVE_COUNT) return PARTY_MEMBER_HERO;
++    return party_active_slots[active_slot];
++}
++
++static PartyMember *party_get_active_member(UINT8 active_slot) {
++    UINT8 member_id;
++
++    if (active_slot >= PARTY_ACTIVE_COUNT) return 0;
++
++    member_id = party_active_slots[active_slot];
++    if (member_id >= PARTY_ROSTER_COUNT) return 0;
++
++    return &party_roster[member_id];
++}
++
++static void party_sync_hero_from_player_battle(void) {
++    PartyMember *hero;
++
++    hero = &party_roster[PARTY_MEMBER_HERO];
++    hero->max_hp = player_battle.max_hp;
++    hero->hp = player_battle.hp;
++    hero->max_mp = player_battle.max_mp;
++    hero->mp = player_battle.mp;
++    hero->attack = player_battle.attack;
++    hero->defense = player_battle.defense;
++    hero->skill_power = player_battle.skill_power;
++    hero->heal_power = player_battle.heal_power;
++    hero->agility = player_battle.agility;
++}
++
++static void party_sync_player_battle_from_hero(void) {
++    PartyMember *hero;
++
++    hero = &party_roster[PARTY_MEMBER_HERO];
++    player_battle.max_hp = hero->max_hp;
++    player_battle.hp = hero->hp;
++    player_battle.max_mp = hero->max_mp;
++    player_battle.mp = hero->mp;
++    player_battle.attack = hero->attack;
++    player_battle.defense = hero->defense;
++    player_battle.skill_power = hero->skill_power;
++    player_battle.heal_power = hero->heal_power;
++    player_battle.agility = hero->agility;
++}
++
++static UINT8 party_active_alive_count(void) {
++    UINT8 i;
++    UINT8 count;
++    PartyMember *member;
++
++    count = 0u;
++    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
++        member = party_get_active_member(i);
++        if (member != 0 && member->hp > 0u) count++;
++    }
++    return count;
++}
++
++static UINT8 party_choose_random_alive_active_slot(void) {
++    UINT8 alive_count;
++    UINT8 pick;
++    UINT8 i;
++    PartyMember *member;
++
++    alive_count = party_active_alive_count();
++    if (alive_count == 0u) return 0u;
++
++    pick = (UINT8)(random_u8() % alive_count);
++
++    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
++        member = party_get_active_member(i);
++        if (member != 0 && member->hp > 0u) {
++            if (pick == 0u) return i;
++            pick--;
++        }
++    }
++
++    return 0u;
++}
++
++static void party_member_to_fighter(const PartyMember *member, Fighter *out) {
++    if (member == 0 || out == 0) return;
++
++    out->name = member->name;
++    out->max_hp = member->max_hp;
++    out->hp = member->hp;
++    out->max_mp = member->max_mp;
++    out->mp = member->mp;
++    out->attack = member->attack;
++    out->defense = member->defense;
++    out->skill_power = member->skill_power;
++    out->heal_power = member->heal_power;
++    out->agility = member->agility;
++}
++
++static UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id) {
++    UINT8 i;
++    UINT8 old_member;
++
++    if (active_slot >= PARTY_ACTIVE_COUNT) return 0u;
++    if (reserve_member_id >= PARTY_ROSTER_COUNT) return 0u;
++
++    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
++        if (party_active_slots[i] == reserve_member_id) return 0u;
++    }
++
++    old_member = party_active_slots[active_slot];
++    party_active_slots[active_slot] = reserve_member_id;
++
++    /* keep hero/player_battle in sync if the hero slot was touched */
++    if (old_member == PARTY_MEMBER_HERO || reserve_member_id == PARTY_MEMBER_HERO) {
++        party_sync_player_battle_from_hero();
++    }
++
++    return 1u;
++}
++
+ static void draw_battle_enemy_names(void) {
+     UINT8 i;
+ 
+@@ -1894,35 +2103,31 @@
+     }
+ }
+ 
++static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
++    PartyMember *member;
++
++    member = party_get_active_member(slot);
++    if (member == 0) return;
++
++    battle_put_bkg_text(x, 1u, member->name);
++    battle_put_bkg_text(x, 2u, "H ");
++    battle_put_u16((UINT8)(x + 2u), 2u, member->hp);
++    battle_put_bkg_text(x, 3u, "M ");
++    battle_put_u16((UINT8)(x + 2u), 3u, member->mp);
++}
++
+ static void draw_party_status_box(void) {
+-    /* rpg081:
+-     * One continuous party strip, no per-character vertical separators.
+-     * Layout is intentionally compact:
+-     *   name
+-     *   H nn
+-     *   M nn  + 16x16 OBJ icon on the right
+-     * Keeping the whole party inside the top 20x5 BG area prevents the first
+-     * command screen from inheriting field BG/window residue.
++    /*
++     * rpg100:
++     * Render active party from party_roster[] instead of hard-coded dummy values.
++     * Redrawing the strip also repairs BG text if the JP glyph cache has been
++     * reused by long battle messages.
+      */
+     draw_bkg_box(0u, 0u, 20u, 5u);
+ 
+-    battle_put_bkg_text(1u, 1u,  "ゆうしゃ");
+-    battle_put_bkg_text(1u, 2u,  "H ");
+-    battle_put_u16(3u, 2u, player_battle.hp);
+-    battle_put_bkg_text(1u, 3u,  "M ");
+-    battle_put_u16(3u, 3u, player_battle.mp);
+-
+-    battle_put_bkg_text(7u, 1u,  "そうりょ");
+-    battle_put_bkg_text(7u, 2u,  "H ");
+-    battle_put_u8(9u, 2u, 10u);
+-    battle_put_bkg_text(7u, 3u,  "M ");
+-    battle_put_u8(9u, 3u, 10u);
+-
+-    battle_put_bkg_text(13u, 1u, "まほう");
+-    battle_put_bkg_text(13u, 2u, "H ");
+-    battle_put_u8(15u, 2u, 12u);
+-    battle_put_bkg_text(13u, 3u, "M ");
+-    battle_put_u8(15u, 3u, 24u);
++    draw_battle_party_member_status(0u, 1u);
++    draw_battle_party_member_status(1u, 7u);
++    draw_battle_party_member_status(2u, 13u);
+ }
+ 
+ static void hide_battle_enemy_sprites(void) {
+@@ -1962,14 +2167,14 @@
+ static void show_battle_party_icons(void) {
+     load_battle_party_icon_sprite_data();
+ 
+-    /* order shown on screen: ゆうしゃ, そうりょ, まほう.
++    /* order shown on screen: ゆうしゃ, そうりょ, まほう. rpg100 swaps hero/mage icon tiles.
+      * rpg081: y=16 raises the icons by one BG row from rpg080, so the 16x16
+      * icon sits beside the H/M numeric area instead of dropping into the
+      * bottom border of the party strip.
+      */
+-    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u),  40u, 16u);
++    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u),  40u, 16u);
+     show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
+-    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u), 136u, 16u);
++    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u), 136u, 16u);
+ }
+ 
+ static void battle_reposition_party_icons_only(void) {
+@@ -1978,9 +2183,9 @@
+      * Re-apply only OAM tile indices/positions, using data already loaded by
+      * battle_enter_render_once().
+      */
+-    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u),  40u, 16u);
++    show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u),  40u, 16u);
+     show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
+-    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u), 136u, 16u);
++    show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u), 136u, 16u);
+ }
+ 
+ static void load_battle_enemy_sprite_data(void) {
+@@ -2235,11 +2440,9 @@
+     flags = battle_dirty_flags;
+     battle_dirty_flags = BATTLE_DIRTY_NONE;
+ 
+-    if (flags & BATTLE_DIRTY_PARTY_HP) {
+-        battle_update_party_hp_dirty(0u);
+-    }
+-    if (flags & BATTLE_DIRTY_PARTY_MP) {
+-        battle_update_party_mp_dirty(0u);
++    if (flags & (UINT8)(BATTLE_DIRTY_PARTY_HP | BATTLE_DIRTY_PARTY_MP)) {
++        draw_party_status_box();
++        battle_reposition_party_icons_only();
+     }
+     if (flags & BATTLE_DIRTY_ENEMY_OAM) {
+         draw_battle_enemy_names();
+@@ -2351,6 +2554,8 @@
+     player_battle.skill_power = player_skill_power_stat;
+     player_battle.heal_power = player_heal_power_stat;
+     player_battle.agility = player_agility_stat;
++    party_prepare_battle_members();
++    party_sync_player_battle_from_hero();
+ 
+     /* rpg081: field-touch battles also use the 3-body encounter table.
+      * The touched actor is still remembered in current_enemy_index so it can be
+@@ -2703,6 +2908,7 @@
+             after = player_battle.max_hp;
+         }
+         player_battle.hp = after;
++        party_sync_hero_from_player_battle();
+ 
+         battle_show_message("かいふくした!");
+         update_battle_status();
+@@ -2721,6 +2927,9 @@
+         update_battle_status();
+         return;
+     }
++    party_sync_hero_from_player_battle();
++
++    
+ 
+     amount = calc_skill_damage(&player_battle, &enemy_battle, skill);
+     if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
+@@ -2765,20 +2974,39 @@
+ 
+ static void enemy_turn(void) {
+     UINT8 i;
++    UINT8 target_slot;
++    UINT8 target_id;
+     UINT16 dmg;
++    Fighter target_fighter;
++    PartyMember *target_member;
+ 
+     for (i = 0u; i < battle_enemy_count; i++) {
+         if (enemy_battles[i].hp == 0u) continue;
++        if (party_active_alive_count() == 0u) {
++            battle_state = BSTATE_LOSE;
++            return;
++        }
+ 
+         battle_target_index = i;
+-        dmg = calc_attack_damage(&enemy_battles[i], &player_battle);
+-        if (dmg >= player_battle.hp) player_battle.hp = 0u;
+-        else player_battle.hp = (UINT16)(player_battle.hp - dmg);
++        target_slot = party_choose_random_alive_active_slot();
++        target_member = party_get_active_member(target_slot);
++        if (target_member == 0) continue;
++
++        party_member_to_fighter(target_member, &target_fighter);
++        dmg = calc_attack_damage(&enemy_battles[i], &target_fighter);
++
++        if (dmg >= target_member->hp) target_member->hp = 0u;
++        else target_member->hp = (UINT16)(target_member->hp - dmg);
++
++        target_id = party_get_active_member_id(target_slot);
++        if (target_id == PARTY_MEMBER_HERO) {
++            party_sync_player_battle_from_hero();
++        }
+ 
+         battle_show_damage_message("まものの こうげき!", dmg);
+         update_battle_status();
+ 
+-        if (player_battle.hp == 0u) {
++        if (party_active_alive_count() == 0u) {
+             battle_state = BSTATE_LOSE;
+             return;
+         }
+@@ -2842,6 +3070,7 @@
+     rand_seed = DIV_REG;
+     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
+     init_event_flags();
++    party_init_roster_defaults();
+     clear_growth_result();
+     battle_enemy_rank = 1u;
+     spawn_player_tx = 1u;
+--- rpg099/jpfont.h
++++ rpg100/jpfont.h
+@@ -4,9 +4,9 @@
+ #include <gb/gb.h>
+ #include "misakiUTF16.h"
+ 
+-#define JP_CACHE_SIZE   48u
++#define JP_CACHE_SIZE   96u
+ #define JP_TILE_BASE    128u
+-#define JP_FRAME_BASE   176u
++#define JP_FRAME_BASE   224u
+ 
+ #define JP_WIN_X        7u
+ #define JP_WIN_Y        112u

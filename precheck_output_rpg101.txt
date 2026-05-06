@@ -1,5 +1,5 @@
 ===== prebank_check.py =====
-main.c bytes: 94582
+main.c bytes: 104469
 [OK] no direct set_bkg_data() call found in main.c code
 [OK] no direct set_sprite_data() call found in main.c code
 [OK] no static const char[] message definitions found in main.c code
@@ -18,3 +18,4 @@ main.c bytes: 94582
 [OK] normalized UTF-16 font cache key is restored
 [INFO] exact bank overflow cannot be known before compile/link.
 [INFO] final judgment must use compiler/linker output plus romusage.
+

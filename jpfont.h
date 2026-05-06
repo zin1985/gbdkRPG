@@ -4,9 +4,9 @@
 #include <gb/gb.h>
 #include "misakiUTF16.h"
 
-#define JP_CACHE_SIZE   48u
+#define JP_CACHE_SIZE   96u
 #define JP_TILE_BASE    128u
-#define JP_FRAME_BASE   176u
+#define JP_FRAME_BASE   224u
 
 #define JP_WIN_X        7u
 #define JP_WIN_Y        112u

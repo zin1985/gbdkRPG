@@ -9,8 +9,8 @@ typedef struct JpCacheEntry {
 } JpCacheEntry;
 
 static JpCacheEntry jp_cache[JP_CACHE_SIZE];
-static UINT16 jp_cache_clock = 1u;
-static UINT8 jp_next_tile = JP_TILE_BASE;
+static UINT16 jp_cache_clock;
+static UINT8 jp_next_tile;
 
 /* 黒枠・白背景 */
 static const unsigned char jp_frame_tiles[] = {
