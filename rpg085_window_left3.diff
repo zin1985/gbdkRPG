@@ -1,0 +1,40 @@
+--- a/rpg084_window_right10/main.c
++++ b/rpg085_window_left3/main.c
+@@ -231,7 +231,7 @@
+  * avoiding the battle window drift seen when field BG scroll state leaks
+  * into battle rendering.
+  */
+-#define BATTLE_BG_SHIFT_X 10u
++#define BATTLE_BG_SHIFT_X 7u
+ #define BATTLE_BG_SCROLL_X ((UINT8)(BATTLE_BG_SHIFT_X * 8u))
+ #define BATTLE_BG_X(x) ((UINT8)((x) + BATTLE_BG_SHIFT_X))
+ 
+--- a/rpg084_window_right10/README.md
++++ b/rpg085_window_left3/README.md
+@@ -620,3 +620,26 @@
+ ### 注意
+ 
+ この版は、戦闘UIのずれ補正を最小範囲で行うための版です。GBDK実機ビルド環境がこの作業環境にないため、`lcc` による最終ビルドは未確認です。
++
++
++## rpg085_window_left3
++
++目的:
++- `rpg084_window_right10` で右へ10マス補正した戦闘BGウィンドウを、ユーザー確認結果に合わせて3マス左へ戻す。
++
++変更内容:
++- `BATTLE_BG_SHIFT_X` を `10u` から `7u` に変更。
++- `BATTLE_BG_SCROLL_X` は `BATTLE_BG_SHIFT_X * 8` のため、80px相当から56px相当に自動で変更。
++- 戦闘UIのBG描画補正は `BATTLE_BG_X(x)` 経由のまま維持。
++
++修正していない箇所:
++- BGM処理。
++- dirty update 構造。
++- OBJの敵・味方アイコン・カーソル座標。
++- `MAP_GFX_TILE_COUNT`。
++- `jpfont.c` / `misakiUTF16.c`。
++
++確認観点:
++- 戦闘中ウィンドウが前回より3マス左に戻っていること。
++- 初回コマンド時にズレが再発していないこと。
++- OBJカーソル、敵、味方アイコンが大きくズレて見えないこと。

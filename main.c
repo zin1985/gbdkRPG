@@ -231,7 +231,7 @@ BANKREF_EXTERN(sprite_data_bank)
  * avoiding the battle window drift seen when field BG scroll state leaks
  * into battle rendering.
  */
-#define BATTLE_BG_SHIFT_X 10u
+#define BATTLE_BG_SHIFT_X 0u
 #define BATTLE_BG_SCROLL_X ((UINT8)(BATTLE_BG_SHIFT_X * 8u))
 #define BATTLE_BG_X(x) ((UINT8)((x) + BATTLE_BG_SHIFT_X))
 

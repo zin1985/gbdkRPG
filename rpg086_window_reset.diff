@@ -1,0 +1,270 @@
+diff -ruN rpg086_orig_for_diff/rpg085_window_left3/CHECK_rpg086_window_reset.md rpg086_work/rpg086_window_reset/CHECK_rpg086_window_reset.md
+--- rpg086_orig_for_diff/rpg085_window_left3/CHECK_rpg086_window_reset.md	1970-01-01 00:00:00.000000000 +0000
++++ rpg086_work/rpg086_window_reset/CHECK_rpg086_window_reset.md	2026-05-05 16:35:31.196805063 +0000
+@@ -0,0 +1,25 @@
++# CHECK rpg086_window_reset
++
++目的: 戦闘ウィンドウ位置をリセットし、rpg084/rpg085の右寄せ補正を解除する。
++
++## 変更確認
++
++- [x] `main.c` の `BATTLE_BG_SHIFT_X` を `0u` に戻した
++- [x] `BATTLE_BG_SCROLL_X` は `0px` 相当になる
++- [x] BG描画マクロは残すが、現時点では座標加算しない
++- [x] OBJ座標は変更していない
++- [x] BGM処理は変更していない
++- [x] dirty update構造は変更していない
++- [x] `MAP_GFX_TILE_COUNT` は変更していない
++- [x] `jpfont.c` / `misakiUTF16.c` は変更していない
++
++## VBA確認
++
++- [ ] 戦闘突入時に上部パーティ欄が自然な位置に出る
++- [ ] パーティ名、HP/MP、アイコンが枠から大きく外れない
++- [ ] 敵名欄の枠と文字が重なる
++- [ ] コマンド欄が画面内に収まる
++- [ ] メッセージ欄が画面下部に戻る
++- [ ] 初回コマンド時に再度ズレない
++- [ ] カーソルOBJがコマンド欄付近に出る
++- [ ] 戦闘後にフィールドへ戻れる
+diff -ruN rpg086_orig_for_diff/rpg085_window_left3/Makefile rpg086_work/rpg086_window_reset/Makefile
+--- rpg086_orig_for_diff/rpg085_window_left3/Makefile	2026-05-05 15:32:39.000000000 +0000
++++ rpg086_work/rpg086_window_reset/Makefile	2026-05-05 16:38:45.515003226 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg083_music.gb
++OUT = rpg086_window_reset.gb
+ SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ruN rpg086_orig_for_diff/rpg085_window_left3/README.md rpg086_work/rpg086_window_reset/README.md
+--- rpg086_orig_for_diff/rpg085_window_left3/README.md	2026-05-05 16:22:03.000000000 +0000
++++ rpg086_work/rpg086_window_reset/README.md	2026-05-05 16:35:31.195928409 +0000
+@@ -643,3 +643,26 @@
+ - 戦闘中ウィンドウが前回より3マス左に戻っていること。
+ - 初回コマンド時にズレが再発していないこと。
+ - OBJカーソル、敵、味方アイコンが大きくズレて見えないこと。
++
++
++## rpg086_window_reset
++
++目的:
++- rpg084/rpg085で追加した戦闘BGの右寄せ補正をいったん解除し、戦闘ウィンドウ基準位置をリセットする。
++- `BATTLE_BG_SHIFT_X` を `0u` に戻し、`move_bkg()` の戦闘時スクロールも `0px` 相当に戻す。
++
++変更:
++- `main.c`: `BATTLE_BG_SHIFT_X 7u` → `0u`
++- BG描画マクロ `BATTLE_BG_X(x)` は残すが、現時点では加算なしとして動作する。
++
++修正していない箇所:
++- dirty update構造
++- BGM処理
++- OBJの敵・味方アイコン・カーソル座標
++- MAP_GFX_TILE_COUNT
++- jpfont.c / misakiUTF16.c
++
++確認ポイント:
++- 戦闘突入時のパーティ欄、敵名欄、コマンド欄、メッセージ欄が画面内の自然な位置に戻ること。
++- BG枠と文字がずれずに重なること。
++- 敵・味方アイコン・カーソルOBJが大きく外れないこと。
+diff -ruN rpg086_orig_for_diff/rpg085_window_left3/build.bat rpg086_work/rpg086_window_reset/build.bat
+--- rpg086_orig_for_diff/rpg085_window_left3/build.bat	2026-05-05 15:32:39.000000000 +0000
++++ rpg086_work/rpg086_window_reset/build.bat	2026-05-05 16:38:45.513958790 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg083_music"
++set "PROJECT=rpg086_window_reset"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ set "ROM_BANKS=8"
+diff -ruN rpg086_orig_for_diff/rpg085_window_left3/build.sh rpg086_work/rpg086_window_reset/build.sh
+--- rpg086_orig_for_diff/rpg085_window_left3/build.sh	2026-05-05 15:32:39.000000000 +0000
++++ rpg086_work/rpg086_window_reset/build.sh	2026-05-05 16:38:45.512628523 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg083_music.gb"
++OUT="rpg086_window_reset.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
+ LOG="build.log"
+diff -ruN rpg086_orig_for_diff/rpg085_window_left3/docs/checks/CHECK_086_WINDOW_RESET.md rpg086_work/rpg086_window_reset/docs/checks/CHECK_086_WINDOW_RESET.md
+--- rpg086_orig_for_diff/rpg085_window_left3/docs/checks/CHECK_086_WINDOW_RESET.md	1970-01-01 00:00:00.000000000 +0000
++++ rpg086_work/rpg086_window_reset/docs/checks/CHECK_086_WINDOW_RESET.md	2026-05-05 16:35:31.197462217 +0000
+@@ -0,0 +1,25 @@
++# CHECK rpg086_window_reset
++
++目的: 戦闘ウィンドウ位置をリセットし、rpg084/rpg085の右寄せ補正を解除する。
++
++## 変更確認
++
++- [x] `main.c` の `BATTLE_BG_SHIFT_X` を `0u` に戻した
++- [x] `BATTLE_BG_SCROLL_X` は `0px` 相当になる
++- [x] BG描画マクロは残すが、現時点では座標加算しない
++- [x] OBJ座標は変更していない
++- [x] BGM処理は変更していない
++- [x] dirty update構造は変更していない
++- [x] `MAP_GFX_TILE_COUNT` は変更していない
++- [x] `jpfont.c` / `misakiUTF16.c` は変更していない
++
++## VBA確認
++
++- [ ] 戦闘突入時に上部パーティ欄が自然な位置に出る
++- [ ] パーティ名、HP/MP、アイコンが枠から大きく外れない
++- [ ] 敵名欄の枠と文字が重なる
++- [ ] コマンド欄が画面内に収まる
++- [ ] メッセージ欄が画面下部に戻る
++- [ ] 初回コマンド時に再度ズレない
++- [ ] カーソルOBJがコマンド欄付近に出る
++- [ ] 戦闘後にフィールドへ戻れる
+diff -ruN rpg086_orig_for_diff/rpg085_window_left3/main.c rpg086_work/rpg086_window_reset/main.c
+--- rpg086_orig_for_diff/rpg085_window_left3/main.c	2026-05-05 16:22:03.000000000 +0000
++++ rpg086_work/rpg086_window_reset/main.c	2026-05-05 16:35:31.108084605 +0000
+@@ -231,7 +231,7 @@
+  * avoiding the battle window drift seen when field BG scroll state leaks
+  * into battle rendering.
+  */
+-#define BATTLE_BG_SHIFT_X 7u
++#define BATTLE_BG_SHIFT_X 0u
+ #define BATTLE_BG_SCROLL_X ((UINT8)(BATTLE_BG_SHIFT_X * 8u))
+ #define BATTLE_BG_X(x) ((UINT8)((x) + BATTLE_BG_SHIFT_X))
+ 
+diff -ruN rpg086_orig_for_diff/rpg085_window_left3/rpg086_window_reset.diff rpg086_work/rpg086_window_reset/rpg086_window_reset.diff
+--- rpg086_orig_for_diff/rpg085_window_left3/rpg086_window_reset.diff	1970-01-01 00:00:00.000000000 +0000
++++ rpg086_work/rpg086_window_reset/rpg086_window_reset.diff	2026-05-05 16:38:48.217539513 +0000
+@@ -0,0 +1,133 @@
++diff -ruN rpg086_orig_for_diff/rpg085_window_left3/CHECK_rpg086_window_reset.md rpg086_work/rpg086_window_reset/CHECK_rpg086_window_reset.md
++--- rpg086_orig_for_diff/rpg085_window_left3/CHECK_rpg086_window_reset.md	1970-01-01 00:00:00.000000000 +0000
+++++ rpg086_work/rpg086_window_reset/CHECK_rpg086_window_reset.md	2026-05-05 16:35:31.196805063 +0000
++@@ -0,0 +1,25 @@
+++# CHECK rpg086_window_reset
+++
+++目的: 戦闘ウィンドウ位置をリセットし、rpg084/rpg085の右寄せ補正を解除する。
+++
+++## 変更確認
+++
+++- [x] `main.c` の `BATTLE_BG_SHIFT_X` を `0u` に戻した
+++- [x] `BATTLE_BG_SCROLL_X` は `0px` 相当になる
+++- [x] BG描画マクロは残すが、現時点では座標加算しない
+++- [x] OBJ座標は変更していない
+++- [x] BGM処理は変更していない
+++- [x] dirty update構造は変更していない
+++- [x] `MAP_GFX_TILE_COUNT` は変更していない
+++- [x] `jpfont.c` / `misakiUTF16.c` は変更していない
+++
+++## VBA確認
+++
+++- [ ] 戦闘突入時に上部パーティ欄が自然な位置に出る
+++- [ ] パーティ名、HP/MP、アイコンが枠から大きく外れない
+++- [ ] 敵名欄の枠と文字が重なる
+++- [ ] コマンド欄が画面内に収まる
+++- [ ] メッセージ欄が画面下部に戻る
+++- [ ] 初回コマンド時に再度ズレない
+++- [ ] カーソルOBJがコマンド欄付近に出る
+++- [ ] 戦闘後にフィールドへ戻れる
++diff -ruN rpg086_orig_for_diff/rpg085_window_left3/Makefile rpg086_work/rpg086_window_reset/Makefile
++--- rpg086_orig_for_diff/rpg085_window_left3/Makefile	2026-05-05 15:32:39.000000000 +0000
+++++ rpg086_work/rpg086_window_reset/Makefile	2026-05-05 16:38:45.515003226 +0000
++@@ -1,4 +1,4 @@
++-OUT = rpg083_music.gb
+++OUT = rpg086_window_reset.gb
++ SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
++ GBDK_PATH ?= /opt/gbdk/bin
++ LCC = $(GBDK_PATH)/lcc
++diff -ruN rpg086_orig_for_diff/rpg085_window_left3/README.md rpg086_work/rpg086_window_reset/README.md
++--- rpg086_orig_for_diff/rpg085_window_left3/README.md	2026-05-05 16:22:03.000000000 +0000
+++++ rpg086_work/rpg086_window_reset/README.md	2026-05-05 16:35:31.195928409 +0000
++@@ -643,3 +643,26 @@
++ - 戦闘中ウィンドウが前回より3マス左に戻っていること。
++ - 初回コマンド時にズレが再発していないこと。
++ - OBJカーソル、敵、味方アイコンが大きくズレて見えないこと。
+++
+++
+++## rpg086_window_reset
+++
+++目的:
+++- rpg084/rpg085で追加した戦闘BGの右寄せ補正をいったん解除し、戦闘ウィンドウ基準位置をリセットする。
+++- `BATTLE_BG_SHIFT_X` を `0u` に戻し、`move_bkg()` の戦闘時スクロールも `0px` 相当に戻す。
+++
+++変更:
+++- `main.c`: `BATTLE_BG_SHIFT_X 7u` → `0u`
+++- BG描画マクロ `BATTLE_BG_X(x)` は残すが、現時点では加算なしとして動作する。
+++
+++修正していない箇所:
+++- dirty update構造
+++- BGM処理
+++- OBJの敵・味方アイコン・カーソル座標
+++- MAP_GFX_TILE_COUNT
+++- jpfont.c / misakiUTF16.c
+++
+++確認ポイント:
+++- 戦闘突入時のパーティ欄、敵名欄、コマンド欄、メッセージ欄が画面内の自然な位置に戻ること。
+++- BG枠と文字がずれずに重なること。
+++- 敵・味方アイコン・カーソルOBJが大きく外れないこと。
++diff -ruN rpg086_orig_for_diff/rpg085_window_left3/build.bat rpg086_work/rpg086_window_reset/build.bat
++--- rpg086_orig_for_diff/rpg085_window_left3/build.bat	2026-05-05 15:32:39.000000000 +0000
+++++ rpg086_work/rpg086_window_reset/build.bat	2026-05-05 16:38:45.513958790 +0000
++@@ -1,7 +1,7 @@
++ @echo off
++ setlocal
++ 
++-set "PROJECT=rpg083_music"
+++set "PROJECT=rpg086_window_reset"
++ set "OUT=%PROJECT%.gb"
++ set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ set "ROM_BANKS=8"
++diff -ruN rpg086_orig_for_diff/rpg085_window_left3/build.sh rpg086_work/rpg086_window_reset/build.sh
++--- rpg086_orig_for_diff/rpg085_window_left3/build.sh	2026-05-05 15:32:39.000000000 +0000
+++++ rpg086_work/rpg086_window_reset/build.sh	2026-05-05 16:38:45.512628523 +0000
++@@ -3,7 +3,7 @@
++ 
++ export PATH="/opt/gbdk/bin:$PATH"
++ 
++-OUT="rpg083_music.gb"
+++OUT="rpg086_window_reset.gb"
++ MAP="${OUT%.gb}.map"
++ SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c"
++ LOG="build.log"
++diff -ruN rpg086_orig_for_diff/rpg085_window_left3/docs/checks/CHECK_086_WINDOW_RESET.md rpg086_work/rpg086_window_reset/docs/checks/CHECK_086_WINDOW_RESET.md
++--- rpg086_orig_for_diff/rpg085_window_left3/docs/checks/CHECK_086_WINDOW_RESET.md	1970-01-01 00:00:00.000000000 +0000
+++++ rpg086_work/rpg086_window_reset/docs/checks/CHECK_086_WINDOW_RESET.md	2026-05-05 16:35:31.197462217 +0000
++@@ -0,0 +1,25 @@
+++# CHECK rpg086_window_reset
+++
+++目的: 戦闘ウィンドウ位置をリセットし、rpg084/rpg085の右寄せ補正を解除する。
+++
+++## 変更確認
+++
+++- [x] `main.c` の `BATTLE_BG_SHIFT_X` を `0u` に戻した
+++- [x] `BATTLE_BG_SCROLL_X` は `0px` 相当になる
+++- [x] BG描画マクロは残すが、現時点では座標加算しない
+++- [x] OBJ座標は変更していない
+++- [x] BGM処理は変更していない
+++- [x] dirty update構造は変更していない
+++- [x] `MAP_GFX_TILE_COUNT` は変更していない
+++- [x] `jpfont.c` / `misakiUTF16.c` は変更していない
+++
+++## VBA確認
+++
+++- [ ] 戦闘突入時に上部パーティ欄が自然な位置に出る
+++- [ ] パーティ名、HP/MP、アイコンが枠から大きく外れない
+++- [ ] 敵名欄の枠と文字が重なる
+++- [ ] コマンド欄が画面内に収まる
+++- [ ] メッセージ欄が画面下部に戻る
+++- [ ] 初回コマンド時に再度ズレない
+++- [ ] カーソルOBJがコマンド欄付近に出る
+++- [ ] 戦闘後にフィールドへ戻れる
++diff -ruN rpg086_orig_for_diff/rpg085_window_left3/main.c rpg086_work/rpg086_window_reset/main.c
++--- rpg086_orig_for_diff/rpg085_window_left3/main.c	2026-05-05 16:22:03.000000000 +0000
+++++ rpg086_work/rpg086_window_reset/main.c	2026-05-05 16:35:31.108084605 +0000
++@@ -231,7 +231,7 @@
++  * avoiding the battle window drift seen when field BG scroll state leaks
++  * into battle rendering.
++  */
++-#define BATTLE_BG_SHIFT_X 7u
+++#define BATTLE_BG_SHIFT_X 0u
++ #define BATTLE_BG_SCROLL_X ((UINT8)(BATTLE_BG_SHIFT_X * 8u))
++ #define BATTLE_BG_X(x) ((UINT8)((x) + BATTLE_BG_SHIFT_X))
++ 

@@ -1,4 +1,4 @@
-OUT = rpg083_music.gb
+OUT = rpg086_window_reset.gb
 SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c
 GBDK_PATH ?= /opt/gbdk/bin
 LCC = $(GBDK_PATH)/lcc

@@ -620,3 +620,49 @@ No new BG tiles, map actors, object kinds, or sprite sheets were added.
 ### 注意
 
 この版は、戦闘UIのずれ補正を最小範囲で行うための版です。GBDK実機ビルド環境がこの作業環境にないため、`lcc` による最終ビルドは未確認です。
+
+
+## rpg085_window_left3
+
+目的:
+- `rpg084_window_right10` で右へ10マス補正した戦闘BGウィンドウを、ユーザー確認結果に合わせて3マス左へ戻す。
+
+変更内容:
+- `BATTLE_BG_SHIFT_X` を `10u` から `7u` に変更。
+- `BATTLE_BG_SCROLL_X` は `BATTLE_BG_SHIFT_X * 8` のため、80px相当から56px相当に自動で変更。
+- 戦闘UIのBG描画補正は `BATTLE_BG_X(x)` 経由のまま維持。
+
+修正していない箇所:
+- BGM処理。
+- dirty update 構造。
+- OBJの敵・味方アイコン・カーソル座標。
+- `MAP_GFX_TILE_COUNT`。
+- `jpfont.c` / `misakiUTF16.c`。
+
+確認観点:
+- 戦闘中ウィンドウが前回より3マス左に戻っていること。
+- 初回コマンド時にズレが再発していないこと。
+- OBJカーソル、敵、味方アイコンが大きくズレて見えないこと。
+
+
+## rpg086_window_reset
+
+目的:
+- rpg084/rpg085で追加した戦闘BGの右寄せ補正をいったん解除し、戦闘ウィンドウ基準位置をリセットする。
+- `BATTLE_BG_SHIFT_X` を `0u` に戻し、`move_bkg()` の戦闘時スクロールも `0px` 相当に戻す。
+
+変更:
+- `main.c`: `BATTLE_BG_SHIFT_X 7u` → `0u`
+- BG描画マクロ `BATTLE_BG_X(x)` は残すが、現時点では加算なしとして動作する。
+
+修正していない箇所:
+- dirty update構造
+- BGM処理
+- OBJの敵・味方アイコン・カーソル座標
+- MAP_GFX_TILE_COUNT
+- jpfont.c / misakiUTF16.c
+
+確認ポイント:
+- 戦闘突入時のパーティ欄、敵名欄、コマンド欄、メッセージ欄が画面内の自然な位置に戻ること。
+- BG枠と文字がずれずに重なること。
+- 敵・味方アイコン・カーソルOBJが大きく外れないこと。
