@@ -5,4 +5,11 @@ banked_graphics.c:
 map_data_bank.c:
 font_data_bank.c:
 battle_data_bank.c:
+battle_text.c:80:30: warning: null character(s) preserved in literal
+battle_text.c:82:29: warning: missing terminating ' character
+battle_text.c:84:1: warning: missing terminating ' character
+battle_text.c:93:48: warning: null character(s) preserved in literal
+battle_text.c:101:35: warning: missing terminating ' character
+battle_text.c:102:1: warning: missing terminating ' character
+battle_text.c:129:33: warning: null character(s) preserved in literal
 battle_text.c:29: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG

@@ -222,9 +222,9 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_CURSOR_SPRITE 24u
 #define BATTLE_CURSOR_TILE 31u
 #define BATTLE_MSG_X 0u
-#define BATTLE_MSG_Y 15u
+#define BATTLE_MSG_Y 14u
 #define BATTLE_MSG_W 20u
-#define BATTLE_MSG_H 3u
+#define BATTLE_MSG_H 4u
 
 /* rpg090:
  * Keep battle UI at the real visible BG origin.  Earlier right-shift
@@ -2028,8 +2028,14 @@ static void draw_battle_frame(void) {
 }
 
 static void draw_battle_message_area(void) {
+    /*
+     * rpg095:
+     * Use the same two-line message style as growth messages.
+     * The command cursor phase keeps this box empty; action messages use rows
+     * 15 and 16 and never share the command window text area.
+     */
     draw_bkg_box(BATTLE_MSG_X, BATTLE_MSG_Y, BATTLE_MSG_W, BATTLE_MSG_H);
-    battle_bkg_clear_area((UINT8)(BATTLE_MSG_X + 1u), (UINT8)(BATTLE_MSG_Y + 1u), (UINT8)(BATTLE_MSG_W - 2u), 1u);
+    battle_bkg_clear_area((UINT8)(BATTLE_MSG_X + 1u), (UINT8)(BATTLE_MSG_Y + 1u), (UINT8)(BATTLE_MSG_W - 2u), 2u);
 }
 
 static void draw_battle_menu(void) {
@@ -2182,7 +2188,7 @@ static void battle_update_dirty(void) {
     if (flags & BATTLE_DIRTY_MESSAGE) {
         draw_battle_message_area();
         if (battle_message_text != 0 && battle_message_text[0] != '\0') {
-            battle_put_bkg_text(1u, 16u, battle_compact_message(battle_message_text));
+            battle_put_bkg_text(1u, 15u, battle_message_text);
         }
     }
     if (flags & BATTLE_DIRTY_CURSOR) {
@@ -2323,7 +2329,7 @@ static void enter_battle_screen(void) {
     battle_start_effect();
     battle_enter_render_once();
     battle_show_message(message_get_buffered(MSG_BATTLE_APPEAR));
-    battle_first_player_refresh_pending = 1u;
+    battle_first_player_refresh_pending = 0u;
 }
 
 
@@ -2572,7 +2578,7 @@ static void player_attack(void) {
     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
 
-    battle_show_damage_message("ダメージ", dmg);
+    battle_show_damage_message("ゆうしゃの こうげき!", dmg);
     battle_flash_enemy_sprite(battle_target_index);
 
     if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
@@ -2640,7 +2646,7 @@ static void player_use_skill(UINT8 skill_id) {
     if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
 
-    battle_show_damage_message("ダメージ", amount);
+    battle_show_damage_message("とくぎを つかった!", amount);
     battle_flash_enemy_sprite(battle_target_index);
 
     if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
@@ -2689,7 +2695,7 @@ static void enemy_turn(void) {
         if (dmg >= player_battle.hp) player_battle.hp = 0u;
         else player_battle.hp = (UINT16)(player_battle.hp - dmg);
 
-        battle_show_damage_message("ダメージ", dmg);
+        battle_show_damage_message("まものの こうげき!", dmg);
         update_battle_status();
 
         if (player_battle.hp == 0u) {
@@ -2709,7 +2715,8 @@ static void battle_input(void) {
 
     if (battle_first_player_refresh_pending) {
         battle_first_player_refresh_pending = 0u;
-        battle_prepare_player_turn_ui();
+        battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
+        battle_update_dirty();
     }
 
     keys = joypad();
