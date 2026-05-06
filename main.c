@@ -1301,6 +1301,14 @@ static void restore_field_vram_state(void) {
     SHOW_SPRITES;
 
     /*
+     * rpg091:
+     * Clear all OAM first so battle-only sprites (party icons / cursor / enemy
+     * bodies using higher OAM slots) cannot survive on the field screen after
+     * battle return.  init_map_sprites() redraws only the field actor slots.
+     */
+    hide_all_sprites_safe();
+
+    /*
      * rpg069:
      * Restore map BG and reset jpfont cache/window while the LCD is off.
      * The map itself does not use dynamic jpfont cache tiles, so this is safe.
@@ -1322,6 +1330,7 @@ static void load_map_mode(void) {
     SHOW_BKG;
     SHOW_SPRITES;
     HIDE_WIN;
+    hide_all_sprites_safe();
     snap_camera_to_player();
     draw_object_map();
     apply_camera_scroll();
@@ -2002,6 +2011,12 @@ static UINT8 battle_alive_count(void) {
 }
 
 static void draw_battle_frame(void) {
+    /*
+     * rpg091:
+     * Re-assert battle BG origin at every full-frame construction point so no
+     * field camera residue can shift the command/status windows.
+     */
+    battle_hide_window_and_reset_scroll();
     battle_clear_bg_full();
     draw_party_status_box();
     draw_battle_enemy_names();
@@ -2139,6 +2154,13 @@ static void battle_update_dirty(void) {
     UINT8 flags;
 
     if (!battle_screen_ready) return;
+
+    /*
+     * rpg091:
+     * Dirty updates must also keep the battle screen pinned to origin.
+     * This prevents later battle steps from inheriting any map/window scroll.
+     */
+    battle_hide_window_and_reset_scroll();
 
     flags = battle_dirty_flags;
     battle_dirty_flags = BATTLE_DIRTY_NONE;
