@@ -72,7 +72,7 @@ static void jp_font_to_tile(const byte *src, unsigned char *dst) {
 }
 
 void jp_init(void) {
-    set_bkg_data(JP_FRAME_BASE, 8u, jp_frame_tiles);
+    set_bkg_data(JP_FRAME_BASE, 9u, jp_frame_tiles);
     jp_reset_cache();
     jp_window_hide();
 }
@@ -190,12 +190,14 @@ void jp_window_prepare(void) {
     for (y = 0u; y < JP_WIN_H; y++) {
         for (x = 0u; x < JP_WIN_W; x++) {
             t = JP_FRAME_BASE + 0u;
-            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u;
-            else if (y == 0u && x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 4u;
-            else if (y == (UINT8)(JP_WIN_H - 1u) && x == 0u) t = JP_FRAME_BASE + 5u;
-            else if (y == (UINT8)(JP_WIN_H - 1u) && x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 6u;
-            else if (y == 0u || y == (UINT8)(JP_WIN_H - 1u)) t = JP_FRAME_BASE + 1u;
-            else if (x == 0u || x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 2u;
+            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u; /* UL */
+            else if (y == 0u && x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 4u; /* UR */
+            else if (y == (UINT8)(JP_WIN_H - 1u) && x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 5u; /* LR */
+            else if (y == (UINT8)(JP_WIN_H - 1u) && x == 0u) t = JP_FRAME_BASE + 6u; /* LL */
+            else if (y == 0u) t = JP_FRAME_BASE + 1u; /* top */
+            else if (x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 2u; /* right */
+            else if (y == (UINT8)(JP_WIN_H - 1u)) t = JP_FRAME_BASE + 7u; /* bottom */
+            else if (x == 0u) t = JP_FRAME_BASE + 8u; /* left */
             set_win_tiles(x, y, 1u, 1u, &t);
         }
     }

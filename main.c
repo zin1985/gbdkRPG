@@ -1800,12 +1800,14 @@ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
     for (y = 0u; y < h; y++) {
         for (x = 0u; x < w; x++) {
             t = JP_FRAME_BASE + 0u;
-            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u;
-            else if (y == 0u && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 4u;
-            else if (y == (UINT8)(h - 1u) && x == 0u) t = JP_FRAME_BASE + 5u;
-            else if (y == (UINT8)(h - 1u) && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 6u;
-            else if (y == 0u || y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 1u;
-            else if (x == 0u || x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u;
+            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u; /* UL */
+            else if (y == 0u && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 4u; /* UR */
+            else if (y == (UINT8)(h - 1u) && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 5u; /* LR */
+            else if (y == (UINT8)(h - 1u) && x == 0u) t = JP_FRAME_BASE + 6u; /* LL */
+            else if (y == 0u) t = JP_FRAME_BASE + 1u; /* top */
+            else if (x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u; /* right */
+            else if (y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 7u; /* bottom */
+            else if (x == 0u) t = JP_FRAME_BASE + 8u; /* left */
 
             set_bkg_tiles(BATTLE_BG_X((UINT8)(x0 + x)), (UINT8)(y0 + y), 1u, 1u, &t);
         }

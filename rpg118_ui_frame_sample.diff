@@ -1,0 +1,55 @@
+--- /mnt/data/rpg117_ui_corner_simple_bank0_guard/jpfont.c	2026-05-07 10:25:38.724993516 +0000
++++ jpfont.c	2026-05-07 10:58:39.098441569 +0000
+@@ -72,7 +72,7 @@
+ }
+ 
+ void jp_init(void) {
+-    set_bkg_data(JP_FRAME_BASE, 8u, jp_frame_tiles);
++    set_bkg_data(JP_FRAME_BASE, 9u, jp_frame_tiles);
+     jp_reset_cache();
+     jp_window_hide();
+ }
+@@ -190,12 +190,14 @@
+     for (y = 0u; y < JP_WIN_H; y++) {
+         for (x = 0u; x < JP_WIN_W; x++) {
+             t = JP_FRAME_BASE + 0u;
+-            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u;
+-            else if (y == 0u && x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 4u;
+-            else if (y == (UINT8)(JP_WIN_H - 1u) && x == 0u) t = JP_FRAME_BASE + 5u;
+-            else if (y == (UINT8)(JP_WIN_H - 1u) && x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 6u;
+-            else if (y == 0u || y == (UINT8)(JP_WIN_H - 1u)) t = JP_FRAME_BASE + 1u;
+-            else if (x == 0u || x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 2u;
++            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u; /* UL */
++            else if (y == 0u && x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 4u; /* UR */
++            else if (y == (UINT8)(JP_WIN_H - 1u) && x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 5u; /* LR */
++            else if (y == (UINT8)(JP_WIN_H - 1u) && x == 0u) t = JP_FRAME_BASE + 6u; /* LL */
++            else if (y == 0u) t = JP_FRAME_BASE + 1u; /* top */
++            else if (x == (UINT8)(JP_WIN_W - 1u)) t = JP_FRAME_BASE + 2u; /* right */
++            else if (y == (UINT8)(JP_WIN_H - 1u)) t = JP_FRAME_BASE + 7u; /* bottom */
++            else if (x == 0u) t = JP_FRAME_BASE + 8u; /* left */
+             set_win_tiles(x, y, 1u, 1u, &t);
+         }
+     }
+--- /mnt/data/rpg117_ui_corner_simple_bank0_guard/main.c	2026-05-07 10:25:37.410040821 +0000
++++ main.c	2026-05-07 10:58:39.099637483 +0000
+@@ -1800,12 +1800,14 @@
+     for (y = 0u; y < h; y++) {
+         for (x = 0u; x < w; x++) {
+             t = JP_FRAME_BASE + 0u;
+-            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u;
+-            else if (y == 0u && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 4u;
+-            else if (y == (UINT8)(h - 1u) && x == 0u) t = JP_FRAME_BASE + 5u;
+-            else if (y == (UINT8)(h - 1u) && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 6u;
+-            else if (y == 0u || y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 1u;
+-            else if (x == 0u || x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u;
++            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u; /* UL */
++            else if (y == 0u && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 4u; /* UR */
++            else if (y == (UINT8)(h - 1u) && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 5u; /* LR */
++            else if (y == (UINT8)(h - 1u) && x == 0u) t = JP_FRAME_BASE + 6u; /* LL */
++            else if (y == 0u) t = JP_FRAME_BASE + 1u; /* top */
++            else if (x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u; /* right */
++            else if (y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 7u; /* bottom */
++            else if (x == 0u) t = JP_FRAME_BASE + 8u; /* left */
+ 
+             set_bkg_tiles(BATTLE_BG_X((UINT8)(x0 + x)), (UINT8)(y0 + y), 1u, 1u, &t);
+         }
