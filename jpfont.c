@@ -232,6 +232,29 @@ void jp_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
     }
 }
 
+void jp_draw_bkg_frame(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
+    UINT8 x;
+    UINT8 y;
+    unsigned char t;
+
+    if (w < 2u || h < 2u) return;
+
+    for (y = 0u; y < h; y++) {
+        for (x = 0u; x < w; x++) {
+            t = JP_FRAME_BASE + 0u;
+            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u;
+            else if (y == 0u && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 4u;
+            else if (y == (UINT8)(h - 1u) && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 5u;
+            else if (y == (UINT8)(h - 1u) && x == 0u) t = JP_FRAME_BASE + 6u;
+            else if (y == 0u) t = JP_FRAME_BASE + 1u;
+            else if (x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u;
+            else if (y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 7u;
+            else if (x == 0u) t = JP_FRAME_BASE + 8u;
+            set_bkg_tiles((UINT8)(x0 + x), (UINT8)(y0 + y), 1u, 1u, &t);
+        }
+    }
+}
+
 void jp_put_bkg_text(UINT8 col, UINT8 row, const char *text) {
     UINT8 consumed;
     UINT8 tile;

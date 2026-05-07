@@ -56,5 +56,6 @@ UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED;
 UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id) BANKED;
 void party_menu_show_status_loop(void) BANKED;
 void party_menu_show_equip_loop(void) BANKED;
+UINT8 party_use_field_item_on_active(UINT8 item_id, UINT8 active_slot) BANKED;
 
 #endif

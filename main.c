@@ -968,6 +968,7 @@ static void put_u16(UINT8 col, UINT8 row, UINT16 value) {
 
 static void screen_clear(void) {
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
+    jp_draw_bkg_frame(0u, 0u, 20u, 18u);
 }
 
 static void show_status_page(void) {
@@ -976,10 +977,12 @@ static void show_status_page(void) {
 
 static void show_simple_page(const char *title, const char *line1, const char *line2) {
     screen_clear();
-    jp_put_bkg_text(1u, 0u, title);
-    jp_put_bkg_text(0u, 3u, line1);
-    jp_put_bkg_text(0u, 5u, line2);
-    jp_put_bkg_text(0u,14u, "A/B/START もどる");
+    jp_draw_bkg_frame(0u, 0u, 20u, 15u);
+    jp_draw_bkg_frame(0u, 15u, 20u, 3u);
+    jp_put_bkg_text(1u, 1u, title);
+    jp_put_bkg_text(2u, 4u, line1);
+    jp_put_bkg_text(2u, 6u, line2);
+    jp_put_bkg_text(1u,16u, "A/B/START もどる");
 }
 
 static void open_main_menu(void) {
@@ -996,12 +999,14 @@ static void open_main_menu(void) {
 
     while (1) {
         screen_clear();
-        jp_put_bkg_text(1u, 0u, "メニュー");
-        put_cursor(0u, 3u, (UINT8)(cursor == MENU_STATUS)); jp_put_bkg_text(1u, 3u, "つよさ");
-        put_cursor(0u, 4u, (UINT8)(cursor == MENU_ITEM));   jp_put_bkg_text(1u, 4u, "もちもの");
-        put_cursor(0u, 5u, (UINT8)(cursor == MENU_EQUIP));  jp_put_bkg_text(1u, 5u, "そうび");
-        put_cursor(0u, 6u, (UINT8)(cursor == MENU_OBJECTIVE)); jp_put_bkg_text(1u, 6u, "もくてき");
-        jp_put_bkg_text(0u,14u, "A けってい B もどる");
+        jp_draw_bkg_frame(0u, 0u, 10u, 10u);
+        jp_draw_bkg_frame(0u, 15u, 20u, 3u);
+        jp_put_bkg_text(1u, 1u, "メニュー");
+        put_cursor(1u, 3u, (UINT8)(cursor == MENU_STATUS)); jp_put_bkg_text(3u, 3u, "つよさ");
+        put_cursor(1u, 4u, (UINT8)(cursor == MENU_ITEM));   jp_put_bkg_text(3u, 4u, "もちもの");
+        put_cursor(1u, 5u, (UINT8)(cursor == MENU_EQUIP));  jp_put_bkg_text(3u, 5u, "そうび");
+        put_cursor(1u, 6u, (UINT8)(cursor == MENU_OBJECTIVE)); jp_put_bkg_text(3u, 6u, "もくてき");
+        jp_put_bkg_text(1u,16u, "A けってい B もどる");
 
         keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
         audio_waitpadup();

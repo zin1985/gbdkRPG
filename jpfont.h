@@ -23,6 +23,7 @@ void jp_window_prepare(void);
 void jp_window_clear_text(void);
 UINT8 jp_put_glyph_utf8(UINT8 col, UINT8 row, const char *p, UINT8 *consumed);
 void jp_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
+void jp_draw_bkg_frame(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
 void jp_put_bkg_text(UINT8 col, UINT8 row, const char *text);
 void jp_wait_vbl(UINT8 n);
 

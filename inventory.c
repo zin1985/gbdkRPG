@@ -4,6 +4,7 @@
 #include "inventory.h"
 #include "jpfont.h"
 #include "audio.h"
+#include "party_runtime.h"
 
 
 static UINT8 g_inventory_counts[INVENTORY_ITEM_MAX];
@@ -115,6 +116,7 @@ static const char *inventory_item_name(UINT8 item_id) BANKED {
 
 static void inventory_ui_clear(void) BANKED {
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
+    jp_draw_bkg_frame(0u, 0u, 20u, 18u);
 }
 
 static void inventory_u8_to_dec(UINT8 value, char *out) BANKED {
@@ -150,46 +152,112 @@ static UINT8 inventory_next_visible(UINT8 start, UINT8 dir) BANKED {
     return ITEM_NONE;
 }
 
-static void inventory_draw_items_page(UINT8 cursor_item) BANKED {
+static void inventory_draw_items_page(UINT8 cursor_item, const char *message) BANKED {
     UINT8 row;
     UINT8 shown;
     UINT8 id;
 
     inventory_ui_clear();
-    jp_put_bkg_text(1u, 0u, "もちもの");
-    jp_put_bkg_text(0u, 1u, "A/Bもどる 上下えらぶ");
+    jp_draw_bkg_frame(0u, 0u, 20u, 15u);
+    jp_draw_bkg_frame(0u, 15u, 20u, 3u);
+    jp_put_bkg_text(1u, 1u, "もちもの");
 
     shown = 0u;
     row = 3u;
-    for (id = 1u; id < INVENTORY_ITEM_MAX && row < 14u; id++) {
+    for (id = 1u; id < INVENTORY_ITEM_MAX && row < 13u; id++) {
         if (g_inventory_counts[id] == 0u) continue;
-        jp_put_bkg_text(0u, row, (id == cursor_item) ? ">" : " ");
-        jp_put_bkg_text(1u, row, inventory_item_name(id));
-        jp_put_bkg_text(13u, row, "x");
-        inventory_put_count(15u, row, g_inventory_counts[id]);
+        jp_put_bkg_text(1u, row, (id == cursor_item) ? ">" : " ");
+        jp_put_bkg_text(3u, row, inventory_item_name(id));
+        jp_put_bkg_text(14u, row, "x");
+        inventory_put_count(16u, row, g_inventory_counts[id]);
         row++;
         shown++;
     }
-    if (shown == 0u) jp_put_bkg_text(1u, 5u, "なにもない");
-    jp_put_bkg_text(0u,15u, "やくそう等は次段階で使用");
+    if (shown == 0u) jp_put_bkg_text(2u, 6u, "なにもない");
+    if (message != 0) jp_put_bkg_text(1u, 16u, message);
+}
+
+static void inventory_draw_target_popup(UINT8 item_id, UINT8 slot_cursor) BANKED {
+    UINT8 i;
+    PartyBattleFighter f;
+
+    jp_draw_bkg_frame(11u, 2u, 9u, 9u);
+    jp_put_bkg_text(12u, 3u, inventory_item_name(item_id));
+    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
+        party_get_active_fighter(i, &f);
+        jp_put_bkg_text(12u, (UINT8)(5u + i), (i == slot_cursor) ? ">" : " ");
+        jp_put_bkg_text(13u, (UINT8)(5u + i), f.name);
+    }
+    jp_put_bkg_text(12u, 9u, "A=使う");
+}
+
+static UINT8 inventory_is_field_usable(UINT8 item_id) BANKED {
+    switch (item_id) {
+        case ITEM_HERB:
+        case ITEM_POTION:
+        case ITEM_MANA_HERB:
+        case ITEM_ANTIDOTE:
+            return 1u;
+        default:
+            return 0u;
+    }
 }
 
 void inventory_menu_show_items_loop(void) BANKED {
     UINT8 keys;
     UINT8 cursor;
+    UINT8 target_slot;
+    UINT8 result;
+    const char *msg;
 
     cursor = inventory_next_visible(ITEM_NONE, 1u);
+    target_slot = 0u;
+    msg = "A=つかう B=もどる";
     audio_waitpadup();
     while (1) {
-        inventory_draw_items_page(cursor);
+        inventory_draw_items_page(cursor, msg);
         keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
         audio_waitpadup();
         if (keys & J_UP) {
             cursor = inventory_next_visible(cursor, 0u);
+            msg = "A=つかう B=もどる";
         } else if (keys & J_DOWN) {
             cursor = inventory_next_visible(cursor, 1u);
-        } else {
+            msg = "A=つかう B=もどる";
+        } else if (keys & (J_B | J_START)) {
             break;
+        } else if (keys & J_A) {
+            if (cursor == ITEM_NONE) continue;
+            if (!inventory_is_field_usable(cursor)) {
+                msg = "そのままでは つかえない";
+                continue;
+            }
+            while (1) {
+                inventory_draw_items_page(cursor, "だれに つかう?");
+                inventory_draw_target_popup(cursor, target_slot);
+                keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B);
+                audio_waitpadup();
+                if (keys & J_UP) {
+                    if (target_slot == 0u) target_slot = PARTY_ACTIVE_COUNT - 1u;
+                    else target_slot--;
+                } else if (keys & J_DOWN) {
+                    target_slot++;
+                    if (target_slot >= PARTY_ACTIVE_COUNT) target_slot = 0u;
+                } else if (keys & J_B) {
+                    msg = "A=つかう B=もどる";
+                    break;
+                } else if (keys & J_A) {
+                    result = party_use_field_item_on_active(cursor, target_slot);
+                    if (result != 0u) {
+                        inventory_remove(cursor, 1u);
+                        if (inventory_get_count(cursor) == 0u) cursor = inventory_next_visible(cursor, 1u);
+                        msg = "つかった!";
+                    } else {
+                        msg = "こうかが ない";
+                    }
+                    break;
+                }
+            }
         }
     }
 }
