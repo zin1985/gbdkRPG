@@ -3,7 +3,7 @@ set -eu
 
 export PATH="/opt/gbdk/bin:$PATH"
 
-OUT="rpg113_saga_growth_bank0_safe.gb"
+OUT="rpg115_original_growth_no_lp_bank0_guard.gb"
 MAP="${OUT%.gb}.map"
 SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c"
 LOG="build.log"

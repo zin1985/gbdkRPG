@@ -1,0 +1,6 @@
+[INFO] prebank_check.py was not present in this archive, so only manual static checks were performed in ChatGPT environment.
+[OK] main.c was intentionally not modified from rpg113 baseline.
+[OK] party_runtime.h public API was intentionally not modified.
+[OK] no new source file was added to build.sh / build.bat / Makefile.
+[OK] rpg114 changes are kept inside party_runtime.c and docs/check files.
+[INFO] final judgment must use compiler/linker output plus romusage on the local GBDK builder.
