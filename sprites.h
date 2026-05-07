@@ -68,7 +68,8 @@ extern const unsigned char priest_field_tiles[ACTOR_TOTAL_TILES * 16u];
 extern const unsigned char fourth_party_field_tiles[ACTOR_TOTAL_TILES * 16u];
 extern const unsigned char npc_tiles[ACTOR_TOTAL_TILES * 16u];
 extern const unsigned char enemy_tiles[ACTOR_TOTAL_TILES * 16u];
+extern const unsigned char battle_enemy_tiles[48u * 16u];
 extern const unsigned char battle_party_display_tiles[12u * 16u];
-extern const unsigned char battle_cursor_tiles[16u];
+extern const unsigned char battle_cursor_tiles[32u];
 
 #endif

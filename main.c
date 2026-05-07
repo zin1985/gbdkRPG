@@ -143,10 +143,11 @@ BANKREF_EXTERN(sprite_data_bank)
  *  4-7   npc0 16x16
  *  8-11  enemy0 16x16
  *  12-15 reserved test actor
- * Battle:
- *  0-11  enemies, up to 3 bodies x 16x16
- *  12-23 party icons, 3 members x 16x16
- *  24-39 spare / emergency hide area
+ * Battle (8x16 OBJ mode only during battle):
+ *  0-23  enemies, up to 3 bodies x 32x32 (8 sprites each)
+ *  24-29 party icons, 3 members x 16x16 (2 sprites each)
+ *  30    command cursor
+ *  31-39 spare / emergency hide area
  */
 #define PLAYER_SPRITE_BASE 0u
 #define NPC0_SPRITE_BASE   4u
@@ -158,9 +159,9 @@ BANKREF_EXTERN(sprite_data_bank)
  * hide_actor_sprite() for inactive actors.
  */
 #define TEST_ACTOR_SPRITE_BASE 12u
-#define BATTLE_PARTY_ICON0_SPRITE 12u
-#define BATTLE_PARTY_ICON1_SPRITE 16u
-#define BATTLE_PARTY_ICON2_SPRITE 20u
+#define BATTLE_PARTY_ICON0_SPRITE 24u
+#define BATTLE_PARTY_ICON1_SPRITE 26u
+#define BATTLE_PARTY_ICON2_SPRITE 28u
 #define BATTLE_PARTY_ICON_TILE_BASE NPC0_TILE_BASE
 
 /* VRAM tile budget.
@@ -219,11 +220,13 @@ BANKREF_EXTERN(sprite_data_bank)
 
 #define BATTLE_MAX_ENEMY_COUNT BATTLE_DATA_MAX_ENEMIES
 #define BATTLE_ENEMY0_SPRITE_BASE 0u
-#define BATTLE_ENEMY1_SPRITE_BASE 4u
-#define BATTLE_ENEMY2_SPRITE_BASE 8u
-#define BATTLE_ENEMY_SPRITE_Y 40u
-#define BATTLE_CURSOR_SPRITE 24u
-#define BATTLE_CURSOR_TILE 31u
+#define BATTLE_ENEMY1_SPRITE_BASE 8u
+#define BATTLE_ENEMY2_SPRITE_BASE 16u
+#define BATTLE_ENEMY_SPRITE_Y 32u
+#define BATTLE_CURSOR_SPRITE 30u
+#define BATTLE_CURSOR_TILE 44u
+#define BATTLE_ENEMY_TILE_BASE 80u
+#define BATTLE_ENEMY_TILE_COUNT 48u
 #define BATTLE_MSG_X 0u
 #define BATTLE_MSG_Y 14u
 #define BATTLE_MSG_W 20u
@@ -678,7 +681,7 @@ static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
     if (battle_enemy_count == 0u) return;
 
     for (i = 0u; i < 3u; i++) {
-        base = (UINT8)(BATTLE_ENEMY0_SPRITE_BASE + (UINT8)(i * 4u));
+        base = (UINT8)(BATTLE_ENEMY0_SPRITE_BASE + (UINT8)(i * 8u));
 
         if (i >= battle_enemy_count || enemy_battles[i].hp == 0u) {
             if (!hide_first) hide_one_battle_body(base);
@@ -686,11 +689,11 @@ static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
         }
 
         if (battle_enemy_count == 1u) {
-            x = 72u;
+            x = 64u;
         } else if (battle_enemy_count == 2u) {
-            x = (UINT8)(56u + (UINT8)(i * 40u));
+            x = (UINT8)(36u + (UINT8)(i * 56u));
         } else {
-            x = (UINT8)(36u + (UINT8)(i * 40u));
+            x = (UINT8)(16u + (UINT8)(i * 48u));
         }
 
         show_one_battle_enemy_sprite(base, x, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[i]);
@@ -1919,15 +1922,12 @@ static void load_battle_party_icon_sprite_data(void) {
 }
 
 static void show_party_icon_16(UINT8 sprite_base, UINT8 tile_base, UINT8 x, UINT8 y) {
+    /* battle mode uses 8x16 OBJ: one 16x16 icon = 2 sprites side by side. */
     set_sprite_tile(sprite_base + 0u, tile_base + 0u);
-    set_sprite_tile(sprite_base + 1u, tile_base + 1u);
-    set_sprite_tile(sprite_base + 2u, tile_base + 2u);
-    set_sprite_tile(sprite_base + 3u, tile_base + 3u);
+    set_sprite_tile(sprite_base + 1u, tile_base + 2u);
 
     move_sprite(sprite_base + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
     move_sprite(sprite_base + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
-    move_sprite(sprite_base + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
-    move_sprite(sprite_base + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
 }
 
 static void battle_place_party_icons(void) {
@@ -1947,28 +1947,26 @@ static void battle_reposition_party_icons_only(void) {
 }
 
 static void load_battle_enemy_sprite_data(void) {
-    /* rpg077: battle-only load of the first 12 enemy OBJ tiles.
-     * Map return still calls init_map_sprites(), so normal field sprite state is
-     * restored after battle.  This keeps the new 3-type battle sprites isolated.
-     */
-    set_banked_sprite_data(ENEMY0_TILE_BASE, 12u, enemy_tiles, BANK(sprite_data_bank));
+    /* 32x32 battle-only enemy sprites. Field enemy sheet is restored by init_map_sprites(). */
+    set_banked_sprite_data(BATTLE_ENEMY_TILE_BASE, BATTLE_ENEMY_TILE_COUNT, battle_enemy_tiles, BANK(sprite_data_bank));
 }
 
 static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UINT8 sprite_kind) {
     UINT8 tile_base;
+    UINT8 i;
+    UINT8 sx;
 
     if (sprite_kind > 2u) sprite_kind = 0u;
-    tile_base = (UINT8)(ENEMY0_TILE_BASE + (UINT8)(sprite_kind * 4u));
+    tile_base = (UINT8)(BATTLE_ENEMY_TILE_BASE + (UINT8)(sprite_kind << 4));
 
-    set_sprite_tile(sprite_base + 0u, tile_base + 0u);
-    set_sprite_tile(sprite_base + 1u, tile_base + 1u);
-    set_sprite_tile(sprite_base + 2u, tile_base + 2u);
-    set_sprite_tile(sprite_base + 3u, tile_base + 3u);
-
-    move_sprite(sprite_base + 0u, (UINT8)(x + 8u),  (UINT8)(y + 16u));
-    move_sprite(sprite_base + 1u, (UINT8)(x + 16u), (UINT8)(y + 16u));
-    move_sprite(sprite_base + 2u, (UINT8)(x + 8u),  (UINT8)(y + 24u));
-    move_sprite(sprite_base + 3u, (UINT8)(x + 16u), (UINT8)(y + 24u));
+    /* battle uses 8x16 OBJ mode: 32x32 = 4 columns x 2 rows of sprites. */
+    for (i = 0u; i < 4u; i++) {
+        sx = (UINT8)(x + 8u + (UINT8)(i << 3));
+        set_sprite_tile((UINT8)(sprite_base + i), (UINT8)(tile_base + (UINT8)(i << 1)));
+        move_sprite((UINT8)(sprite_base + i), sx, (UINT8)(y + 16u));
+        set_sprite_tile((UINT8)(sprite_base + 4u + i), (UINT8)(tile_base + 8u + (UINT8)(i << 1)));
+        move_sprite((UINT8)(sprite_base + 4u + i), sx, (UINT8)(y + 32u));
+    }
 }
 
 static void show_battle_enemy_sprites(void) {
@@ -2088,21 +2086,21 @@ static UINT8 battle_enemy_sprite_base_for_index(UINT8 enemy_index) {
 }
 
 static UINT8 battle_enemy_x_for_index(UINT8 enemy_index) {
-    if (battle_enemy_count == 1u) return 72u;
+    if (battle_enemy_count == 1u) return 64u;
     if (battle_enemy_count == 2u) {
-        if (enemy_index == 0u) return 56u;
-        return 96u;
+        if (enemy_index == 0u) return 36u;
+        return 92u;
     }
-    if (enemy_index == 0u) return 36u;
-    if (enemy_index == 1u) return 76u;
-    return 116u;
+    if (enemy_index == 0u) return 16u;
+    if (enemy_index == 1u) return 64u;
+    return 112u;
 }
 
 static void hide_one_battle_body(UINT8 sprite_base) {
-    move_sprite(sprite_base + 0u, 0u, 0u);
-    move_sprite(sprite_base + 1u, 0u, 0u);
-    move_sprite(sprite_base + 2u, 0u, 0u);
-    move_sprite(sprite_base + 3u, 0u, 0u);
+    UINT8 i;
+    for (i = 0u; i < 8u; i++) {
+        move_sprite((UINT8)(sprite_base + i), 0u, 0u);
+    }
 }
 
 static void battle_flash_enemy_sprite(UINT8 enemy_index) {
@@ -2239,10 +2237,11 @@ static void battle_enter_render_once(void) {
 
     hide_all_sprites_safe();
     battle_hide_window_and_reset_scroll();
+    SPRITES_8x16;
     jp_init();
     load_battle_enemy_sprite_data();
     load_battle_party_icon_sprite_data();
-    set_banked_sprite_data(BATTLE_CURSOR_TILE, 1u, battle_cursor_tiles, BANK(sprite_data_bank));
+    set_banked_sprite_data(BATTLE_CURSOR_TILE, 2u, battle_cursor_tiles, BANK(sprite_data_bank));
     set_sprite_tile(BATTLE_CURSOR_SPRITE, BATTLE_CURSOR_TILE);
 
     draw_battle_frame();
