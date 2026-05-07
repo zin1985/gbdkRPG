@@ -1,0 +1,139 @@
+Only in rpg113_saga_growth_bank0_safe: CHECK_rpg113_saga_growth_bank0_safe.md
+diff -ru rpg112_saga_mastery_spark/Makefile rpg113_saga_growth_bank0_safe/Makefile
+--- rpg112_saga_mastery_spark/Makefile	2026-05-07 07:30:06.221569675 +0000
++++ rpg113_saga_growth_bank0_safe/Makefile	2026-05-07 07:35:07.504489662 +0000
+@@ -1,4 +1,4 @@
+-OUT = rpg112_saga_mastery_spark.gb
++OUT = rpg113_saga_growth_bank0_safe.gb
+ SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+diff -ru rpg112_saga_mastery_spark/build.bat rpg113_saga_growth_bank0_safe/build.bat
+--- rpg112_saga_mastery_spark/build.bat	2026-05-07 07:30:06.220856307 +0000
++++ rpg113_saga_growth_bank0_safe/build.bat	2026-05-07 07:35:07.503801987 +0000
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg112_saga_mastery_spark"
++set "PROJECT=rpg113_saga_growth_bank0_safe"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c"
+ set "ROM_BANKS=8"
+diff -ru rpg112_saga_mastery_spark/build.sh rpg113_saga_growth_bank0_safe/build.sh
+--- rpg112_saga_mastery_spark/build.sh	2026-05-07 07:30:06.220294524 +0000
++++ rpg113_saga_growth_bank0_safe/build.sh	2026-05-07 07:35:07.502115576 +0000
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg112_saga_mastery_spark.gb"
++OUT="rpg113_saga_growth_bank0_safe.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c"
+ LOG="build.log"
+Only in rpg113_saga_growth_bank0_safe/docs/future: RPG_FEATURE_EXTENSION_RPG113.md
+diff -ru rpg112_saga_mastery_spark/main.c rpg113_saga_growth_bank0_safe/main.c
+--- rpg112_saga_mastery_spark/main.c	2026-05-07 07:30:06.218442167 +0000
++++ rpg113_saga_growth_bank0_safe/main.c	2026-05-07 07:34:57.887279946 +0000
+@@ -279,9 +279,6 @@
+ #define PLAYER_HP_MP_MAX 999u
+ #define PLAYER_STAT_MAX 255u
+ #define ENEMY_RANK_MAX 5u
+-#define GROWTH_LOG_ATTACK 0x20u
+-#define GROWTH_LOG_SKILL  0x40u
+-#define GROWTH_LOG_HEAL   0x80u
+ 
+ typedef struct GrowthResult {
+     UINT8 actor_id;
+@@ -2263,11 +2260,6 @@
+     player_battle.skill_power = player_skill_power_stat;
+     player_battle.heal_power = player_heal_power_stat;
+     player_battle.agility = player_agility_stat;
+-    party_prepare_battle_members(player_max_hp_stat, player_max_mp_stat,
+-                                 player_attack_stat, player_defense_stat,
+-                                 player_skill_power_stat, player_heal_power_stat,
+-                                 player_agility_stat);
+-    last_growth_type = GROWTH_NONE;
+ 
+     /* rpg081: field-touch battles also use the 3-body encounter table.
+      * The touched actor is still remembered in current_enemy_index so it can be
+@@ -2321,6 +2313,11 @@
+     /* Hide map OAM before the transition so the field player cannot leak into
+      * the battle intro.  The battle screen itself is then built exactly once.
+      */
++    party_prepare_battle_members(player_max_hp_stat, player_max_mp_stat,
++                                 player_attack_stat, player_defense_stat,
++                                 player_skill_power_stat, player_heal_power_stat,
++                                 player_agility_stat);
++    last_growth_type = GROWTH_NONE;
+     hide_all_sprites_safe();
+     audio_play_music(AUDIO_TRACK_BATTLE);
+     battle_start_effect();
+@@ -2352,11 +2349,6 @@
+     player_battle.skill_power = player_skill_power_stat;
+     player_battle.heal_power = player_heal_power_stat;
+     player_battle.agility = player_agility_stat;
+-    party_prepare_battle_members(player_max_hp_stat, player_max_mp_stat,
+-                                 player_attack_stat, player_defense_stat,
+-                                 player_skill_power_stat, player_heal_power_stat,
+-                                 player_agility_stat);
+-    last_growth_type = GROWTH_NONE;
+ 
+     battle_data_load_random(random_u8(), battle_enemy_data_slots, &battle_enemy_count);
+     if (battle_enemy_count == 0u) battle_enemy_count = 1u;
+@@ -2513,22 +2505,19 @@
+ 
+ static void apply_battle_growth(void) {
+     UINT8 stat_type;
+-    UINT8 log_flags;
+ 
+-    log_flags = last_growth_type;
++    stat_type = last_growth_type;
+     clear_growth_result();
+ 
+     if (!should_growth_happen(battle_enemy_rank)) {
+         return;
+     }
+ 
+-    if (log_flags & GROWTH_LOG_HEAL) {
+-        stat_type = GROWTH_HEAL;
+-    } else if (log_flags & GROWTH_LOG_SKILL) {
++    if (stat_type == GROWTH_SKILL) {
+         stat_type = (random_u8() & 1u) ? GROWTH_SKILL : GROWTH_MP;
+-    } else if (log_flags & GROWTH_LOG_ATTACK) {
++    } else if (stat_type == GROWTH_ATK) {
+         stat_type = (random_u8() & 1u) ? GROWTH_ATK : GROWTH_AGI;
+-    } else {
++    } else if (stat_type == GROWTH_NONE) {
+         stat_type = (UINT8)(GROWTH_HP + (random_u8() % GROWTH_STAT_COUNT));
+     }
+     apply_player_stat_growth(stat_type);
+@@ -2651,7 +2640,7 @@
+     }
+ 
+     battle_load_current_actor(&actor);
+-    if (battle_party_turn_slot == 0u) last_growth_type |= GROWTH_LOG_ATTACK;
++    if (battle_party_turn_slot == 0u) last_growth_type = GROWTH_ATK;
+     if (actor.hp == 0u) {
+         battle_finish_party_action();
+         return;
+@@ -2699,7 +2688,7 @@
+         }
+ 
+         amount = calc_heal_amount(&actor, skill);
+-        if (battle_party_turn_slot == 0u) last_growth_type |= GROWTH_LOG_HEAL;
++        if (battle_party_turn_slot == 0u) last_growth_type = GROWTH_HEAL;
+         battle_heal_current_actor(amount);
+ 
+         battle_show_message("かいふくした!");
+@@ -2719,7 +2708,7 @@
+         return;
+     }
+ 
+-    if (battle_party_turn_slot == 0u) last_growth_type |= GROWTH_LOG_SKILL;
++    if (battle_party_turn_slot == 0u) last_growth_type = GROWTH_SKILL;
+     amount = calc_skill_damage(&actor, &enemy_battle, skill);
+     if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
+     else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
+Only in rpg113_saga_growth_bank0_safe: rpg113_saga_growth_bank0_safe.diff

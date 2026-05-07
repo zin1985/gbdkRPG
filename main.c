@@ -2260,10 +2260,6 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     player_battle.skill_power = player_skill_power_stat;
     player_battle.heal_power = player_heal_power_stat;
     player_battle.agility = player_agility_stat;
-    party_prepare_battle_members(player_max_hp_stat, player_max_mp_stat,
-                                 player_attack_stat, player_defense_stat,
-                                 player_skill_power_stat, player_heal_power_stat,
-                                 player_agility_stat);
 
     /* rpg081: field-touch battles also use the 3-body encounter table.
      * The touched actor is still remembered in current_enemy_index so it can be
@@ -2317,6 +2313,11 @@ static void enter_battle_screen(void) {
     /* Hide map OAM before the transition so the field player cannot leak into
      * the battle intro.  The battle screen itself is then built exactly once.
      */
+    party_prepare_battle_members(player_max_hp_stat, player_max_mp_stat,
+                                 player_attack_stat, player_defense_stat,
+                                 player_skill_power_stat, player_heal_power_stat,
+                                 player_agility_stat);
+    last_growth_type = GROWTH_NONE;
     hide_all_sprites_safe();
     audio_play_music(AUDIO_TRACK_BATTLE);
     battle_start_effect();
@@ -2434,7 +2435,6 @@ static UINT8 apply_player_stat_growth(UINT8 stat_type) {
                 player_max_hp_stat++;
                 last_growth.new_value = player_max_hp_stat;
                 last_growth.stat_type = GROWTH_HP;
-                last_growth_type = GROWTH_HP;
                 return 1u;
             }
             break;
@@ -2445,7 +2445,6 @@ static UINT8 apply_player_stat_growth(UINT8 stat_type) {
                 player_max_mp_stat++;
                 last_growth.new_value = player_max_mp_stat;
                 last_growth.stat_type = GROWTH_MP;
-                last_growth_type = GROWTH_MP;
                 return 1u;
             }
             break;
@@ -2456,7 +2455,6 @@ static UINT8 apply_player_stat_growth(UINT8 stat_type) {
                 player_attack_stat++;
                 last_growth.new_value = player_attack_stat;
                 last_growth.stat_type = GROWTH_ATK;
-                last_growth_type = GROWTH_ATK;
                 return 1u;
             }
             break;
@@ -2467,7 +2465,6 @@ static UINT8 apply_player_stat_growth(UINT8 stat_type) {
                 player_defense_stat++;
                 last_growth.new_value = player_defense_stat;
                 last_growth.stat_type = GROWTH_DEF;
-                last_growth_type = GROWTH_DEF;
                 return 1u;
             }
             break;
@@ -2478,7 +2475,6 @@ static UINT8 apply_player_stat_growth(UINT8 stat_type) {
                 player_skill_power_stat++;
                 last_growth.new_value = player_skill_power_stat;
                 last_growth.stat_type = GROWTH_SKILL;
-                last_growth_type = GROWTH_SKILL;
                 return 1u;
             }
             break;
@@ -2489,7 +2485,6 @@ static UINT8 apply_player_stat_growth(UINT8 stat_type) {
                 player_heal_power_stat++;
                 last_growth.new_value = player_heal_power_stat;
                 last_growth.stat_type = GROWTH_HEAL;
-                last_growth_type = GROWTH_HEAL;
                 return 1u;
             }
             break;
@@ -2500,7 +2495,6 @@ static UINT8 apply_player_stat_growth(UINT8 stat_type) {
                 player_agility_stat++;
                 last_growth.new_value = player_agility_stat;
                 last_growth.stat_type = GROWTH_AGI;
-                last_growth_type = GROWTH_AGI;
                 return 1u;
             }
             break;
@@ -2512,13 +2506,20 @@ static UINT8 apply_player_stat_growth(UINT8 stat_type) {
 static void apply_battle_growth(void) {
     UINT8 stat_type;
 
+    stat_type = last_growth_type;
     clear_growth_result();
 
     if (!should_growth_happen(battle_enemy_rank)) {
         return;
     }
 
-    stat_type = (UINT8)(GROWTH_HP + (random_u8() % GROWTH_STAT_COUNT));
+    if (stat_type == GROWTH_SKILL) {
+        stat_type = (random_u8() & 1u) ? GROWTH_SKILL : GROWTH_MP;
+    } else if (stat_type == GROWTH_ATK) {
+        stat_type = (random_u8() & 1u) ? GROWTH_ATK : GROWTH_AGI;
+    } else if (stat_type == GROWTH_NONE) {
+        stat_type = (UINT8)(GROWTH_HP + (random_u8() % GROWTH_STAT_COUNT));
+    }
     apply_player_stat_growth(stat_type);
 }
 
@@ -2639,6 +2640,7 @@ static void player_attack(void) {
     }
 
     battle_load_current_actor(&actor);
+    if (battle_party_turn_slot == 0u) last_growth_type = GROWTH_ATK;
     if (actor.hp == 0u) {
         battle_finish_party_action();
         return;
@@ -2686,6 +2688,7 @@ static void player_use_skill(UINT8 skill_id) {
         }
 
         amount = calc_heal_amount(&actor, skill);
+        if (battle_party_turn_slot == 0u) last_growth_type = GROWTH_HEAL;
         battle_heal_current_actor(amount);
 
         battle_show_message("かいふくした!");
@@ -2705,6 +2708,7 @@ static void player_use_skill(UINT8 skill_id) {
         return;
     }
 
+    if (battle_party_turn_slot == 0u) last_growth_type = GROWTH_SKILL;
     amount = calc_skill_damage(&actor, &enemy_battle, skill);
     if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);

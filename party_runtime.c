@@ -5,6 +5,15 @@
 
 BANKREF(party_runtime_bank)
 
+#define PARTY_WEAPON_NONE  0u
+#define PARTY_WEAPON_SWORD 1u
+#define PARTY_WEAPON_STAFF 2u
+#define PARTY_WEAPON_BOW   3u
+#define PARTY_WEAPON_COUNT 4u
+#define PARTY_MASTERY_MAX  50u
+#define PARTY_TECH_FLAG_SKILL 0x01u
+#define PARTY_TECH_FLAG_HEAL  0x02u
+
 typedef struct PartyMemberRuntime {
     const char *name;
     UINT16 max_hp;
@@ -17,6 +26,9 @@ typedef struct PartyMemberRuntime {
     UINT8 heal_power;
     UINT8 agility;
     UINT8 sprite_tile_offset;
+    UINT8 weapon_type;
+    UINT8 weapon_mastery[PARTY_WEAPON_COUNT];
+    UINT8 learned_tech_flags;
 } PartyMemberRuntime;
 
 static PartyMemberRuntime party_roster[PARTY_ROSTER_COUNT];
@@ -38,6 +50,12 @@ static void party_init_member(UINT8 id, const char *name, UINT16 hp, UINT16 mp,
     party_roster[id].heal_power = heal;
     party_roster[id].agility = agi;
     party_roster[id].sprite_tile_offset = sprite_tile_offset;
+    party_roster[id].weapon_type = PARTY_WEAPON_NONE;
+    party_roster[id].weapon_mastery[0] = 0u;
+    party_roster[id].weapon_mastery[1] = 0u;
+    party_roster[id].weapon_mastery[2] = 0u;
+    party_roster[id].weapon_mastery[3] = 0u;
+    party_roster[id].learned_tech_flags = 0u;
 }
 
 void party_init_roster_defaults(void) BANKED {
@@ -52,6 +70,13 @@ void party_init_roster_defaults(void) BANKED {
     party_init_member(PARTY_MEMBER_WARRIOR, "せんし",   42u,  6u, 9u, 5u, 3u, 3u, 4u, 0u);
     party_init_member(PARTY_MEMBER_ARCHER,  "かりうど", 30u, 12u, 7u, 3u, 6u, 5u, 9u, 4u);
     party_init_member(PARTY_MEMBER_MONK,    "ぶとうか", 34u, 10u, 8u, 4u, 5u, 5u, 10u, 8u);
+
+    party_roster[PARTY_MEMBER_HERO].weapon_type = PARTY_WEAPON_SWORD;
+    party_roster[PARTY_MEMBER_PRIEST].weapon_type = PARTY_WEAPON_STAFF;
+    party_roster[PARTY_MEMBER_MAGE].weapon_type = PARTY_WEAPON_STAFF;
+    party_roster[PARTY_MEMBER_WARRIOR].weapon_type = PARTY_WEAPON_SWORD;
+    party_roster[PARTY_MEMBER_ARCHER].weapon_type = PARTY_WEAPON_BOW;
+    party_roster[PARTY_MEMBER_MONK].weapon_type = PARTY_WEAPON_NONE;
 }
 
 void party_prepare_battle_members(UINT16 hero_max_hp, UINT16 hero_max_mp,
@@ -212,6 +237,18 @@ void party_damage_active(UINT8 active_slot, UINT16 damage) BANKED {
 }
 
 
+static void party_gain_mastery(PartyMemberRuntime *member, UINT8 tech_flag) BANKED {
+    UINT8 weapon_type;
+
+    if (member == 0) return;
+
+    weapon_type = member->weapon_type;
+    if (weapon_type < PARTY_WEAPON_COUNT && member->weapon_mastery[weapon_type] < PARTY_MASTERY_MAX) {
+        member->weapon_mastery[weapon_type]++;
+    }
+    member->learned_tech_flags |= tech_flag;
+}
+
 UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED {
     UINT16 after;
     PartyMemberRuntime *member;
@@ -222,6 +259,7 @@ UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED {
     if (op == PARTY_OP_TRY_CONSUME_MP) {
         if (member->mp < value) return 0u;
         member->mp = (UINT16)(member->mp - value);
+        party_gain_mastery(member, PARTY_TECH_FLAG_SKILL);
         return 1u;
     }
 
@@ -233,6 +271,7 @@ UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED {
             after = member->max_hp;
         }
         member->hp = after;
+        party_gain_mastery(member, PARTY_TECH_FLAG_HEAL);
         return member->hp;
     }
 
