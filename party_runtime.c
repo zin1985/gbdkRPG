@@ -2,6 +2,9 @@
 
 #include <gb/gb.h>
 #include "party_runtime.h"
+#include "inventory.h"
+#include "jpfont.h"
+#include "audio.h"
 
 BANKREF(party_runtime_bank)
 
@@ -13,6 +16,7 @@ BANKREF(party_runtime_bank)
 #define PARTY_WEAPON_TOOL  5u
 #define PARTY_WEAPON_COUNT 6u
 #define PARTY_MASTERY_MAX  50u
+
 
 /* rpg115: original growth pack without LP.
  * Keep all new gameplay foundations inside bank 7 and do not add public APIs.
@@ -57,6 +61,46 @@ BANKREF(party_runtime_bank)
 #define PARTY_FORM_GUARD 3u
 #define PARTY_FORM_FOCUS 4u
 
+#define PARTY_EQUIP_SLOT_WEAPON 0u
+#define PARTY_EQUIP_SLOT_ARMOR  1u
+#define PARTY_EQUIP_SLOT_ACC    2u
+
+/* rpg116: equipment seed. Kept in bank 7, not in Bank 0.
+ * Item IDs are defined in inventory.h so inventory, equipment and menu pages
+ * share the same small numeric IDs.
+ */
+typedef struct PartyEquipmentDef {
+    UINT8 item_id;
+    UINT8 slot;
+    UINT8 weapon_type;
+    UINT8 attack;
+    UINT8 defense;
+    UINT8 skill;
+    UINT8 heal;
+    UINT8 agility;
+    UINT8 weight;
+    UINT8 element_resist;
+    UINT8 status_resist;
+    const char *name;
+} PartyEquipmentDef;
+
+static const PartyEquipmentDef party_equipment_defs[] = {
+    { ITEM_WOOD_SWORD,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 2u, 0u, 0u, 0u, 0u, 1u, 0u, 0u, "木のけん" },
+    { ITEM_IRON_SWORD,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 4u, 0u, 0u, 0u, 0u, 3u, 0u, 0u, "鉄のけん" },
+    { ITEM_OAK_STAFF,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_STAFF, 1u, 0u, 0u, 2u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "木のつえ" },
+    { ITEM_MAGE_STAFF,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_STAFF, 1u, 0u, 3u, 1u, 0u, 1u, PARTY_ELEM_FIRE | PARTY_ELEM_ICE, 0u, "まどうのつえ" },
+    { ITEM_SHORT_BOW,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   3u, 0u, 0u, 0u, 1u, 1u, PARTY_ELEM_THUNDER, 0u, "短いゆみ" },
+    { ITEM_GLOVES,        PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_GLOVE, 2u, 0u, 1u, 0u, 2u, 0u, 0u, 0u, "けいこ手甲" },
+    { ITEM_TOOL_KIT,      PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_TOOL,  1u, 0u, 2u, 0u, 0u, 1u, 0u, 0u, "道具キット" },
+    { ITEM_CLOTH_ARMOR,   PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 1u, 0u, 0u, 0u, 1u, 0u, 0u, "ぬののふく" },
+    { ITEM_LEATHER_ARMOR, PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 2u, 0u, 0u, 0u, 2u, 0u, 0u, "かわよろい" },
+    { ITEM_IRON_ARMOR,    PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 4u, 0u, 0u, 0u, 5u, 0u, 0u, "鉄よろい" },
+    { ITEM_CHARM,         PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 1u, 1u, 0u, 0u, PARTY_ELEM_LIGHT, PARTY_STATUS_SLEEP, "おまもり" },
+    { ITEM_FEATHER,       PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 2u, 0u, 0u, 0u, "はね飾り" }
+};
+#define PARTY_EQUIPMENT_DEF_COUNT ((UINT8)(sizeof(party_equipment_defs) / sizeof(party_equipment_defs[0])))
+
+
 #define PARTY_ACTION_NONE   0u
 #define PARTY_ACTION_SKILL  1u
 #define PARTY_ACTION_HEAL   2u
@@ -79,6 +123,9 @@ typedef struct PartyMemberRuntime {
     UINT8 heal_power;
     UINT8 agility;
     UINT8 sprite_tile_offset;
+    UINT8 weapon_id;
+    UINT8 armor_id;
+    UINT8 accessory_id;
     UINT8 weapon_type;
     UINT8 weapon_mastery[PARTY_WEAPON_COUNT];
     UINT8 learned_tech_flags;
@@ -116,6 +163,9 @@ static void party_init_member(UINT8 id, const char *name, UINT16 hp, UINT16 mp,
     party_roster[id].heal_power = heal;
     party_roster[id].agility = agi;
     party_roster[id].sprite_tile_offset = sprite_tile_offset;
+    party_roster[id].weapon_id = ITEM_NONE;
+    party_roster[id].armor_id = ITEM_NONE;
+    party_roster[id].accessory_id = ITEM_NONE;
     party_roster[id].weapon_type = PARTY_WEAPON_NONE;
     for (i = 0u; i < PARTY_WEAPON_COUNT; i++) party_roster[id].weapon_mastery[i] = 0u;
     party_roster[id].learned_tech_flags = 0u;
@@ -146,12 +196,37 @@ void party_init_roster_defaults(void) BANKED {
     party_init_member(PARTY_MEMBER_ARCHER,  "かりうど", 30u, 12u, 7u, 3u, 6u, 5u, 9u, 4u);
     party_init_member(PARTY_MEMBER_MONK,    "ぶとうか", 34u, 10u, 8u, 4u, 5u, 5u, 10u, 8u);
 
+    party_roster[PARTY_MEMBER_HERO].weapon_id = ITEM_IRON_SWORD;
+    party_roster[PARTY_MEMBER_HERO].armor_id = ITEM_LEATHER_ARMOR;
+    party_roster[PARTY_MEMBER_HERO].accessory_id = ITEM_FEATHER;
     party_roster[PARTY_MEMBER_HERO].weapon_type = PARTY_WEAPON_SWORD;
+
+    party_roster[PARTY_MEMBER_PRIEST].weapon_id = ITEM_OAK_STAFF;
+    party_roster[PARTY_MEMBER_PRIEST].armor_id = ITEM_CLOTH_ARMOR;
+    party_roster[PARTY_MEMBER_PRIEST].accessory_id = ITEM_CHARM;
     party_roster[PARTY_MEMBER_PRIEST].weapon_type = PARTY_WEAPON_STAFF;
+
+    party_roster[PARTY_MEMBER_MAGE].weapon_id = ITEM_MAGE_STAFF;
+    party_roster[PARTY_MEMBER_MAGE].armor_id = ITEM_CLOTH_ARMOR;
+    party_roster[PARTY_MEMBER_MAGE].accessory_id = ITEM_CHARM;
     party_roster[PARTY_MEMBER_MAGE].weapon_type = PARTY_WEAPON_STAFF;
+
+    party_roster[PARTY_MEMBER_WARRIOR].weapon_id = ITEM_IRON_SWORD;
+    party_roster[PARTY_MEMBER_WARRIOR].armor_id = ITEM_IRON_ARMOR;
+    party_roster[PARTY_MEMBER_WARRIOR].accessory_id = ITEM_CHARM;
     party_roster[PARTY_MEMBER_WARRIOR].weapon_type = PARTY_WEAPON_SWORD;
+
+    party_roster[PARTY_MEMBER_ARCHER].weapon_id = ITEM_SHORT_BOW;
+    party_roster[PARTY_MEMBER_ARCHER].armor_id = ITEM_LEATHER_ARMOR;
+    party_roster[PARTY_MEMBER_ARCHER].accessory_id = ITEM_FEATHER;
     party_roster[PARTY_MEMBER_ARCHER].weapon_type = PARTY_WEAPON_BOW;
+
+    party_roster[PARTY_MEMBER_MONK].weapon_id = ITEM_GLOVES;
+    party_roster[PARTY_MEMBER_MONK].armor_id = ITEM_CLOTH_ARMOR;
+    party_roster[PARTY_MEMBER_MONK].accessory_id = ITEM_FEATHER;
     party_roster[PARTY_MEMBER_MONK].weapon_type = PARTY_WEAPON_GLOVE;
+
+    inventory_seed_defaults();
 
     /* Original-growth defaults. No LP: risk is expressed through morale,
      * focus, adventure sense, fatigue, formation, and derived stats.
@@ -266,6 +341,121 @@ UINT16 party_get_active_mp(UINT8 active_slot) BANKED {
     return member->mp;
 }
 
+
+static const PartyEquipmentDef *party_find_equipment(UINT8 item_id) BANKED {
+    UINT8 i;
+
+    if (item_id == ITEM_NONE) return 0;
+    for (i = 0u; i < PARTY_EQUIPMENT_DEF_COUNT; i++) {
+        if (party_equipment_defs[i].item_id == item_id) return &party_equipment_defs[i];
+    }
+    return 0;
+}
+
+static const char *party_equipment_name(UINT8 item_id) BANKED {
+    const PartyEquipmentDef *eq;
+
+    eq = party_find_equipment(item_id);
+    if (eq == 0) return "なし";
+    return eq->name;
+}
+
+static UINT8 party_equipped_weapon_type(PartyMemberRuntime *member) BANKED {
+    const PartyEquipmentDef *eq;
+
+    if (member == 0) return PARTY_WEAPON_NONE;
+    eq = party_find_equipment(member->weapon_id);
+    if (eq == 0) return member->weapon_type;
+    return eq->weapon_type;
+}
+
+static UINT8 party_equipment_attack(PartyMemberRuntime *member) BANKED {
+    const PartyEquipmentDef *eq;
+
+    if (member == 0) return 0u;
+    eq = party_find_equipment(member->weapon_id);
+    if (eq == 0) return 0u;
+    return eq->attack;
+}
+
+static UINT8 party_equipment_defense(PartyMemberRuntime *member) BANKED {
+    UINT8 v;
+    const PartyEquipmentDef *eq;
+
+    if (member == 0) return 0u;
+    v = 0u;
+    eq = party_find_equipment(member->armor_id);
+    if (eq != 0) v = (UINT8)(v + eq->defense);
+    eq = party_find_equipment(member->accessory_id);
+    if (eq != 0) v = (UINT8)(v + eq->defense);
+    return v;
+}
+
+static UINT8 party_equipment_skill(PartyMemberRuntime *member) BANKED {
+    UINT8 v;
+    const PartyEquipmentDef *eq;
+
+    if (member == 0) return 0u;
+    v = 0u;
+    eq = party_find_equipment(member->weapon_id);
+    if (eq != 0) v = (UINT8)(v + eq->skill);
+    eq = party_find_equipment(member->accessory_id);
+    if (eq != 0) v = (UINT8)(v + eq->skill);
+    return v;
+}
+
+static UINT8 party_equipment_heal(PartyMemberRuntime *member) BANKED {
+    UINT8 v;
+    const PartyEquipmentDef *eq;
+
+    if (member == 0) return 0u;
+    v = 0u;
+    eq = party_find_equipment(member->weapon_id);
+    if (eq != 0) v = (UINT8)(v + eq->heal);
+    eq = party_find_equipment(member->accessory_id);
+    if (eq != 0) v = (UINT8)(v + eq->heal);
+    return v;
+}
+
+static UINT8 party_equipment_agility(PartyMemberRuntime *member) BANKED {
+    UINT8 v;
+    const PartyEquipmentDef *eq;
+
+    if (member == 0) return 0u;
+    v = 0u;
+    eq = party_find_equipment(member->weapon_id);
+    if (eq != 0) v = (UINT8)(v + eq->agility);
+    eq = party_find_equipment(member->accessory_id);
+    if (eq != 0) v = (UINT8)(v + eq->agility);
+    return v;
+}
+
+static UINT8 party_equipment_weight(PartyMemberRuntime *member) BANKED {
+    UINT8 v;
+    const PartyEquipmentDef *eq;
+
+    if (member == 0) return 0u;
+    v = member->equip_weight;
+    eq = party_find_equipment(member->weapon_id);
+    if (eq != 0) v = (UINT8)(v + eq->weight);
+    eq = party_find_equipment(member->armor_id);
+    if (eq != 0) v = (UINT8)(v + eq->weight);
+    eq = party_find_equipment(member->accessory_id);
+    if (eq != 0) v = (UINT8)(v + eq->weight);
+    return v;
+}
+
+static const char *party_weapon_type_name(UINT8 weapon_type) BANKED {
+    switch (weapon_type) {
+        case PARTY_WEAPON_SWORD: return "剣";
+        case PARTY_WEAPON_STAFF: return "杖";
+        case PARTY_WEAPON_BOW: return "弓";
+        case PARTY_WEAPON_GLOVE: return "体術";
+        case PARTY_WEAPON_TOOL: return "道具";
+        default: return "なし";
+    }
+}
+
 static UINT8 party_clamp_u8(UINT16 value) BANKED {
     if (value > 255u) return 255u;
     return (UINT8)value;
@@ -288,7 +478,7 @@ static UINT8 party_mastery_bonus(PartyMemberRuntime *member) BANKED {
     UINT8 weapon_type;
 
     if (member == 0) return 0u;
-    weapon_type = member->weapon_type;
+    weapon_type = party_equipped_weapon_type(member);
     if (weapon_type >= PARTY_WEAPON_COUNT) return 0u;
 
     return (UINT8)(member->weapon_mastery[weapon_type] >> 3);
@@ -339,12 +529,13 @@ static UINT8 party_effective_attack(PartyMemberRuntime *member) BANKED {
 
     if (member == 0) return 0u;
     value = member->attack;
+    value += party_equipment_attack(member);
     value += party_mastery_bonus(member);
     value += party_morale_bonus(member);
     if (member->learned_tech_flags & PARTY_TECH_FLAG_RANK1) value++;
     if (member->learned_tech_flags & PARTY_TECH_FLAG_RANK2) value++;
     if (member->learned_tech_flags & PARTY_TECH_FLAG_COUNTER) value++;
-    if (member->formation_role == PARTY_FORM_BACK && member->weapon_type != PARTY_WEAPON_BOW) {
+    if (member->formation_role == PARTY_FORM_BACK && party_equipped_weapon_type(member) != PARTY_WEAPON_BOW) {
         if (value > 1u) value--;
     }
     if (member->status_flags & PARTY_STATUS_POISON) {
@@ -359,6 +550,7 @@ static UINT8 party_effective_defense(PartyMemberRuntime *member) BANKED {
 
     if (member == 0) return 0u;
     value = member->defense;
+    value += party_equipment_defense(member);
     penalty = party_fatigue_penalty(member);
     if (member->formation_role == PARTY_FORM_GUARD) value += 2u;
     if (member->race_type == PARTY_RACE_MECH) value += 2u;
@@ -377,10 +569,11 @@ static UINT8 party_effective_agility(PartyMemberRuntime *member) BANKED {
 
     if (member == 0) return 0u;
     value = member->agility;
+    value += party_equipment_agility(member);
     if (member->formation_role == PARTY_FORM_SWIFT) value += 2u;
     if (member->formation_role == PARTY_FORM_FOCUS && member->focus >= 16u) value++;
     value += party_sense_bonus(member);
-    penalty = (UINT8)((member->equip_weight >> 1) + party_fatigue_penalty(member));
+    penalty = (UINT8)((party_equipment_weight(member) >> 1) + party_fatigue_penalty(member));
     if (value > penalty) value -= penalty;
     else value = 1u;
     if (member->status_flags & PARTY_STATUS_SLEEP) value = 1u;
@@ -392,12 +585,13 @@ static UINT8 party_effective_skill(PartyMemberRuntime *member) BANKED {
 
     if (member == 0) return 0u;
     value = member->skill_power;
+    value += party_equipment_skill(member);
     value += party_mastery_bonus(member);
     value += party_focus_bonus(member);
     if (member->race_type == PARTY_RACE_MUTANT) value++;
     if (member->learned_magic_flags & (PARTY_MAGIC_FLAG_FIRE | PARTY_MAGIC_FLAG_ICE | PARTY_MAGIC_FLAG_THUNDER)) value++;
     if (member->learned_tech_flags & PARTY_TECH_FLAG_SPARK) value++;
-    if (member->weapon_type == PARTY_WEAPON_TOOL && (member->learned_tech_flags & PARTY_TECH_FLAG_TOOL)) value++;
+    if (party_equipped_weapon_type(member) == PARTY_WEAPON_TOOL && (member->learned_tech_flags & PARTY_TECH_FLAG_TOOL)) value++;
     return party_clamp_u8(value);
 }
 
@@ -406,6 +600,7 @@ static UINT8 party_effective_heal(PartyMemberRuntime *member) BANKED {
 
     if (member == 0) return 0u;
     value = member->heal_power;
+    value += party_equipment_heal(member);
     if (member->learned_tech_flags & PARTY_TECH_FLAG_HEAL) value++;
     if (member->learned_magic_flags & (PARTY_MAGIC_FLAG_HEAL | PARTY_MAGIC_FLAG_LIGHT)) value++;
     if (member->race_type == PARTY_RACE_MUTANT) value++;
@@ -513,7 +708,7 @@ static void party_gain_mastery(PartyMemberRuntime *member, UINT8 tech_flag) BANK
 
     if (member == 0) return;
 
-    weapon_type = member->weapon_type;
+    weapon_type = party_equipped_weapon_type(member);
     if (weapon_type < PARTY_WEAPON_COUNT && member->weapon_mastery[weapon_type] < PARTY_MASTERY_MAX) {
         member->weapon_mastery[weapon_type]++;
         if (member->weapon_mastery[weapon_type] >= 6u) member->learned_tech_flags |= PARTY_TECH_FLAG_RANK1;
@@ -588,4 +783,150 @@ UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id)
 
     party_active_slots[active_slot] = reserve_member_id;
     return 1u;
+}
+
+
+static void party_ui_clear(void) BANKED {
+    jp_bkg_clear_area(0u, 0u, 20u, 18u);
+}
+
+static void party_u8_to_dec(UINT8 value, char *out) BANKED {
+    UINT8 i;
+    UINT8 tens;
+
+    i = 0u;
+    if (value >= 100u) {
+        out[i++] = (char)('0' + (value / 100u));
+        value = (UINT8)(value % 100u);
+        out[i++] = (char)('0' + (value / 10u));
+    } else if (value >= 10u) {
+        tens = (UINT8)(value / 10u);
+        out[i++] = (char)('0' + tens);
+    }
+    out[i++] = (char)('0' + (value % 10u));
+    out[i] = '\0';
+}
+
+static void party_u16_to_dec3(UINT16 value, char *out) BANKED {
+    UINT8 i;
+    UINT8 hundreds;
+    UINT8 tens;
+
+    if (value > 999u) value = 999u;
+    i = 0u;
+    hundreds = (UINT8)(value / 100u);
+    tens = (UINT8)((value / 10u) % 10u);
+    if (hundreds != 0u) {
+        out[i++] = (char)('0' + hundreds);
+        out[i++] = (char)('0' + tens);
+    } else if (tens != 0u) {
+        out[i++] = (char)('0' + tens);
+    }
+    out[i++] = (char)('0' + (UINT8)(value % 10u));
+    out[i] = '\0';
+}
+
+static void party_put_u8(UINT8 x, UINT8 y, UINT8 value) BANKED {
+    char buf[4];
+    party_u8_to_dec(value, buf);
+    jp_put_bkg_text(x, y, buf);
+}
+
+static void party_put_u16(UINT8 x, UINT8 y, UINT16 value) BANKED {
+    char buf[4];
+    party_u16_to_dec3(value, buf);
+    jp_put_bkg_text(x, y, buf);
+}
+
+static void party_draw_status_page(UINT8 active_slot) BANKED {
+    PartyBattleFighter f;
+    PartyMemberRuntime *member;
+
+    party_get_active_fighter(active_slot, &f);
+    member = party_get_active_member(active_slot);
+
+    party_ui_clear();
+    jp_put_bkg_text(1u, 0u, "つよさ");
+    jp_put_bkg_text(13u, 0u, "< >");
+    jp_put_bkg_text(0u, 2u, f.name);
+    jp_put_bkg_text(0u, 3u, "HP"); party_put_u16(5u, 3u, f.hp); jp_put_bkg_text(8u, 3u, "/"); party_put_u16(10u, 3u, f.max_hp);
+    jp_put_bkg_text(0u, 4u, "MP"); party_put_u16(5u, 4u, f.mp); jp_put_bkg_text(8u, 4u, "/"); party_put_u16(10u, 4u, f.max_mp);
+    jp_put_bkg_text(0u, 6u, "ちから"); party_put_u8(11u, 6u, f.attack);
+    jp_put_bkg_text(0u, 7u, "まもり"); party_put_u8(11u, 7u, f.defense);
+    jp_put_bkg_text(0u, 8u, "とくぎ"); party_put_u8(11u, 8u, f.skill_power);
+    jp_put_bkg_text(0u, 9u, "かいふく"); party_put_u8(11u, 9u, f.heal_power);
+    jp_put_bkg_text(0u,10u, "すばやさ"); party_put_u8(11u,10u, f.agility);
+    if (member != 0) {
+        jp_put_bkg_text(0u,12u, "武器"); jp_put_bkg_text(6u,12u, party_weapon_type_name(party_equipped_weapon_type(member)));
+        jp_put_bkg_text(0u,13u, "熟練"); party_put_u8(6u,13u, member->weapon_mastery[party_equipped_weapon_type(member)]);
+        jp_put_bkg_text(10u,13u, "勘"); party_put_u8(14u,13u, member->adventure_sense);
+    }
+    jp_put_bkg_text(0u,15u, "< > なかま  A/Bもどる");
+}
+
+void party_menu_show_status_loop(void) BANKED {
+    UINT8 keys;
+    UINT8 slot;
+
+    slot = 0u;
+    audio_waitpadup();
+    while (1) {
+        party_draw_status_page(slot);
+        keys = audio_waitpad(J_LEFT | J_RIGHT | J_A | J_B | J_START);
+        audio_waitpadup();
+        if (keys & J_LEFT) {
+            if (slot == 0u) slot = PARTY_ACTIVE_COUNT - 1u;
+            else slot--;
+        } else if (keys & J_RIGHT) {
+            slot++;
+            if (slot >= PARTY_ACTIVE_COUNT) slot = 0u;
+        } else {
+            break;
+        }
+    }
+}
+
+static void party_draw_equip_page(UINT8 active_slot) BANKED {
+    PartyMemberRuntime *member;
+
+    member = party_get_active_member(active_slot);
+    party_ui_clear();
+    jp_put_bkg_text(1u, 0u, "そうび");
+    jp_put_bkg_text(13u, 0u, "< >");
+    if (member == 0) {
+        jp_put_bkg_text(0u, 3u, "なかま なし");
+        return;
+    }
+    jp_put_bkg_text(0u, 2u, member->name);
+    jp_put_bkg_text(0u, 4u, "武器"); jp_put_bkg_text(5u, 4u, party_equipment_name(member->weapon_id));
+    jp_put_bkg_text(0u, 5u, "防具"); jp_put_bkg_text(5u, 5u, party_equipment_name(member->armor_id));
+    jp_put_bkg_text(0u, 6u, "装飾"); jp_put_bkg_text(5u, 6u, party_equipment_name(member->accessory_id));
+    jp_put_bkg_text(0u, 8u, "武器種"); jp_put_bkg_text(7u, 8u, party_weapon_type_name(party_equipped_weapon_type(member)));
+    jp_put_bkg_text(0u, 9u, "攻撃+"); party_put_u8(8u, 9u, party_equipment_attack(member));
+    jp_put_bkg_text(0u,10u, "防御+"); party_put_u8(8u,10u, party_equipment_defense(member));
+    jp_put_bkg_text(0u,11u, "重量"); party_put_u8(8u,11u, party_equipment_weight(member));
+    jp_put_bkg_text(0u,13u, "装備変更UIは次段階");
+    jp_put_bkg_text(0u,15u, "< > なかま  A/Bもどる");
+}
+
+void party_menu_show_equip_loop(void) BANKED {
+    UINT8 keys;
+    UINT8 slot;
+
+    slot = 0u;
+    audio_waitpadup();
+    while (1) {
+        party_draw_equip_page(slot);
+        keys = audio_waitpad(J_LEFT | J_RIGHT | J_A | J_B | J_START);
+        audio_waitpadup();
+        if (keys & J_LEFT) {
+            if (slot == 0u) slot = PARTY_ACTIVE_COUNT - 1u;
+            else slot--;
+        } else if (keys & J_RIGHT) {
+            slot++;
+            if (slot >= PARTY_ACTIVE_COUNT) slot = 0u;
+        } else {
+            break;
+        }
+    }
 }

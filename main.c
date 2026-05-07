@@ -10,6 +10,7 @@
 #include "battle_data.h"
 #include "battle_text.h"
 #include "party_runtime.h"
+#include "inventory.h"
 #include "actor_runtime.h"
 
 /*
@@ -970,16 +971,7 @@ static void screen_clear(void) {
 }
 
 static void show_status_page(void) {
-    screen_clear();
-    jp_put_bkg_text(1u, 0u, "つよさ");
-    jp_put_bkg_text(0u, 2u, "たいりょく"); put_u16(11u, 2u, player_max_hp_stat);
-    jp_put_bkg_text(0u, 3u, "MP");         put_u16(11u, 3u, player_max_mp_stat);
-    jp_put_bkg_text(0u, 4u, "ちから");     put_u8(11u, 4u, player_attack_stat);
-    jp_put_bkg_text(0u, 5u, "まもり");     put_u8(11u, 5u, player_defense_stat);
-    jp_put_bkg_text(0u, 6u, "とくぎ");     put_u8(11u, 6u, player_skill_power_stat);
-    jp_put_bkg_text(0u, 7u, "かいふく");   put_u8(11u, 7u, player_heal_power_stat);
-    jp_put_bkg_text(0u, 8u, "すばやさ");   put_u8(11u, 8u, player_agility_stat);
-    jp_put_bkg_text(0u,14u, "A/B/START もどる");
+    party_menu_show_status_loop();
 }
 
 static void show_simple_page(const char *title, const char *line1, const char *line2) {
@@ -1026,18 +1018,18 @@ static void open_main_menu(void) {
             if (cursor == MENU_STATUS) {
                 show_status_page();
             } else if (cursor == MENU_ITEM) {
-                show_simple_page("もちもの", "やくそう x3", "かぎ なし");
+                inventory_menu_show_items_loop();
             } else if (cursor == MENU_EQUIP) {
-                show_simple_page("そうび", "木のけん", "ぬののふく");
+                party_menu_show_equip_loop();
             } else {
                 if (check_event_flag(FLAG_ENEMY_DEFEATED)) {
                     show_simple_page("もくてき", "まもの とうばつずみ", "NPCに はなすと ふっかつ");
                 } else {
                     show_simple_page("もくてき", "まものを たおす", "つぎは まちと どうくつ");
                 }
+                audio_waitpad(J_A | J_B | J_START);
+                audio_waitpadup();
             }
-            audio_waitpad(J_A | J_B | J_START);
-            audio_waitpadup();
         }
     }
 
