@@ -211,6 +211,34 @@ void party_damage_active(UINT8 active_slot, UINT16 damage) BANKED {
     else member->hp = (UINT16)(member->hp - damage);
 }
 
+
+UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED {
+    UINT16 after;
+    PartyMemberRuntime *member;
+
+    member = party_get_active_member(active_slot);
+    if (member == 0) return 0u;
+
+    if (op == PARTY_OP_TRY_CONSUME_MP) {
+        if (member->mp < value) return 0u;
+        member->mp = (UINT16)(member->mp - value);
+        return 1u;
+    }
+
+    if (op == PARTY_OP_HEAL_ACTIVE) {
+        if (member->hp == 0u) return member->hp;
+
+        after = (UINT16)(member->hp + value);
+        if (after > member->max_hp || after < member->hp) {
+            after = member->max_hp;
+        }
+        member->hp = after;
+        return member->hp;
+    }
+
+    return 0u;
+}
+
 UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id) BANKED {
     UINT8 i;
 

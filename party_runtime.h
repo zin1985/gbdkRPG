@@ -13,6 +13,9 @@
 #define PARTY_MEMBER_ARCHER  4u
 #define PARTY_MEMBER_MONK    5u
 
+#define PARTY_OP_TRY_CONSUME_MP 2u
+#define PARTY_OP_HEAL_ACTIVE    3u
+
 typedef struct PartyBattleFighter {
     const char *name;
     UINT16 max_hp;
@@ -48,6 +51,7 @@ void party_get_active_fighter(UINT8 active_slot, PartyBattleFighter *out) BANKED
 UINT8 party_active_alive_count(void) BANKED;
 UINT8 party_choose_random_alive_active_slot(UINT8 random_value) BANKED;
 void party_damage_active(UINT8 active_slot, UINT16 damage) BANKED;
+UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED;
 
 UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id) BANKED;
 

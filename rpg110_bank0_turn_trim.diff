@@ -1,0 +1,141 @@
+--- rpg109/main.c
++++ rpg110/main.c
+@@ -2617,14 +2617,7 @@
+ }
+ 
+ static UINT8 battle_current_consume_mp(UINT16 cost) {
+-    UINT8 ok;
+-
+-    ok = (UINT8)party_battle_op(PARTY_OP_TRY_CONSUME_MP, battle_party_turn_slot, cost);
+-    if (ok && battle_party_turn_slot == 0u) {
+-        if (cost >= player_battle.mp) player_battle.mp = 0u;
+-        else player_battle.mp = (UINT16)(player_battle.mp - cost);
+-    }
+-    return ok;
++    return (UINT8)party_battle_op(PARTY_OP_TRY_CONSUME_MP, battle_party_turn_slot, cost);
+ }
+ 
+ static void battle_heal_current_actor(UINT16 amount) {
+@@ -2756,7 +2749,6 @@
+ static void enemy_turn(void) {
+     UINT8 i;
+     UINT8 target_slot;
+-    UINT8 target_id;
+     UINT16 dmg;
+     Fighter target_fighter;
+     PartyBattleFighter party_target;
+@@ -2785,12 +2777,6 @@
+ 
+         dmg = calc_attack_damage(&enemy_battles[i], &target_fighter);
+         party_damage_active(target_slot, dmg);
+-
+-        target_id = party_get_active_member_id(target_slot);
+-        if (target_id == PARTY_MEMBER_HERO) {
+-            if (dmg >= player_battle.hp) player_battle.hp = 0u;
+-            else player_battle.hp = (UINT16)(player_battle.hp - dmg);
+-        }
+ 
+         battle_show_damage_message("まものの こうげき!", dmg);
+         update_battle_status();
+
+--- rpg109/build.sh
++++ rpg110/build.sh
+@@ -3,7 +3,7 @@
+ 
+ export PATH="/opt/gbdk/bin:$PATH"
+ 
+-OUT="rpg109_manual_party_control.gb"
++OUT="rpg110_bank0_turn_trim.gb"
+ MAP="${OUT%.gb}.map"
+ SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c"
+ LOG="build.log"
+
+--- rpg109/build.bat
++++ rpg110/build.bat
+@@ -1,7 +1,7 @@
+ @echo off
+ setlocal
+ 
+-set "PROJECT=rpg109_manual_party_control"
++set "PROJECT=rpg110_bank0_turn_trim"
+ set "OUT=%PROJECT%.gb"
+ set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c"
+ set "ROM_BANKS=8"
+
+--- rpg109/Makefile
++++ rpg110/Makefile
+@@ -1,4 +1,4 @@
+-OUT = rpg109_manual_party_control.gb
++OUT = rpg110_bank0_turn_trim.gb
+ SRCS = main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c
+ GBDK_PATH ?= /opt/gbdk/bin
+ LCC = $(GBDK_PATH)/lcc
+
+--- rpg109/README.md
++++ rpg110/README.md
+@@ -956,3 +956,24 @@
+ Bank 0対策:
+ - rpg108の自動行動処理は採用せず、rpg107安定版から最小追加
+ - `party_battle_op()` にMP消費/HP回復を集約し、BANKED入口を増やしすぎない
++
++
++## rpg110_bank0_turn_trim
++
++rpg109_manual_party_control の機能を維持しつつ、Bank 0 overflow を消すための小型化版。
++
++rpg109 の残り:
++- `_HOME (0x4000 -> 0x4012)`
++- `_INITIALIZER (0x4013 -> 0x4013)`
++- `_GSINIT (0x4014 -> 0x401f)`
++- `_GSFINAL (0x4020 -> 0x4020)`
++
++修正:
++- `battle_current_consume_mp()` から `player_battle.mp` への二重同期を削除
++- 敵攻撃時の `player_battle.hp` への二重同期を削除
++
++理由:
++- rpg109 では現在操作中の仲間ステータスは `party_runtime` 側から取得する
++- UI表示も `party_get_active_hp/mp()` を参照している
++- `party_damage_active()` と `party_battle_op()` が戦闘中HP/MPの実体になっているため、旧単独ゆうしゃ用の `player_battle` ミラー更新は不要
++- 機能を削らずにHOMEコードを小さくする
+
+
+--- /dev/null
++++ rpg110/CHECK_rpg110_bank0_turn_trim.md
+# CHECK rpg110_bank0_turn_trim
+
+## 目的
+rpg109_manual_party_control の手動仲間操作を維持しつつ、Bank 0 overflow warning を解消する。
+
+## rpg109 の問題
+```text
+_HOME        (0x4000 -> 0x4012)
+_INITIALIZER (0x4013 -> 0x4013)
+_GSINIT      (0x4014 -> 0x401f)
+_GSFINAL     (0x4020 -> 0x4020)
+```
+
+## 修正内容
+- `battle_current_consume_mp()` を小型化
+  - `party_battle_op(PARTY_OP_TRY_CONSUME_MP, ...)` の結果をそのまま返す
+  - `player_battle.mp` への旧ミラー更新を削除
+- `enemy_turn()` を小型化
+  - `target_id` 変数を削除
+  - `player_battle.hp` への旧ミラー更新を削除
+
+## 根拠
+rpg109では以下が戦闘中の実体になっている。
+- HP/MP表示: `party_get_active_hp/mp()`
+- 被ダメージ: `party_damage_active()`
+- MP消費/回復: `party_battle_op()`
+- 行動者取得: `battle_load_current_actor()` が `party_get_active_fighter()` から読む
+
+そのため、旧単独ゆうしゃ戦闘用の `player_battle.hp/mp` 二重同期は不要。
+
+## 確認観点
+- Bank 0 overflow warning が消えるか
+- ゆうしゃ → そうりょ → まほう の手動選択が維持されているか
+- そうりょ/まほうのMP消費がUIに反映されるか
+- 敵攻撃でゆうしゃHPが減るか
+- HP0の仲間がスキップされるか
+- 戦闘UI位置が崩れないか

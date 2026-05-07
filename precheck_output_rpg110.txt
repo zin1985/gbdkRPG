@@ -1,0 +1,1 @@
+prebank_check not run in artifact generation session; please run build.sh for final compiler and romusage check.

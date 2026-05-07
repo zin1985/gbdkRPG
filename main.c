@@ -511,6 +511,7 @@ static UINT8 battle_dirty_flags;
 static const char *battle_message_text;
 static UINT8 battle_first_player_refresh_pending;
 static UINT8 battle_screen_ready;
+static UINT8 battle_party_turn_slot;
 #define enemy_battle (enemy_battles[battle_target_index])
 static UINT16 player_max_hp_stat;
 static UINT16 player_max_mp_stat;
@@ -727,6 +728,12 @@ static UINT8 apply_player_stat_growth(UINT8 stat_type);
 static void apply_battle_growth(void);
 static void show_growth_message(void);
 static void return_to_map_after_battle(UINT8 won);
+static void battle_load_current_actor(Fighter *out);
+static UINT8 battle_select_next_party_turn(void);
+static void battle_finish_party_action(void);
+static UINT8 battle_current_special_skill(void);
+static UINT8 battle_current_consume_mp(UINT16 cost);
+static void battle_heal_current_actor(UINT16 amount);
 static void player_attack(void);
 static void player_skill(void);
 static void player_heal(void);
@@ -1851,6 +1858,7 @@ static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
     name = party_get_active_name(slot);
     if (name == 0) return;
 
+    battle_put_bkg_text((UINT8)(x - 1u), 1u, (slot == battle_party_turn_slot) ? ">" : " ");
     battle_put_bkg_text(x, 1u, name);
     battle_put_bkg_text(x, 2u, "H ");
     battle_put_u16((UINT8)(x + 2u), 2u, party_get_active_hp(slot));
@@ -2241,6 +2249,7 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     UINT8 i;
 
     current_enemy_index = enemy_index;
+    battle_party_turn_slot = 0u;
     player_battle.name = "ゆうしゃ";
     player_battle.max_hp = player_max_hp_stat;
     player_battle.hp = player_max_hp_stat;
@@ -2550,32 +2559,106 @@ static void return_to_map_after_battle(UINT8 won) {
     else audio_play_music(AUDIO_TRACK_FIELD);
 }
 
-static void player_attack(void) {
-    UINT16 dmg;
+static void battle_load_current_actor(Fighter *out) {
+    PartyBattleFighter src;
+
+    party_get_active_fighter(battle_party_turn_slot, &src);
+
+    out->name = src.name;
+    out->max_hp = src.max_hp;
+    out->hp = src.hp;
+    out->max_mp = src.max_mp;
+    out->mp = src.mp;
+    out->attack = src.attack;
+    out->defense = src.defense;
+    out->skill_power = src.skill_power;
+    out->heal_power = src.heal_power;
+    out->agility = src.agility;
+}
+
+static UINT8 battle_select_next_party_turn(void) {
+    UINT8 slot;
+
+    for (slot = (UINT8)(battle_party_turn_slot + 1u); slot < PARTY_ACTIVE_COUNT; slot++) {
+        if (party_get_active_hp(slot) > 0u) {
+            battle_party_turn_slot = slot;
+            menu_index = CMD_ATTACK;
+            return 1u;
+        }
+    }
+
+    return 0u;
+}
+
+static void battle_finish_party_action(void) {
+    update_battle_status();
 
     if (!battle_select_first_alive()) {
         battle_state = BSTATE_WIN;
         return;
     }
 
-    dmg = calc_attack_damage(&player_battle, &enemy_battle);
+    if (battle_select_next_party_turn()) {
+        battle_state = BSTATE_PLAYER;
+        update_battle_status();
+    } else {
+        battle_state = BSTATE_ENEMY;
+    }
+}
+
+static UINT8 battle_current_special_skill(void) {
+    UINT8 member_id;
+
+    member_id = party_get_active_member_id(battle_party_turn_slot);
+    if (member_id == PARTY_MEMBER_MAGE) return SKILL_FIRE;
+    if (member_id == PARTY_MEMBER_PRIEST) return SKILL_HEAL_SIMPLE;
+    if (member_id == PARTY_MEMBER_HERO) return player_get_skill_slot(PLAYER_SKILL_SLOT_SPECIAL);
+    return SKILL_POWER_STRIKE;
+}
+
+static UINT8 battle_current_consume_mp(UINT16 cost) {
+    return (UINT8)party_battle_op(PARTY_OP_TRY_CONSUME_MP, battle_party_turn_slot, cost);
+}
+
+static void battle_heal_current_actor(UINT16 amount) {
+    UINT16 hp;
+
+    hp = party_battle_op(PARTY_OP_HEAL_ACTIVE, battle_party_turn_slot, amount);
+    if (battle_party_turn_slot == 0u) {
+        player_battle.hp = hp;
+    }
+}
+
+static void player_attack(void) {
+    UINT16 dmg;
+    Fighter actor;
+
+    if (!battle_select_first_alive()) {
+        battle_state = BSTATE_WIN;
+        return;
+    }
+
+    battle_load_current_actor(&actor);
+    if (actor.hp == 0u) {
+        battle_finish_party_action();
+        return;
+    }
+
+    dmg = calc_attack_damage(&actor, &enemy_battle);
     if (dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT16)(enemy_battle.hp - dmg);
 
-    battle_show_damage_message("ゆうしゃの こうげき!", dmg);
+    battle_show_damage_message("こうげき!", dmg);
     battle_flash_enemy_sprite(battle_target_index);
 
-    if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
-    else battle_state = BSTATE_ENEMY;
-
-    update_battle_status();
+    battle_finish_party_action();
 }
 
 
 static void player_use_skill(UINT8 skill_id) {
     const SkillDef *skill;
     UINT16 amount;
-    UINT16 after;
+    Fighter actor;
 
     if (skill_id == SKILL_NONE) {
         battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
@@ -2584,38 +2667,29 @@ static void player_use_skill(UINT8 skill_id) {
         return;
     }
 
+    battle_load_current_actor(&actor);
     skill = skill_get_def(skill_id);
 
     if (skill->kind == SKILL_KIND_HEAL) {
-        if (player_battle.hp >= player_battle.max_hp) {
+        if (actor.hp >= actor.max_hp) {
             battle_show_message(message_get_buffered(MSG_BATTLE_HP_FULL));
             battle_state = BSTATE_PLAYER;
             update_battle_status();
             return;
         }
 
-        if (!fighter_try_consume_mp(&player_battle, (UINT16)skill->mp_cost)) {
+        if (!battle_current_consume_mp((UINT16)skill->mp_cost)) {
             battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
             battle_state = BSTATE_PLAYER;
             update_battle_status();
             return;
         }
 
-        amount = calc_heal_amount(&player_battle, skill);
-        after = (UINT16)(player_battle.hp + amount);
-        if (after > player_battle.max_hp || after < player_battle.hp) {
-            after = player_battle.max_hp;
-        }
-        player_battle.hp = after;
-        party_sync_hero_from_values(player_battle.max_hp, player_battle.hp,
-                                    player_battle.max_mp, player_battle.mp,
-                                    player_battle.attack, player_battle.defense,
-                                    player_battle.skill_power, player_battle.heal_power,
-                                    player_battle.agility);
+        amount = calc_heal_amount(&actor, skill);
+        battle_heal_current_actor(amount);
 
         battle_show_message("かいふくした!");
-        update_battle_status();
-        battle_state = BSTATE_ENEMY;
+        battle_finish_party_action();
         return;
     }
 
@@ -2624,47 +2698,40 @@ static void player_use_skill(UINT8 skill_id) {
         return;
     }
 
-    if (!fighter_try_consume_mp(&player_battle, (UINT16)skill->mp_cost)) {
+    if (!battle_current_consume_mp((UINT16)skill->mp_cost)) {
         battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
         battle_state = BSTATE_PLAYER;
         update_battle_status();
         return;
     }
-    party_sync_hero_from_values(player_battle.max_hp, player_battle.hp,
-                                    player_battle.max_mp, player_battle.mp,
-                                    player_battle.attack, player_battle.defense,
-                                    player_battle.skill_power, player_battle.heal_power,
-                                    player_battle.agility);
 
-    
-
-    amount = calc_skill_damage(&player_battle, &enemy_battle, skill);
+    amount = calc_skill_damage(&actor, &enemy_battle, skill);
     if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
 
     battle_show_damage_message("とくぎを つかった!", amount);
     battle_flash_enemy_sprite(battle_target_index);
 
-    if (!battle_select_first_alive()) battle_state = BSTATE_WIN;
-    else battle_state = BSTATE_ENEMY;
-
-    update_battle_status();
+    battle_finish_party_action();
 }
 
 static void player_skill(void) {
-    player_use_skill(player_get_skill_slot(PLAYER_SKILL_SLOT_SPECIAL));
+    player_use_skill(battle_current_special_skill());
 }
 
 static void player_heal(void) {
-    player_use_skill(player_get_skill_slot(PLAYER_SKILL_SLOT_HEAL));
+    player_use_skill(SKILL_HEAL_SIMPLE);
 }
 
 static void player_run(void) {
     INT16 chance_i;
     UINT8 chance;
     UINT8 roll;
+    Fighter actor;
 
-    chance_i = (INT16)40 + (INT16)player_battle.agility - (INT16)enemy_battle.agility;
+    battle_load_current_actor(&actor);
+
+    chance_i = (INT16)40 + (INT16)actor.agility - (INT16)enemy_battle.agility;
     if (chance_i < 5) chance = 5u;
     else if (chance_i > 95) chance = 95u;
     else chance = (UINT8)chance_i;
@@ -2675,14 +2742,13 @@ static void player_run(void) {
         battle_state = BSTATE_ESCAPE;
     } else {
         battle_show_message(message_get_buffered(MSG_BATTLE_ESCAPE_NG));
-        battle_state = BSTATE_ENEMY;
+        battle_finish_party_action();
     }
 }
 
 static void enemy_turn(void) {
     UINT8 i;
     UINT8 target_slot;
-    UINT8 target_id;
     UINT16 dmg;
     Fighter target_fighter;
     PartyBattleFighter party_target;
@@ -2712,12 +2778,6 @@ static void enemy_turn(void) {
         dmg = calc_attack_damage(&enemy_battles[i], &target_fighter);
         party_damage_active(target_slot, dmg);
 
-        target_id = party_get_active_member_id(target_slot);
-        if (target_id == PARTY_MEMBER_HERO) {
-            if (dmg >= player_battle.hp) player_battle.hp = 0u;
-            else player_battle.hp = (UINT16)(player_battle.hp - dmg);
-        }
-
         battle_show_damage_message("まものの こうげき!", dmg);
         update_battle_status();
 
@@ -2727,6 +2787,13 @@ static void enemy_turn(void) {
         }
     }
 
+    battle_party_turn_slot = 0u;
+    if (party_get_active_hp(0u) == 0u) {
+        if (!battle_select_next_party_turn()) {
+            battle_state = BSTATE_LOSE;
+            return;
+        }
+    }
     battle_select_first_alive();
     battle_state = BSTATE_PLAYER;
 }
@@ -2739,6 +2806,15 @@ static void battle_input(void) {
     if (battle_first_player_refresh_pending) {
         battle_first_player_refresh_pending = 0u;
         battle_prepare_first_command_ui();
+    }
+
+    if (party_get_active_hp(battle_party_turn_slot) == 0u) {
+        if (battle_select_next_party_turn()) {
+            update_battle_status();
+        } else {
+            battle_state = BSTATE_ENEMY;
+        }
+        return;
     }
 
     keys = joypad();
@@ -2824,6 +2900,7 @@ static void init_game(void) {
     move_pixels_remaining = 0u;
     walk_anim_counter = 0u;
     battle_first_player_refresh_pending = 0u;
+    battle_party_turn_slot = 0u;
     game_mode = MODE_MAP;
 }
 

@@ -935,3 +935,45 @@ rpg106 で残っていた Bank 0 overflow warning をさらに削るための最
 期待:
 - `_INITIALIZER` / `_INITIALIZED` を0に近づける
 - main.c側の数十byte程度のコード削減で、rpg106 の `_HOME 0x4000 -> 0x4008` を吸収する
+
+
+## rpg109_manual_party_control
+
+rpg108の自動仲間行動ではなく、アクティブ3人を順番にコマンド選択できるようにした版。
+
+仕様:
+- 1ターン内で `ゆうしゃ -> そうりょ -> まほう` の順にコマンド選択
+- 戦闘ステータス欄の名前左に `>` を出し、現在の操作対象を示す
+- こうげき: 現在操作中の仲間で攻撃
+- とくぎ:
+  - ゆうしゃ: 既存の特技
+  - そうりょ: 回復
+  - まほう: 火力攻撃
+- かいふく: 現在操作中の仲間自身を回復
+- にげる: 現在操作中の仲間の素早さで逃走判定
+- 全員行動後に敵ターンへ進む
+
+Bank 0対策:
+- rpg108の自動行動処理は採用せず、rpg107安定版から最小追加
+- `party_battle_op()` にMP消費/HP回復を集約し、BANKED入口を増やしすぎない
+
+
+## rpg110_bank0_turn_trim
+
+rpg109_manual_party_control の機能を維持しつつ、Bank 0 overflow を消すための小型化版。
+
+rpg109 の残り:
+- `_HOME (0x4000 -> 0x4012)`
+- `_INITIALIZER (0x4013 -> 0x4013)`
+- `_GSINIT (0x4014 -> 0x401f)`
+- `_GSFINAL (0x4020 -> 0x4020)`
+
+修正:
+- `battle_current_consume_mp()` から `player_battle.mp` への二重同期を削除
+- 敵攻撃時の `player_battle.hp` への二重同期を削除
+
+理由:
+- rpg109 では現在操作中の仲間ステータスは `party_runtime` 側から取得する
+- UI表示も `party_get_active_hp/mp()` を参照している
+- `party_damage_active()` と `party_battle_op()` が戦闘中HP/MPの実体になっているため、旧単独ゆうしゃ用の `player_battle` ミラー更新は不要
+- 機能を削らずにHOMEコードを小さくする
