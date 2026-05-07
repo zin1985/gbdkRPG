@@ -1,0 +1,70 @@
+--- /mnt/data/rpg122_orig/main.c	2026-05-07 11:52:20.000000000 +0000
++++ /mnt/data/rpg122/main.c	2026-05-07 14:45:05.028845638 +0000
+@@ -985,6 +985,24 @@
+     jp_put_bkg_text(1u,16u, "A/B/START もどる");
+ }
+ 
++static void draw_main_menu_static(void) {
++    jp_draw_bkg_frame(0u, 0u, 10u, 10u);
++    jp_draw_bkg_frame(0u, 15u, 20u, 3u);
++    jp_put_bkg_text(1u, 1u, "メニュー");
++    jp_put_bkg_text(3u, 3u, "つよさ");
++    jp_put_bkg_text(3u, 4u, "もちもの");
++    jp_put_bkg_text(3u, 5u, "そうび");
++    jp_put_bkg_text(3u, 6u, "もくてき");
++    jp_put_bkg_text(1u,16u, "A けってい B もどる");
++}
++
++static void draw_main_menu_cursor(UINT8 cursor) {
++    put_cursor(1u, 3u, (UINT8)(cursor == MENU_STATUS));
++    put_cursor(1u, 4u, (UINT8)(cursor == MENU_ITEM));
++    put_cursor(1u, 5u, (UINT8)(cursor == MENU_EQUIP));
++    put_cursor(1u, 6u, (UINT8)(cursor == MENU_OBJECTIVE));
++}
++
+ static void open_main_menu(void) {
+     UINT8 keys;
+     UINT8 cursor = MENU_STATUS;
+@@ -997,26 +1015,22 @@
+     DISPLAY_ON;
+     audio_waitpadup();
+ 
+-    while (1) {
+-        screen_clear();
+-        jp_draw_bkg_frame(0u, 0u, 10u, 10u);
+-        jp_draw_bkg_frame(0u, 15u, 20u, 3u);
+-        jp_put_bkg_text(1u, 1u, "メニュー");
+-        put_cursor(1u, 3u, (UINT8)(cursor == MENU_STATUS)); jp_put_bkg_text(3u, 3u, "つよさ");
+-        put_cursor(1u, 4u, (UINT8)(cursor == MENU_ITEM));   jp_put_bkg_text(3u, 4u, "もちもの");
+-        put_cursor(1u, 5u, (UINT8)(cursor == MENU_EQUIP));  jp_put_bkg_text(3u, 5u, "そうび");
+-        put_cursor(1u, 6u, (UINT8)(cursor == MENU_OBJECTIVE)); jp_put_bkg_text(3u, 6u, "もくてき");
+-        jp_put_bkg_text(1u,16u, "A けってい B もどる");
++    screen_clear();
++    draw_main_menu_static();
++    draw_main_menu_cursor(cursor);
+ 
++    while (1) {
+         keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
+         audio_waitpadup();
+ 
+         if (keys & J_UP) {
+             if (cursor == 0u) cursor = MENU_COUNT - 1u;
+             else cursor--;
++            draw_main_menu_cursor(cursor);
+         } else if (keys & J_DOWN) {
+             cursor++;
+             if (cursor >= MENU_COUNT) cursor = 0u;
++            draw_main_menu_cursor(cursor);
+         } else if (keys & (J_B | J_START)) {
+             break;
+         } else if (keys & J_A) {
+@@ -1035,6 +1049,9 @@
+                 audio_waitpad(J_A | J_B | J_START);
+                 audio_waitpadup();
+             }
++            screen_clear();
++            draw_main_menu_static();
++            draw_main_menu_cursor(cursor);
+         }
+     }
+ 
