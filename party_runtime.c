@@ -8,6 +8,13 @@
 
 BANKREF(party_runtime_bank)
 
+#ifndef PARTY_TECH_FLAG_NONE
+#define PARTY_TECH_FLAG_NONE 0x00u
+#endif
+#ifndef PARTY_ACTION_ATTACK
+#define PARTY_ACTION_ATTACK 4u
+#endif
+
 #define PARTY_WEAPON_NONE  0u
 #define PARTY_WEAPON_SWORD 1u
 #define PARTY_WEAPON_STAFF 2u
@@ -22,7 +29,6 @@ BANKREF(party_runtime_bank)
  * Keep all new gameplay foundations inside bank 7 and do not add public APIs.
  * main.c and party_runtime.h are intentionally unchanged to protect Bank 0.
  */
-#define PARTY_TECH_FLAG_NONE    0x00u
 #define PARTY_TECH_FLAG_SKILL   0x01u
 #define PARTY_TECH_FLAG_HEAL    0x02u
 #define PARTY_TECH_FLAG_RANK1   0x04u
@@ -106,7 +112,6 @@ static const PartyEquipmentDef party_equipment_defs[] = {
 #define PARTY_ACTION_SKILL  1u
 #define PARTY_ACTION_HEAL   2u
 #define PARTY_ACTION_DAMAGE 3u
-#define PARTY_ACTION_ATTACK 4u
 
 #define PARTY_MORALE_MAX  31u
 #define PARTY_FOCUS_MAX   31u

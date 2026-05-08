@@ -69,6 +69,22 @@ extern const unsigned char fourth_party_field_tiles[ACTOR_TOTAL_TILES * 16u];
 extern const unsigned char npc_tiles[ACTOR_TOTAL_TILES * 16u];
 extern const unsigned char enemy_tiles[ACTOR_TOTAL_TILES * 16u];
 extern const unsigned char battle_enemy_tiles[48u * 16u];
+
+/* Battle enemies rendered as BG tiles in battle scene.
+ * 3 x 32x32 enemies as OBJ exceed hardware scanline/OAM limits, so the
+ * battle enemy sheet is also loaded into BG tile space and stamped into the
+ * battle background.  Tile range 80-127 is battle-local and restored by
+ * field draw_object_map() after battle.
+ */
+#define BATTLE_ENEMY_BG_TILE_BASE 80u
+#define BATTLE_ENEMY_BG_TILE_COUNT 48u
+#define BATTLE_ENEMY_BG_W 4u
+#define BATTLE_ENEMY_BG_H 4u
+#define BATTLE_ENEMY_BG_Y 5u
+
+void battle_enemy_bg_load_tiles(void) BANKED;
+void battle_enemy_bg_draw_all(UINT8 count, const UINT8 *sprite_kinds, const UINT8 *alive_flags) BANKED;
+void battle_enemy_bg_draw_slot(UINT8 count, UINT8 slot, UINT8 sprite_kind, UINT8 alive) BANKED;
 extern const unsigned char battle_party_display_tiles[12u * 16u];
 extern const unsigned char battle_cursor_tiles[32u];
 

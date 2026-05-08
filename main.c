@@ -143,8 +143,9 @@ BANKREF_EXTERN(sprite_data_bank)
  *  4-7   npc0 16x16
  *  8-11  enemy0 16x16
  *  12-15 reserved test actor
- * Battle (8x16 OBJ mode only during battle):
- *  0-23  enemies, up to 3 bodies x 32x32 (8 sprites each)
+ * Battle:
+ *  enemies are rendered as BG tiles (rpg128) so 3 x 32x32 bodies do not
+ *  consume OAM or hit the 10-OBJ-per-scanline hardware limit.
  *  24-29 party icons, 3 members x 16x16 (2 sprites each)
  *  30    command cursor
  *  31-39 spare / emergency hide area
@@ -664,8 +665,6 @@ static void battle_prepare_first_command_ui(void);
 static void battle_reposition_party_icons_only(void);
 static void battle_reposition_enemy_sprites_only(void);
 static void hide_battle_enemy_sprites(void);
-static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UINT8 sprite_kind);
-static void hide_one_battle_body(UINT8 sprite_base);
 static void battle_enter_render_once(void);
 static void battle_update_dirty(void);
 static void battle_set_message_dirty(const char *text);
@@ -674,31 +673,21 @@ static void battle_move_command_cursor_obj(void);
 static void battle_hide_command_cursor_obj(void);
 static void battle_flash_enemy_sprite(UINT8 enemy_index);
 static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
+    UINT8 alive_flags[3];
     UINT8 i;
-    UINT8 x;
-    UINT8 base;
 
-    if (hide_first) hide_battle_enemy_sprites();
-    if (battle_enemy_count == 0u) return;
+    (void)hide_first;
+
+    /* rpg128: enemy bodies are BG tiles. Keep old OBJ slots hidden so
+     * party icons/cursor/effects are the only battle OAM users.
+     */
+    hide_battle_enemy_sprites();
 
     for (i = 0u; i < 3u; i++) {
-        base = (UINT8)(BATTLE_ENEMY0_SPRITE_BASE + (UINT8)(i * 8u));
-
-        if (i >= battle_enemy_count || enemy_battles[i].hp == 0u) {
-            if (!hide_first) hide_one_battle_body(base);
-            continue;
-        }
-
-        if (battle_enemy_count == 1u) {
-            x = 64u;
-        } else if (battle_enemy_count == 2u) {
-            x = (UINT8)(36u + (UINT8)(i * 56u));
-        } else {
-            x = (UINT8)(16u + (UINT8)(i * 48u));
-        }
-
-        show_one_battle_enemy_sprite(base, x, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[i]);
+        alive_flags[i] = (UINT8)((i < battle_enemy_count && enemy_battles[i].hp > 0u) ? 1u : 0u);
     }
+
+    battle_enemy_bg_draw_all(battle_enemy_count, battle_enemy_sprite_kinds, alive_flags);
 }
 
 static void battle_reposition_enemy_sprites_only(void) {
@@ -1949,56 +1938,10 @@ static void battle_reposition_party_icons_only(void) {
 }
 
 static void load_battle_enemy_sprite_data(void) {
-    /* 32x32 battle-only enemy sprites. Field enemy sheet is restored by init_map_sprites(). */
-    set_banked_sprite_data(BATTLE_ENEMY_TILE_BASE, BATTLE_ENEMY_TILE_COUNT, battle_enemy_tiles, BANK(sprite_data_bank));
-}
-
-static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UINT8 sprite_kind) {
-    UINT8 tile_base;
-    UINT8 i;
-    UINT8 sx;
-    UINT8 cols;
-    UINT8 src_col;
-    UINT8 first_col;
-
-    if (sprite_kind > 2u) sprite_kind = 0u;
-    tile_base = (UINT8)(BATTLE_ENEMY_TILE_BASE + (UINT8)(sprite_kind << 4));
-
-    /*
-     * rpg126:
-     * Game Boy hardware can draw only 10 OBJ sprites on the same scanline.
-     * Three full 32x32 enemies in 8x16 mode need 4 + 4 + 4 = 12 sprites
-     * per row, so the rightmost enemy lost its right half.
-     *
-     * Keep full 32x32 when there are 1 or 2 enemies.  When 3 enemies are
-     * present, draw side enemies as 24x32 and keep the center enemy 32x32:
-     * 3 + 4 + 3 = exactly 10 sprites per row.
+    /* rpg128: load battle enemy art into BG tile space.  Field map BG tiles are
+     * restored by draw_object_map()/restore_field_vram_state() after battle.
      */
-    cols = 4u;
-    first_col = 0u;
-    if (battle_enemy_count >= 3u) {
-        if (sprite_base == BATTLE_ENEMY0_SPRITE_BASE) {
-            cols = 3u;
-            first_col = 0u;
-        } else if (sprite_base == BATTLE_ENEMY2_SPRITE_BASE) {
-            cols = 3u;
-            first_col = 1u;
-        }
-    }
-
-    for (i = 0u; i < cols; i++) {
-        src_col = (UINT8)(first_col + i);
-        sx = (UINT8)(x + 8u + (UINT8)(i << 3));
-        set_sprite_tile((UINT8)(sprite_base + i), (UINT8)(tile_base + (UINT8)(src_col << 1)));
-        move_sprite((UINT8)(sprite_base + i), sx, (UINT8)(y + 16u));
-        set_sprite_tile((UINT8)(sprite_base + 4u + i), (UINT8)(tile_base + 8u + (UINT8)(src_col << 1)));
-        move_sprite((UINT8)(sprite_base + 4u + i), sx, (UINT8)(y + 32u));
-    }
-
-    if (cols < 4u) {
-        move_sprite((UINT8)(sprite_base + 3u), 0u, 0u);
-        move_sprite((UINT8)(sprite_base + 7u), 0u, 0u);
-    }
+    battle_enemy_bg_load_tiles();
 }
 
 static void show_battle_enemy_sprites(void) {
@@ -2111,45 +2054,16 @@ static void update_battle_menu_cursor(UINT8 old_index, UINT8 new_index) {
     battle_update_dirty();
 }
 
-static UINT8 battle_enemy_sprite_base_for_index(UINT8 enemy_index) {
-    if (enemy_index == 0u) return BATTLE_ENEMY0_SPRITE_BASE;
-    if (enemy_index == 1u) return BATTLE_ENEMY1_SPRITE_BASE;
-    return BATTLE_ENEMY2_SPRITE_BASE;
-}
-
-static UINT8 battle_enemy_x_for_index(UINT8 enemy_index) {
-    if (battle_enemy_count == 1u) return 64u;
-    if (battle_enemy_count == 2u) {
-        if (enemy_index == 0u) return 36u;
-        return 92u;
-    }
-    if (enemy_index == 0u) return 16u;
-    if (enemy_index == 1u) return 64u;
-    return 112u;
-}
-
-static void hide_one_battle_body(UINT8 sprite_base) {
-    UINT8 i;
-    for (i = 0u; i < 8u; i++) {
-        move_sprite((UINT8)(sprite_base + i), 0u, 0u);
-    }
-}
-
 static void battle_flash_enemy_sprite(UINT8 enemy_index) {
-    UINT8 sprite_base;
-    UINT8 x;
-
     if (enemy_index >= battle_enemy_count) return;
 
-    sprite_base = battle_enemy_sprite_base_for_index(enemy_index);
-    x = battle_enemy_x_for_index(enemy_index);
-
-    hide_one_battle_body(sprite_base);
+    /* rpg128: flash only the target BG enemy slot. */
+    battle_enemy_bg_draw_slot(battle_enemy_count, enemy_index, battle_enemy_sprite_kinds[enemy_index], 0u);
     audio_wait_vbl();
     audio_wait_vbl();
 
     if (enemy_battles[enemy_index].hp > 0u) {
-        show_one_battle_enemy_sprite(sprite_base, x, BATTLE_ENEMY_SPRITE_Y, battle_enemy_sprite_kinds[enemy_index]);
+        battle_enemy_bg_draw_slot(battle_enemy_count, enemy_index, battle_enemy_sprite_kinds[enemy_index], 1u);
     }
 }
 

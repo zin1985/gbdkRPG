@@ -2,6 +2,7 @@
 
 #include <gb/gb.h>
 #include "sprites.h"
+#include "jpfont.h"
 BANKREF(sprite_data_bank)
 
 
@@ -397,3 +398,78 @@ const unsigned char battle_cursor_tiles[32u] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
+
+
+/* rpg128: draw 32x32 battle enemies as BG tiles instead of OBJ sprites.
+ *
+ * A full 32x32 enemy is 4x4 BG tiles.  Three enemies need 48 tiles total, but
+ * they consume zero OAM entries and avoid the Game Boy 10-sprites-per-scanline
+ * limit that cut the rightmost OBJ enemy in rpg126/rpg127.
+ */
+void battle_enemy_bg_load_tiles(void) BANKED {
+    set_bkg_data(BATTLE_ENEMY_BG_TILE_BASE, BATTLE_ENEMY_BG_TILE_COUNT, battle_enemy_tiles);
+}
+
+static UINT8 battle_enemy_bg_x_for_slot(UINT8 count, UINT8 slot) {
+    if (count <= 1u) return 8u;
+    if (count == 2u) {
+        if (slot == 0u) return 4u;
+        return 12u;
+    }
+    if (slot == 0u) return 1u;
+    if (slot == 1u) return 8u;
+    return 15u;
+}
+
+void battle_enemy_bg_draw_slot(UINT8 count, UINT8 slot, UINT8 sprite_kind, UINT8 alive) BANKED {
+    UINT8 x;
+    UINT8 base;
+    UINT8 blank;
+    unsigned char tiles[16];
+
+    if (slot >= 3u) return;
+    if (sprite_kind > 2u) sprite_kind = 0u;
+
+    x = battle_enemy_bg_x_for_slot(count, slot);
+    blank = (UINT8)(JP_FRAME_BASE + 0u);
+
+    if (!alive) {
+        for (base = 0u; base < 16u; base++) tiles[base] = blank;
+    } else {
+        base = (UINT8)(BATTLE_ENEMY_BG_TILE_BASE + (UINT8)(sprite_kind << 4));
+        /* battle_enemy_tiles are ordered for 8x16 OBJ columns:
+         *  0,1 = col0 rows0-1; 2,3 = col1 rows0-1; ...
+         * For BG we need row-major 4x4 tile IDs.
+         */
+        tiles[0]  = (UINT8)(base + 0u);
+        tiles[1]  = (UINT8)(base + 2u);
+        tiles[2]  = (UINT8)(base + 4u);
+        tiles[3]  = (UINT8)(base + 6u);
+        tiles[4]  = (UINT8)(base + 1u);
+        tiles[5]  = (UINT8)(base + 3u);
+        tiles[6]  = (UINT8)(base + 5u);
+        tiles[7]  = (UINT8)(base + 7u);
+        tiles[8]  = (UINT8)(base + 8u);
+        tiles[9]  = (UINT8)(base + 10u);
+        tiles[10] = (UINT8)(base + 12u);
+        tiles[11] = (UINT8)(base + 14u);
+        tiles[12] = (UINT8)(base + 9u);
+        tiles[13] = (UINT8)(base + 11u);
+        tiles[14] = (UINT8)(base + 13u);
+        tiles[15] = (UINT8)(base + 15u);
+    }
+
+    set_bkg_tiles(x, BATTLE_ENEMY_BG_Y, BATTLE_ENEMY_BG_W, BATTLE_ENEMY_BG_H, tiles);
+}
+
+void battle_enemy_bg_draw_all(UINT8 count, const UINT8 *sprite_kinds, const UINT8 *alive_flags) BANKED {
+    UINT8 i;
+    if (count > 3u) count = 3u;
+    for (i = 0u; i < 3u; i++) {
+        if (i < count) {
+            battle_enemy_bg_draw_slot(count, i, sprite_kinds[i], alive_flags[i]);
+        } else {
+            battle_enemy_bg_draw_slot(3u, i, 0u, 0u);
+        }
+    }
+}
