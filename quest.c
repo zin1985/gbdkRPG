@@ -6,7 +6,7 @@
 
 static UINT8 g_quest_states[QUEST_MAX];
 
-void quest_init(void) {
+void quest_init(void) BANKED {
     UINT8 i;
 
     for (i = 0u; i < QUEST_MAX; i++) {
@@ -14,19 +14,19 @@ void quest_init(void) {
     }
 }
 
-UINT8 quest_get_state(UINT8 quest_id) {
+UINT8 quest_get_state(UINT8 quest_id) BANKED {
     if (quest_id >= QUEST_MAX) return QST_NONE;
     return g_quest_states[quest_id];
 }
 
-void quest_set_state(UINT8 quest_id, UINT8 state) {
+void quest_set_state(UINT8 quest_id, UINT8 state) BANKED {
     if (quest_id >= QUEST_MAX) return;
     if (state > QST_DONE) state = QST_DONE;
 
     g_quest_states[quest_id] = state;
 }
 
-void quest_start(UINT8 quest_id) {
+void quest_start(UINT8 quest_id) BANKED {
     if (quest_id >= QUEST_MAX) return;
 
     if (g_quest_states[quest_id] == QST_NONE) {
@@ -34,7 +34,7 @@ void quest_start(UINT8 quest_id) {
     }
 }
 
-void quest_advance(UINT8 quest_id) {
+void quest_advance(UINT8 quest_id) BANKED {
     if (quest_id >= QUEST_MAX) return;
 
     if (g_quest_states[quest_id] == QST_NONE) {
@@ -44,24 +44,24 @@ void quest_advance(UINT8 quest_id) {
     }
 }
 
-void quest_ready(UINT8 quest_id) {
+void quest_ready(UINT8 quest_id) BANKED {
     if (quest_id >= QUEST_MAX) return;
     if (g_quest_states[quest_id] != QST_DONE) {
         g_quest_states[quest_id] = QST_READY;
     }
 }
 
-void quest_complete(UINT8 quest_id) {
+void quest_complete(UINT8 quest_id) BANKED {
     if (quest_id >= QUEST_MAX) return;
     g_quest_states[quest_id] = QST_DONE;
 }
 
-UINT8 quest_is_done(UINT8 quest_id) {
+UINT8 quest_is_done(UINT8 quest_id) BANKED {
     if (quest_id >= QUEST_MAX) return 0u;
     return (g_quest_states[quest_id] == QST_DONE) ? 1u : 0u;
 }
 
-void quest_copy_to(UINT8 *dst) {
+void quest_copy_to(UINT8 *dst) BANKED {
     UINT8 i;
 
     if (dst == 0) return;
@@ -71,7 +71,7 @@ void quest_copy_to(UINT8 *dst) {
     }
 }
 
-void quest_copy_from(const UINT8 *src) {
+void quest_copy_from(const UINT8 *src) BANKED {
     UINT8 i;
 
     if (src == 0) return;
