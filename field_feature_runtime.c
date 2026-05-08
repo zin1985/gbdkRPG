@@ -1,4 +1,4 @@
-#pragma bank 7
+#pragma bank 5
 
 #include <gb/gb.h>
 #include "field_feature_runtime.h"

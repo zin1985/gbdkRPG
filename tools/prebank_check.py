@@ -184,6 +184,38 @@ if jpfont_src.exists():
     else:
         print("[WARN] jpfont cache key may still be byte-based")
 
+
+
+# rpg136 scheduled bank architecture check
+build_sh = root / "build.sh"
+makefile = root / "Makefile"
+field_runtime = root / "field_feature_runtime.c"
+bank_ids = root / "bank_ids.h"
+if build_sh.exists():
+    bt = build_sh.read_text(encoding="utf-8", errors="replace")
+    if "rpg136_scheduled_bank_architecture_pack.gb" in bt and "-Wl-yo16" in bt:
+        print("[OK] rpg136 build.sh uses 16-bank scheduled architecture output")
+    else:
+        print("[WARN] rpg136 build.sh scheduled bank settings may be incomplete")
+if makefile.exists():
+    mt = makefile.read_text(encoding="utf-8", errors="replace")
+    if "rpg136_scheduled_bank_architecture_pack.gb" in mt and "-Wl-yo16" in mt:
+        print("[OK] rpg136 Makefile uses 16-bank scheduled architecture output")
+    else:
+        print("[WARN] rpg136 Makefile scheduled bank settings may be incomplete")
+if field_runtime.exists():
+    ft = field_runtime.read_text(encoding="utf-8", errors="replace")
+    if "#pragma bank 5" in ft:
+        print("[OK] field_feature_runtime.c moved to bank 5 world/features bank")
+    else:
+        print("[WARN] field_feature_runtime.c is not bank 5")
+if bank_ids.exists():
+    bi = bank_ids.read_text(encoding="utf-8", errors="replace")
+    if "ROM_BANK_FUTURE_SAVE_COMPAT" in bi and "ROM_BANK_FIELD_FEATURES" in bi:
+        print("[OK] bank_ids.h scheduled bank layout is present")
+    else:
+        print("[WARN] bank_ids.h scheduled bank layout may be incomplete")
+
 print("[INFO] exact bank overflow cannot be known before compile/link.")
 print("[INFO] final judgment must use compiler/linker output plus romusage.")
 sys.exit(0)
