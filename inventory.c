@@ -28,6 +28,7 @@ void inventory_seed_defaults(void) {
     inventory_add(ITEM_TOOL_KIT, 1u);
     inventory_add(ITEM_CLOTH_ARMOR, 1u);
     inventory_add(ITEM_CHARM, 1u);
+    inventory_add(ITEM_DEBUG_NO_ENCOUNT, 1u);
 }
 
 UINT8 inventory_get_count(UINT8 item_id) {
@@ -110,6 +111,7 @@ static const char *inventory_item_name(UINT8 item_id) BANKED {
         case ITEM_IRON_ARMOR: return "鉄よろい";
         case ITEM_CHARM: return "おまもり";
         case ITEM_FEATHER: return "はね飾り";
+        case ITEM_DEBUG_NO_ENCOUNT: return "退魔のすず";
         default: return "?";
     }
 }

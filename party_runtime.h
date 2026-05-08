@@ -59,5 +59,6 @@ UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id)
 void party_menu_show_status_loop(void) BANKED;
 void party_menu_show_equip_loop(void) BANKED;
 UINT8 party_use_field_item_on_active(UINT8 item_id, UINT8 active_slot) BANKED;
+UINT8 party_debug_no_encounter_accessory_equipped(void) BANKED;
 
 #endif

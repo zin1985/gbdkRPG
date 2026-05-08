@@ -27,6 +27,7 @@
 
 #define ITEM_CHARM         32u
 #define ITEM_FEATHER       33u
+#define ITEM_DEBUG_NO_ENCOUNT 34u
 
 void inventory_clear(void);
 void inventory_seed_defaults(void);

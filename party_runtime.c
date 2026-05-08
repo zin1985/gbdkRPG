@@ -103,7 +103,8 @@ static const PartyEquipmentDef party_equipment_defs[] = {
     { ITEM_LEATHER_ARMOR, PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 2u, 0u, 0u, 0u, 2u, 0u, 0u, "かわよろい" },
     { ITEM_IRON_ARMOR,    PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 4u, 0u, 0u, 0u, 5u, 0u, 0u, "鉄よろい" },
     { ITEM_CHARM,         PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 1u, 1u, 0u, 0u, PARTY_ELEM_LIGHT, PARTY_STATUS_SLEEP, "おまもり" },
-    { ITEM_FEATHER,       PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 2u, 0u, 0u, 0u, "はね飾り" }
+    { ITEM_FEATHER,       PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 2u, 0u, 0u, 0u, "はね飾り" },
+    { ITEM_DEBUG_NO_ENCOUNT, PARTY_EQUIP_SLOT_ACC,  PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, "退魔のすず" }
 };
 #define PARTY_EQUIPMENT_DEF_COUNT ((UINT8)(sizeof(party_equipment_defs) / sizeof(party_equipment_defs[0])))
 
@@ -348,6 +349,20 @@ UINT16 party_get_active_mp(UINT8 active_slot) BANKED {
     return member->mp;
 }
 
+
+
+UINT8 party_debug_no_encounter_accessory_equipped(void) BANKED {
+    UINT8 i;
+    PartyMemberRuntime *member;
+
+    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
+        member = party_get_active_member(i);
+        if (member != 0 && member->accessory_id == ITEM_DEBUG_NO_ENCOUNT) {
+            return 1u;
+        }
+    }
+    return 0u;
+}
 
 static const PartyEquipmentDef *party_find_equipment(UINT8 item_id) BANKED {
     UINT8 i;
