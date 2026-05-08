@@ -22,6 +22,7 @@ BANKREF(party_runtime_bank)
  * Keep all new gameplay foundations inside bank 7 and do not add public APIs.
  * main.c and party_runtime.h are intentionally unchanged to protect Bank 0.
  */
+#define PARTY_TECH_FLAG_NONE    0x00u
 #define PARTY_TECH_FLAG_SKILL   0x01u
 #define PARTY_TECH_FLAG_HEAL    0x02u
 #define PARTY_TECH_FLAG_RANK1   0x04u
@@ -105,6 +106,7 @@ static const PartyEquipmentDef party_equipment_defs[] = {
 #define PARTY_ACTION_SKILL  1u
 #define PARTY_ACTION_HEAL   2u
 #define PARTY_ACTION_DAMAGE 3u
+#define PARTY_ACTION_ATTACK 4u
 
 #define PARTY_MORALE_MAX  31u
 #define PARTY_FOCUS_MAX   31u
@@ -730,6 +732,80 @@ static void party_gain_mastery(PartyMemberRuntime *member, UINT8 tech_flag) BANK
     member->learned_tech_flags |= tech_flag;
 }
 
+
+static UINT8 party_growth_roll(UINT8 *seed) BANKED {
+    *seed = (UINT8)((*seed * 17u) + 29u);
+    return *seed;
+}
+
+static void party_post_battle_one_growth(PartyMemberRuntime *member, UINT8 enemy_rank, UINT8 *seed) BANKED {
+    UINT8 chance;
+    UINT8 roll;
+    UINT8 style;
+    UINT8 weapon_type;
+
+    if (member == 0) return;
+    if (member->hp == 0u) {
+        party_add_capped(&member->fatigue, 1u, PARTY_FATIGUE_MAX);
+        member->last_action_style = PARTY_ACTION_NONE;
+        return;
+    }
+
+    if (enemy_rank == 0u) enemy_rank = 1u;
+    if (enemy_rank > 5u) enemy_rank = 5u;
+
+    style = member->last_action_style;
+    chance = (UINT8)(28u + (UINT8)(enemy_rank * 5u));
+    if (member->morale >= 16u) chance = (UINT8)(chance + 5u);
+    if (member->focus >= 16u) chance = (UINT8)(chance + 5u);
+    if (member->fatigue >= 24u && chance > 10u) chance = (UINT8)(chance - 10u);
+
+    roll = (UINT8)(party_growth_roll(seed) % 100u);
+    if (roll < chance) {
+        if (style == PARTY_ACTION_DAMAGE) {
+            if (member->max_hp < 199u) member->max_hp++;
+            if (member->defense < 99u && (party_growth_roll(seed) & 3u) == 0u) member->defense++;
+        } else if (style == PARTY_ACTION_HEAL) {
+            if (member->heal_power < 99u) member->heal_power++;
+            if (member->max_mp < 99u && (party_growth_roll(seed) & 1u) != 0u) member->max_mp++;
+        } else if (style == PARTY_ACTION_SKILL) {
+            if (member->skill_power < 99u) member->skill_power++;
+            if (member->max_mp < 99u && (party_growth_roll(seed) & 1u) != 0u) member->max_mp++;
+        } else if (style == PARTY_ACTION_ATTACK) {
+            if (member->attack < 99u) member->attack++;
+            if (member->agility < 99u && (party_growth_roll(seed) & 3u) == 0u) member->agility++;
+        } else {
+            if (member->max_hp < 199u) member->max_hp++;
+        }
+    }
+
+    weapon_type = party_equipped_weapon_type(member);
+    if (style == PARTY_ACTION_ATTACK && weapon_type < PARTY_WEAPON_COUNT && member->weapon_mastery[weapon_type] < PARTY_MASTERY_MAX) {
+        if ((party_growth_roll(seed) & 1u) != 0u) {
+            party_gain_mastery(member, PARTY_TECH_FLAG_NONE);
+        }
+    }
+
+    if (member->adventure_sense < PARTY_SENSE_MAX && (party_growth_roll(seed) % 100u) < (UINT8)(12u + enemy_rank)) {
+        member->adventure_sense++;
+    }
+
+    if (member->fatigue > 0u && (party_growth_roll(seed) & 1u) != 0u) member->fatigue--;
+    if (member->morale > 0u && member->morale < PARTY_MORALE_MAX) member->morale++;
+    member->last_action_style = PARTY_ACTION_NONE;
+}
+
+void party_after_battle_growth(UINT8 enemy_rank, UINT8 random_seed) BANKED {
+    UINT8 i;
+    PartyMemberRuntime *member;
+
+    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
+        member = party_get_active_member(i);
+        party_post_battle_one_growth(member, enemy_rank, &random_seed);
+    }
+}
+
+
 UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED {
     UINT16 after;
     PartyMemberRuntime *member;
@@ -745,6 +821,15 @@ UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED {
         party_gain_mastery(member, PARTY_TECH_FLAG_SKILL);
         if (member->focus >= 16u) member->learned_tech_flags |= PARTY_TECH_FLAG_FOCUS;
         party_note_action(member, PARTY_ACTION_SKILL);
+        return 1u;
+    }
+
+    if (op == PARTY_OP_NOTE_ATTACK) {
+        party_gain_mastery(member, PARTY_TECH_FLAG_NONE);
+        party_note_action(member, PARTY_ACTION_ATTACK);
+        if (member->focus < PARTY_FOCUS_MAX && (member->weapon_mastery[party_equipped_weapon_type(member)] & 3u) == 0u) {
+            member->focus++;
+        }
         return 1u;
     }
 
@@ -897,9 +982,12 @@ static void party_draw_status_page(UINT8 active_slot) BANKED {
     jp_put_bkg_text(1u, 9u, "かいふく"); party_put_u8(12u, 9u, f.heal_power);
     jp_put_bkg_text(1u,10u, "すばやさ"); party_put_u8(12u,10u, f.agility);
     if (member != 0) {
-        jp_put_bkg_text(1u,12u, "武器"); party_put_field_text(7u,12u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
-        jp_put_bkg_text(1u,13u, "熟練"); party_put_u8(7u,13u, member->weapon_mastery[party_equipped_weapon_type(member)]);
-        jp_put_bkg_text(10u,13u, "勘"); party_put_u8(14u,13u, member->adventure_sense);
+        jp_put_bkg_text(1u,11u, "武器"); party_put_field_text(7u,11u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
+        jp_put_bkg_text(1u,12u, "熟練"); party_put_u8(7u,12u, member->weapon_mastery[party_equipped_weapon_type(member)]);
+        jp_put_bkg_text(10u,12u, "勘"); party_put_u8(14u,12u, member->adventure_sense);
+        jp_put_bkg_text(1u,13u, "戦意"); party_put_u8(7u,13u, member->morale);
+        jp_put_bkg_text(10u,13u, "集中"); party_put_u8(16u,13u, member->focus);
+        jp_put_bkg_text(1u,14u, "疲労"); party_put_u8(7u,14u, member->fatigue);
     }
     jp_put_bkg_text(1u,16u, "< > なかま  A/Bもどる");
 }

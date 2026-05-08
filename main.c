@@ -222,7 +222,8 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_ENEMY0_SPRITE_BASE 0u
 #define BATTLE_ENEMY1_SPRITE_BASE 8u
 #define BATTLE_ENEMY2_SPRITE_BASE 16u
-#define BATTLE_ENEMY_SPRITE_Y 32u
+/* rpg126: place enemies below the 5-row party status box (0-39px). */
+#define BATTLE_ENEMY_SPRITE_Y 40u
 #define BATTLE_CURSOR_SPRITE 30u
 #define BATTLE_CURSOR_TILE 44u
 #define BATTLE_ENEMY_TILE_BASE 80u
@@ -1902,7 +1903,8 @@ static void draw_party_status_box(void) {
 static void hide_battle_enemy_sprites(void) {
     UINT8 i;
 
-    for (i = 0u; i < 12u; i++) {
+    /* rpg126: 3 battle enemies reserve sprite slots 0-23. */
+    for (i = 0u; i < 24u; i++) {
         move_sprite(i, 0u, 0u);
     }
 }
@@ -1955,17 +1957,47 @@ static void show_one_battle_enemy_sprite(UINT8 sprite_base, UINT8 x, UINT8 y, UI
     UINT8 tile_base;
     UINT8 i;
     UINT8 sx;
+    UINT8 cols;
+    UINT8 src_col;
+    UINT8 first_col;
 
     if (sprite_kind > 2u) sprite_kind = 0u;
     tile_base = (UINT8)(BATTLE_ENEMY_TILE_BASE + (UINT8)(sprite_kind << 4));
 
-    /* battle uses 8x16 OBJ mode: 32x32 = 4 columns x 2 rows of sprites. */
-    for (i = 0u; i < 4u; i++) {
+    /*
+     * rpg126:
+     * Game Boy hardware can draw only 10 OBJ sprites on the same scanline.
+     * Three full 32x32 enemies in 8x16 mode need 4 + 4 + 4 = 12 sprites
+     * per row, so the rightmost enemy lost its right half.
+     *
+     * Keep full 32x32 when there are 1 or 2 enemies.  When 3 enemies are
+     * present, draw side enemies as 24x32 and keep the center enemy 32x32:
+     * 3 + 4 + 3 = exactly 10 sprites per row.
+     */
+    cols = 4u;
+    first_col = 0u;
+    if (battle_enemy_count >= 3u) {
+        if (sprite_base == BATTLE_ENEMY0_SPRITE_BASE) {
+            cols = 3u;
+            first_col = 0u;
+        } else if (sprite_base == BATTLE_ENEMY2_SPRITE_BASE) {
+            cols = 3u;
+            first_col = 1u;
+        }
+    }
+
+    for (i = 0u; i < cols; i++) {
+        src_col = (UINT8)(first_col + i);
         sx = (UINT8)(x + 8u + (UINT8)(i << 3));
-        set_sprite_tile((UINT8)(sprite_base + i), (UINT8)(tile_base + (UINT8)(i << 1)));
+        set_sprite_tile((UINT8)(sprite_base + i), (UINT8)(tile_base + (UINT8)(src_col << 1)));
         move_sprite((UINT8)(sprite_base + i), sx, (UINT8)(y + 16u));
-        set_sprite_tile((UINT8)(sprite_base + 4u + i), (UINT8)(tile_base + 8u + (UINT8)(i << 1)));
+        set_sprite_tile((UINT8)(sprite_base + 4u + i), (UINT8)(tile_base + 8u + (UINT8)(src_col << 1)));
         move_sprite((UINT8)(sprite_base + 4u + i), sx, (UINT8)(y + 32u));
+    }
+
+    if (cols < 4u) {
+        move_sprite((UINT8)(sprite_base + 3u), 0u, 0u);
+        move_sprite((UINT8)(sprite_base + 7u), 0u, 0u);
     }
 }
 
@@ -2562,6 +2594,7 @@ static void return_to_map_after_battle(UINT8 won) {
 
     if (won) {
         apply_battle_growth();
+        party_after_battle_growth(battle_enemy_rank, random_u8());
         show_growth_message();
         if (current_enemy_index < ACTOR_COUNT &&
             actors[current_enemy_index].kind == ACTOR_KIND_ENEMY) {
@@ -2656,6 +2689,7 @@ static void player_attack(void) {
 
     battle_load_current_actor(&actor);
     if (battle_party_turn_slot == 0u) last_growth_type = GROWTH_ATK;
+    party_battle_op(PARTY_OP_NOTE_ATTACK, battle_party_turn_slot, 0u);
     if (actor.hp == 0u) {
         battle_finish_party_action();
         return;
