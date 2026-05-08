@@ -39,8 +39,11 @@
  * 5-8 = sharp mountain 16x16 metatile: TL, TR, BL, BR (existing kind 2 slot)
  * 9-12 = town entrance marker 16x16 metatile: TL, TR, BL, BR
  * 13-16 = forest canopy 16x16 metatile: TL, TR, BL, BR
+ * 17-20 = dungeon wall 16x16 metatile: TL, TR, BL, BR
+ * 21-24 = dungeon pit/hazard 16x16 metatile: TL, TR, BL, BR
+ * 25-28 = dungeon chest 16x16 metatile: TL, TR, BL, BR
  */
-#define MAP_GFX_TILE_COUNT 17u
+#define MAP_GFX_TILE_COUNT 29u
 
 /* Actor sprites
  * 1 frame = 16x16 = 4 tiles.

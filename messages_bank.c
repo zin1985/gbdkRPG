@@ -145,6 +145,65 @@ const char msg_prompt_exit_town_bank[] =
     "フィールドへ でますか?\n"
     "A:はい  B:いいえ";
 
+
+const char msg_prompt_enter_port_bank[] =
+    "みなとまちへ\n"
+    "いきますか?\n"
+    "A:はい  B:いいえ";
+
+const char msg_enter_port_bank[] =
+    "みなとまちへ\n"
+    "むかいます。";
+
+const char msg_arrive_port_bank[] =
+    "しおかぜのまちに\n"
+    "つきました。";
+
+const char msg_prompt_enter_dungeon_bank[] =
+    "どうくつへ\n"
+    "はいりますか?\n"
+    "A:はい  B:いいえ";
+
+const char msg_enter_dungeon_bank[] =
+    "くらい どうくつへ\n"
+    "はいります。";
+
+const char msg_arrive_dungeon_bank[] =
+    "じめんが つめたい。\n"
+    "まものの けはい。";
+
+const char msg_dungeon_exit_bank[] =
+    "どうくつを\n"
+    "でました。";
+
+const char msg_prompt_enter_ruins_bank[] =
+    "こだい いせきへ\n"
+    "はいりますか?\n"
+    "A:はい  B:いいえ";
+
+const char msg_enter_ruins_bank[] =
+    "こだい いせきへ\n"
+    "ふみこみます。";
+
+const char msg_arrive_ruins_bank[] =
+    "ふるい いしが\n"
+    "しずかに ならぶ。";
+
+const char msg_treasure_found_bank[] =
+    "たからばこから\n"
+    "ポーションを えた！";
+
+const char msg_treasure_empty_bank[] =
+    "からっぽだ。";
+
+const char msg_trap_damage_bank[] =
+    "あしもとから\n"
+    "どくのけむり！";
+
+const char msg_ruin_lore_bank[] =
+    "かべに ふるい\n"
+    "もじが きざまれている。";
+
 const char * const message_table[MSG_COUNT] = {
     msg_common_npc_bank,
     msg_test_short_bank,
@@ -179,5 +238,19 @@ const char * const message_table[MSG_COUNT] = {
     msg_battle_lose_bank,
     msg_prompt_revive_bank,
     msg_prompt_enter_town_bank,
-    msg_prompt_exit_town_bank
+    msg_prompt_exit_town_bank,
+    msg_prompt_enter_port_bank,
+    msg_enter_port_bank,
+    msg_arrive_port_bank,
+    msg_prompt_enter_dungeon_bank,
+    msg_enter_dungeon_bank,
+    msg_arrive_dungeon_bank,
+    msg_dungeon_exit_bank,
+    msg_prompt_enter_ruins_bank,
+    msg_enter_ruins_bank,
+    msg_arrive_ruins_bank,
+    msg_treasure_found_bank,
+    msg_treasure_empty_bank,
+    msg_trap_damage_bank,
+    msg_ruin_lore_bank
 };

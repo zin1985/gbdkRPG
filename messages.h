@@ -43,7 +43,21 @@
 #define MSG_PROMPT_REVIVE 31u
 #define MSG_PROMPT_ENTER_TOWN 32u
 #define MSG_PROMPT_EXIT_TOWN 33u
-#define MSG_COUNT       34u
+#define MSG_PROMPT_ENTER_PORT 34u
+#define MSG_ENTER_PORT       35u
+#define MSG_ARRIVE_PORT      36u
+#define MSG_PROMPT_ENTER_DUNGEON 37u
+#define MSG_ENTER_DUNGEON    38u
+#define MSG_ARRIVE_DUNGEON   39u
+#define MSG_DUNGEON_EXIT     40u
+#define MSG_PROMPT_ENTER_RUINS 41u
+#define MSG_ENTER_RUINS      42u
+#define MSG_ARRIVE_RUINS     43u
+#define MSG_TREASURE_FOUND   44u
+#define MSG_TREASURE_EMPTY   45u
+#define MSG_TRAP_DAMAGE      46u
+#define MSG_RUIN_LORE        47u
+#define MSG_COUNT       48u
 
 void message_show(UINT8 id) NONBANKED;
 const char *message_get_buffered(UINT8 id) NONBANKED;

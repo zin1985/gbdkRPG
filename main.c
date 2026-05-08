@@ -12,6 +12,8 @@
 #include "party_runtime.h"
 #include "inventory.h"
 #include "actor_runtime.h"
+#include "quest.h"
+#include "field_feature_runtime.h"
 
 /*
  * ============================================================================
@@ -191,6 +193,18 @@ BANKREF_EXTERN(sprite_data_bank)
 #define MAP_TILE_FOREST_TR (MAP_TILE_BASE + 14u)
 #define MAP_TILE_FOREST_BL (MAP_TILE_BASE + 15u)
 #define MAP_TILE_FOREST_BR (MAP_TILE_BASE + 16u)
+#define MAP_TILE_DUNGEON_WALL_TL (MAP_TILE_BASE + 17u)
+#define MAP_TILE_DUNGEON_WALL_TR (MAP_TILE_BASE + 18u)
+#define MAP_TILE_DUNGEON_WALL_BL (MAP_TILE_BASE + 19u)
+#define MAP_TILE_DUNGEON_WALL_BR (MAP_TILE_BASE + 20u)
+#define MAP_TILE_DUNGEON_PIT_TL  (MAP_TILE_BASE + 21u)
+#define MAP_TILE_DUNGEON_PIT_TR  (MAP_TILE_BASE + 22u)
+#define MAP_TILE_DUNGEON_PIT_BL  (MAP_TILE_BASE + 23u)
+#define MAP_TILE_DUNGEON_PIT_BR  (MAP_TILE_BASE + 24u)
+#define MAP_TILE_CHEST_TL (MAP_TILE_BASE + 25u)
+#define MAP_TILE_CHEST_TR (MAP_TILE_BASE + 26u)
+#define MAP_TILE_CHEST_BL (MAP_TILE_BASE + 27u)
+#define MAP_TILE_CHEST_BR (MAP_TILE_BASE + 28u)
 #define FOREST_BG_X 6u
 #define FOREST_BG_Y 5u
 
@@ -299,13 +313,8 @@ typedef struct GrowthResult {
 #define MENU_OBJECTIVE 3u
 #define MENU_COUNT 4u
 
-#define MAP_EVENT_NONE 0u
-#define MAP_EVENT_TOWN 1u
-#define MAP_EVENT_DUNGEON 2u
-#define MAP_EVENT_FIELD_EXIT 3u
+/* rpg132: map event/area constants moved to field_feature_runtime.h */
 
-#define AREA_FIELD 0u
-#define AREA_TOWN 1u
 
 /*
  * ============================================================================
@@ -570,9 +579,7 @@ static void show_status_page(void);
 static void show_simple_page(const char *title, const char *line1, const char *line2);
 static void put_ascii(UINT8 col, UINT8 row, const char *text);
 static void put_cursor(UINT8 col, UINT8 row, UINT8 visible);
-static void u8_to_dec(UINT8 value, char *out);
 static void u16_to_dec3(UINT16 value, char *out);
-static void put_u8(UINT8 col, UINT8 row, UINT8 value);
 static void put_u16(UINT8 col, UINT8 row, UINT16 value);
 static void screen_clear(void);
 static void wait_a_pressed(void);
@@ -595,11 +602,20 @@ static UINT8 map16_is_blocked(UINT8 tx, UINT8 ty);
 static UINT8 actor_at_tile(UINT8 tx, UINT8 ty, UINT8 *enemy_index);
 static Direction opposite_dir(Direction dir);
 static INT8 find_talkable_actor(void);
-static UINT8 map_event_at_tile(UINT8 tx, UINT8 ty);
+#define map_event_at_tile(tx, ty) field_feature_map_event(current_area, (tx), (ty))
 static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir);
 static void enter_town_marker(void);
 static void leave_town_marker(void);
+static void enter_port_marker(void);
+static void leave_port_marker(void);
+static void enter_dungeon_marker(void);
+static void leave_dungeon_marker(void);
+static void enter_ruins_marker(void);
+static void leave_ruins_marker(void);
+static UINT8 apply_map_event_transition(UINT8 event_id);
 static void check_step_event(void);
+static UINT8 current_area_is_dangerous(void);
+static UINT8 current_area_is_town_like(void);
 static void inspect_map_event(UINT8 event_id);
 static void try_interact(void);
 
@@ -905,26 +921,6 @@ static void put_cursor(UINT8 col, UINT8 row, UINT8 visible) {
     }
 }
 
-static void u8_to_dec(UINT8 value, char *out) {
-    UINT8 hundreds;
-    UINT8 tens;
-    UINT8 ones;
-    UINT8 i = 0u;
-
-    hundreds = value / 100u;
-    tens = (value / 10u) % 10u;
-    ones = value % 10u;
-
-    if (hundreds != 0u) {
-        out[i++] = (char)('0' + hundreds);
-        out[i++] = (char)('0' + tens);
-    } else if (tens != 0u) {
-        out[i++] = (char)('0' + tens);
-    }
-    out[i++] = (char)('0' + ones);
-    out[i] = '\0';
-}
-
 static void u16_to_dec3(UINT16 value, char *out) {
     UINT16 hundreds;
     UINT8 tens;
@@ -945,12 +941,6 @@ static void u16_to_dec3(UINT16 value, char *out) {
     }
     out[i++] = (char)('0' + ones);
     out[i] = '\0';
-}
-
-static void put_u8(UINT8 col, UINT8 row, UINT8 value) {
-    char buf[4];
-    u8_to_dec(value, buf);
-    jp_put_bkg_text(col, row, buf);
 }
 
 static void put_u16(UINT8 col, UINT8 row, UINT16 value) {
@@ -1050,7 +1040,7 @@ static void open_main_menu(void) {
 
     hide_battle_enemy_sprites();
     restore_field_vram_state();
-    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
+    if (current_area_is_town_like()) audio_play_music(AUDIO_TRACK_TOWN);
     else audio_play_music(AUDIO_TRACK_FIELD);
 }
 
@@ -1123,23 +1113,39 @@ static void draw_object_map(void) {
             sy = (UINT8)(y * 2u);
 
             if (kind == 1u) {
-                tl = MAP_TILE_WALL_TL;
-                tr = MAP_TILE_WALL_TR;
-                bl = MAP_TILE_WALL_BL;
-                br = MAP_TILE_WALL_BR;
-            } else if (kind == 2u) {
-                tl = MAP_TILE_CAP_TL;
-                tr = MAP_TILE_CAP_TR;
-                bl = MAP_TILE_CAP_BL;
-                br = MAP_TILE_CAP_BR;
+                if (current_area_is_dangerous()) {
+                    tl = MAP_TILE_DUNGEON_WALL_TL;
+                    tr = MAP_TILE_DUNGEON_WALL_TR;
+                    bl = MAP_TILE_DUNGEON_WALL_BL;
+                    br = MAP_TILE_DUNGEON_WALL_BR;
+                } else {
+                    tl = MAP_TILE_WALL_TL;
+                    tr = MAP_TILE_WALL_TR;
+                    bl = MAP_TILE_WALL_BL;
+                    br = MAP_TILE_WALL_BR;
+                }
+            } else if (kind == 2u || kind == 5u) {
+                if (current_area_is_dangerous()) {
+                    tl = MAP_TILE_DUNGEON_PIT_TL;
+                    tr = MAP_TILE_DUNGEON_PIT_TR;
+                    bl = MAP_TILE_DUNGEON_PIT_BL;
+                    br = MAP_TILE_DUNGEON_PIT_BR;
+                } else {
+                    tl = MAP_TILE_CAP_TL;
+                    tr = MAP_TILE_CAP_TR;
+                    bl = MAP_TILE_CAP_BL;
+                    br = MAP_TILE_CAP_BR;
+                }
             } else if (kind == 3u) {
-                /* v3d: visible town entrance marker.  It is still a BG
-                 * metatile, not an actor, so it does not consume OAM sprites.
-                 */
                 tl = MAP_TILE_TOWN_TL;
                 tr = MAP_TILE_TOWN_TR;
                 bl = MAP_TILE_TOWN_BL;
                 br = MAP_TILE_TOWN_BR;
+            } else if (kind == 4u) {
+                tl = MAP_TILE_CHEST_TL;
+                tr = MAP_TILE_CHEST_TR;
+                bl = MAP_TILE_CHEST_BL;
+                br = MAP_TILE_CHEST_BR;
             } else {
                 tl = MAP_TILE_FLOOR;
                 tr = MAP_TILE_FLOOR;
@@ -1231,7 +1237,7 @@ static void hide_actor_sprite(const Actor *actor) {
 }
 
 static UINT8 actor_visible_in_current_area(const Actor *actor) {
-    if (current_area == AREA_TOWN) {
+    if (current_area_is_town_like()) {
         return (UINT8)(actor->kind == ACTOR_KIND_NPC);
     }
 
@@ -1415,15 +1421,12 @@ static INT8 find_talkable_actor(void) {
     return -1;
 }
 
-static UINT8 map_event_at_tile(UINT8 tx, UINT8 ty) {
-    /* v3e-safe: Add town movement without restoring the risky v4/v3e
-     * real map-array switch. FIELD -> TOWN and TOWN -> FIELD are both
-     * controlled warps inside the already verified 16x16 map.
-     */
-    if (current_area == AREA_FIELD && tx == 14u && ty == 2u) return MAP_EVENT_TOWN;
-    if (current_area == AREA_TOWN && tx == 2u && ty == 14u) return MAP_EVENT_FIELD_EXIT;
-    if (current_area == AREA_FIELD && tx == 1u && ty == 14u) return MAP_EVENT_DUNGEON;
-    return MAP_EVENT_NONE;
+static UINT8 current_area_is_dangerous(void) {
+    return (UINT8)(current_area == AREA_DUNGEON || current_area == AREA_RUINS);
+}
+
+static UINT8 current_area_is_town_like(void) {
+    return (UINT8)(current_area == AREA_TOWN || current_area == AREA_PORT);
 }
 
 static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
@@ -1452,38 +1455,86 @@ static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
     draw_all_actors();
 }
 
-static void enter_town_marker(void) {
-    message_show(MSG_ENTER_TOWN);
+#define MSG_NONE_LOCAL 0xFFu
 
-    /* v3f/rpg067:
-     * Switch the area selector only. Actor visibility is decided by
-     * actor_visible_in_current_area(); no actor array or sprite sheet is changed.
-     */
-    current_area = AREA_TOWN;
-    audio_play_music(AUDIO_TRACK_TOWN);
+static void change_area_marker(UINT8 before_msg, UINT8 area, UINT8 music, UINT8 tx, UINT8 ty, Direction dir, UINT8 after_msg) {
+    if (before_msg != MSG_NONE_LOCAL) message_show(before_msg);
+    current_area = area;
+    audio_play_music(music);
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
-    warp_player_to_tile(2u, 13u, DIR_DOWN);
-    message_show(MSG_ARRIVE_TOWN);
+    warp_player_to_tile(tx, ty, dir);
+    if (after_msg != MSG_NONE_LOCAL) message_show(after_msg);
     draw_all_actors();
 }
 
+static void enter_town_marker(void) {
+    change_area_marker(MSG_ENTER_TOWN, AREA_TOWN, AUDIO_TRACK_TOWN, 2u, 13u, DIR_DOWN, MSG_ARRIVE_TOWN);
+}
+
 static void leave_town_marker(void) {
-    message_show(MSG_BACK_FIELD);
-    /* rpg067:
-     * Returning to field re-enables field-visible actors and hides town NPCs.
-     */
-    current_area = AREA_FIELD;
-    audio_play_music(AUDIO_TRACK_FIELD);
-    encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
-    warp_player_to_tile(13u, 2u, DIR_RIGHT);
-    message_show(MSG_LEFT_FIELD);
-    draw_all_actors();
+    change_area_marker(MSG_BACK_FIELD, AREA_FIELD, AUDIO_TRACK_FIELD, 13u, 2u, DIR_RIGHT, MSG_LEFT_FIELD);
+}
+
+static void enter_port_marker(void) {
+    change_area_marker(MSG_ENTER_PORT, AREA_PORT, AUDIO_TRACK_TOWN, 2u, 13u, DIR_DOWN, MSG_ARRIVE_PORT);
+}
+
+static void leave_port_marker(void) {
+    change_area_marker(MSG_BACK_FIELD, AREA_FIELD, AUDIO_TRACK_FIELD, 13u, 14u, DIR_RIGHT, MSG_LEFT_FIELD);
+}
+
+static void enter_dungeon_marker(void) {
+    change_area_marker(MSG_ENTER_DUNGEON, AREA_DUNGEON, AUDIO_TRACK_FIELD, 2u, 13u, DIR_DOWN, MSG_ARRIVE_DUNGEON);
+    quest_start(QUEST_LOST_KEY);
+}
+
+static void leave_dungeon_marker(void) {
+    change_area_marker(MSG_DUNGEON_EXIT, AREA_FIELD, AUDIO_TRACK_FIELD, 2u, 14u, DIR_RIGHT, MSG_NONE_LOCAL);
+}
+
+static void enter_ruins_marker(void) {
+    change_area_marker(MSG_ENTER_RUINS, AREA_RUINS, AUDIO_TRACK_FIELD, 13u, 13u, DIR_UP, MSG_ARRIVE_RUINS);
+    quest_advance(QUEST_LOST_KEY);
+}
+
+static void leave_ruins_marker(void) {
+    change_area_marker(MSG_DUNGEON_EXIT, AREA_FIELD, AUDIO_TRACK_FIELD, 2u, 2u, DIR_RIGHT, MSG_NONE_LOCAL);
+}
+
+
+static UINT8 apply_map_event_transition(UINT8 event_id) {
+    if (event_id == MAP_EVENT_TOWN) {
+        enter_town_marker();
+        return 1u;
+    } else if (event_id == MAP_EVENT_PORT_TOWN) {
+        enter_port_marker();
+        return 1u;
+    } else if (event_id == MAP_EVENT_DUNGEON) {
+        enter_dungeon_marker();
+        return 1u;
+    } else if (event_id == MAP_EVENT_RUINS) {
+        enter_ruins_marker();
+        return 1u;
+    } else if (event_id == MAP_EVENT_FIELD_EXIT) {
+        leave_town_marker();
+        return 1u;
+    } else if (event_id == MAP_EVENT_PORT_EXIT) {
+        leave_port_marker();
+        return 1u;
+    } else if (event_id == MAP_EVENT_DUNGEON_EXIT) {
+        leave_dungeon_marker();
+        return 1u;
+    } else if (event_id == MAP_EVENT_RUINS_EXIT) {
+        leave_ruins_marker();
+        return 1u;
+    }
+    return 0u;
 }
 
 static UINT8 field_random_encounter_should_start(void) {
     UINT8 roll;
 
-    if (current_area != AREA_FIELD) return 0u;
+    if (current_area != AREA_FIELD && current_area != AREA_DUNGEON && current_area != AREA_RUINS) return 0u;
     if (game_mode != MODE_MAP) return 0u;
     if (dialogue_is_active()) return 0u;
     if (player_moving) return 0u;
@@ -1500,19 +1551,19 @@ static UINT8 field_random_encounter_should_start(void) {
     rand_seed ^= DIV_REG;
     roll = random_u8();
 
-    return (UINT8)(roll < RANDOM_ENCOUNTER_RATE);
+    return (UINT8)(roll < field_feature_encounter_rate(current_area, RANDOM_ENCOUNTER_RATE));
 }
 
 static void check_step_event(void) {
     UINT8 event_id;
     event_id = map_event_at_tile(player_tx, player_ty);
-    if (event_id == MAP_EVENT_TOWN) {
-        enter_town_marker();
-        return;
-    } else if (event_id == MAP_EVENT_FIELD_EXIT) {
-        leave_town_marker();
-        return;
-    } else if (event_id != MAP_EVENT_NONE) {
+    if (apply_map_event_transition(event_id)) return;
+    if (event_id != MAP_EVENT_NONE) return;
+
+    if (current_area_is_dangerous() && current_object16_at(player_tx, player_ty) == 5u) {
+        party_damage_active(0u, 2u);
+        message_show(MSG_TRAP_DAMAGE);
+        draw_all_actors();
         return;
     }
 
@@ -1522,28 +1573,22 @@ static void check_step_event(void) {
 }
 
 static void inspect_map_event(UINT8 event_id) {
-    if (event_id == MAP_EVENT_TOWN) {
-        dialogue_message_nowait_window(message_get_buffered(MSG_PROMPT_ENTER_TOWN));
-        if (wait_choice_ab()) {
-            dialogue_hide();
-            enter_town_marker();
+    if (apply_map_event_transition(event_id)) {
+        return;
+    } else if (event_id == MAP_EVENT_CHEST) {
+        UINT8 flag_id;
+        flag_id = field_feature_chest_flag(current_area);
+        if (check_event_flag(flag_id)) {
+            message_show(MSG_TREASURE_EMPTY);
         } else {
-            dialogue_hide();
-            message_show(MSG_LATER);
+            set_event_flag(flag_id);
+            inventory_add(ITEM_POTION, 1u);
+            message_show(MSG_TREASURE_FOUND);
+            draw_object_map();
             draw_all_actors();
         }
-    } else if (event_id == MAP_EVENT_FIELD_EXIT) {
-        dialogue_message_nowait_window(message_get_buffered(MSG_PROMPT_EXIT_TOWN));
-        if (wait_choice_ab()) {
-            dialogue_hide();
-            leave_town_marker();
-        } else {
-            dialogue_hide();
-            message_show(MSG_STAY_TOWN);
-            draw_all_actors();
-        }
-    } else if (event_id == MAP_EVENT_DUNGEON) {
-        message_show(MSG_DARK_CAVE);
+    } else if (event_id == MAP_EVENT_RUIN_LORE) {
+        message_show(MSG_RUIN_LORE);
     }
 }
 
@@ -1578,6 +1623,10 @@ static void try_interact(void) {
         case DIR_LEFT:  if (tx > 0u) tx--; break;
         case DIR_RIGHT: tx++; break;
         default: break;
+    }
+    if (current_object16_at(tx, ty) == 4u) {
+        inspect_map_event(MAP_EVENT_CHEST);
+        return;
     }
     event_id = map_event_at_tile(tx, ty);
     if (event_id != MAP_EVENT_NONE) inspect_map_event(event_id);
@@ -1837,14 +1886,6 @@ static void battle_put_bkg_text(UINT8 col, UINT8 row, const char *text) {
     jp_put_bkg_text(BATTLE_BG_X(col), row, text);
 }
 
-static void battle_put_u8(UINT8 col, UINT8 row, UINT8 value) {
-    put_u8(BATTLE_BG_X(col), row, value);
-}
-
-static void battle_put_u16(UINT8 col, UINT8 row, UINT16 value) {
-    put_u16(BATTLE_BG_X(col), row, value);
-}
-
 static void draw_battle_enemy_names(void) {
     UINT8 i;
 
@@ -1870,9 +1911,9 @@ static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
     battle_put_bkg_text((UINT8)(x - 1u), 1u, (slot == battle_party_turn_slot) ? ">" : " ");
     battle_put_bkg_text(x, 1u, name);
     battle_put_bkg_text(x, 2u, "H ");
-    battle_put_u16((UINT8)(x + 2u), 2u, party_get_active_hp(slot));
+    put_u16(BATTLE_BG_X((UINT8)(x + 2u)), 2u, party_get_active_hp(slot));
     battle_put_bkg_text(x, 3u, "M ");
-    battle_put_u16((UINT8)(x + 2u), 3u, party_get_active_mp(slot));
+    put_u16(BATTLE_BG_X((UINT8)(x + 2u)), 3u, party_get_active_mp(slot));
 }
 
 static void draw_party_status_box(void) {
@@ -2518,7 +2559,7 @@ static void return_to_map_after_battle(UINT8 won) {
         }
     }
     restore_field_vram_state();
-    if (current_area == AREA_TOWN) audio_play_music(AUDIO_TRACK_TOWN);
+    if (current_area_is_town_like()) audio_play_music(AUDIO_TRACK_TOWN);
     else audio_play_music(AUDIO_TRACK_FIELD);
 }
 

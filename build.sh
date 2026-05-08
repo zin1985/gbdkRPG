@@ -3,9 +3,9 @@ set -eu
 
 export PATH="/opt/gbdk/bin:$PATH"
 
-OUT="rpg116_equipment_items_status_bank0_guard.gb"
+OUT="rpg134_bank0_final_14b_trim.gb"
 MAP="${OUT%.gb}.map"
-SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c"
+SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c field_feature_runtime.c"
 LOG="build.log"
 PRECHECK_LOG="precheck_output.log"
 COMPILE_LOG="compile_output.log"

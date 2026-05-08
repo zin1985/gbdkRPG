@@ -7,6 +7,12 @@ extern const unsigned char collision16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
 extern const unsigned char object16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
 extern const unsigned char town_collision16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
 extern const unsigned char town_object16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
+extern const unsigned char port_collision16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
+extern const unsigned char port_object16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
+extern const unsigned char dungeon_collision16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
+extern const unsigned char dungeon_object16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
+extern const unsigned char ruins_collision16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
+extern const unsigned char ruins_object16_map[MAP_DATA_HEIGHT][MAP_DATA_WIDTH];
 
 UINT8 map_data_collision16_at(UINT8 area, UINT8 tx, UINT8 ty) NONBANKED {
     UINT8 save_bank;
@@ -21,6 +27,12 @@ UINT8 map_data_collision16_at(UINT8 area, UINT8 tx, UINT8 ty) NONBANKED {
 
     if (area == MAP_DATA_AREA_TOWN) {
         value = town_collision16_map[ty][tx];
+    } else if (area == MAP_DATA_AREA_PORT) {
+        value = port_collision16_map[ty][tx];
+    } else if (area == MAP_DATA_AREA_DUNGEON) {
+        value = dungeon_collision16_map[ty][tx];
+    } else if (area == MAP_DATA_AREA_RUINS) {
+        value = ruins_collision16_map[ty][tx];
     } else {
         value = collision16_map[ty][tx];
     }
@@ -42,6 +54,12 @@ UINT8 map_data_object16_at(UINT8 area, UINT8 tx, UINT8 ty) NONBANKED {
 
     if (area == MAP_DATA_AREA_TOWN) {
         value = town_object16_map[ty][tx];
+    } else if (area == MAP_DATA_AREA_PORT) {
+        value = port_object16_map[ty][tx];
+    } else if (area == MAP_DATA_AREA_DUNGEON) {
+        value = dungeon_object16_map[ty][tx];
+    } else if (area == MAP_DATA_AREA_RUINS) {
+        value = ruins_object16_map[ty][tx];
     } else {
         value = object16_map[ty][tx];
     }
