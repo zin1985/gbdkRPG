@@ -204,6 +204,23 @@ const char msg_ruin_lore_bank[] =
     "かべに ふるい\n"
     "もじが きざまれている。";
 
+
+const char msg_dungeon_npc_guide_bank[] =
+    "この どうくつは\n"
+    "あしもとに きをつけろ。";
+
+const char msg_dungeon_npc_wounded_bank[] =
+    "おくで ひかるものを\n"
+    "みたが けむりが ひどい。";
+
+const char msg_ruins_npc_scholar_bank[] =
+    "ここは こだいの\n"
+    "ちしきが ねむる ばしょ。";
+
+const char msg_ruins_npc_spirit_bank[] =
+    "しずかな いしのこえを\n"
+    "きけるものだけ すすめ。";
+
 const char * const message_table[MSG_COUNT] = {
     msg_common_npc_bank,
     msg_test_short_bank,
@@ -252,5 +269,9 @@ const char * const message_table[MSG_COUNT] = {
     msg_treasure_found_bank,
     msg_treasure_empty_bank,
     msg_trap_damage_bank,
-    msg_ruin_lore_bank
+    msg_ruin_lore_bank,
+    msg_dungeon_npc_guide_bank,
+    msg_dungeon_npc_wounded_bank,
+    msg_ruins_npc_scholar_bank,
+    msg_ruins_npc_spirit_bank
 };

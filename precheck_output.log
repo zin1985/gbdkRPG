@@ -1,5 +1,5 @@
 ===== prebank_check.py =====
-main.c bytes: 96828
+main.c bytes: 96806
 [OK] no direct set_bkg_data() call found in main.c code
 [OK] no direct set_sprite_data() call found in main.c code
 [OK] no static const char[] message definitions found in main.c code
@@ -16,8 +16,8 @@ main.c bytes: 96828
 [OK] random encounter helper is present
 [OK] battle start effect helper is present
 [OK] normalized UTF-16 font cache key is restored
-[OK] rpg136 build.sh uses 16-bank scheduled architecture output
-[OK] rpg136 Makefile uses 16-bank scheduled architecture output
+[WARN] rpg136 build.sh scheduled bank settings may be incomplete
+[WARN] rpg136 Makefile scheduled bank settings may be incomplete
 [OK] field_feature_runtime.c moved to bank 5 world/features bank
 [OK] bank_ids.h scheduled bank layout is present
 [INFO] exact bank overflow cannot be known before compile/link.

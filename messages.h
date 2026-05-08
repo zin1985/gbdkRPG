@@ -57,7 +57,11 @@
 #define MSG_TREASURE_EMPTY   45u
 #define MSG_TRAP_DAMAGE      46u
 #define MSG_RUIN_LORE        47u
-#define MSG_COUNT       48u
+#define MSG_DUNGEON_NPC_GUIDE   48u
+#define MSG_DUNGEON_NPC_WOUNDED 49u
+#define MSG_RUINS_NPC_SCHOLAR   50u
+#define MSG_RUINS_NPC_SPIRIT    51u
+#define MSG_COUNT       52u
 
 void message_show(UINT8 id) NONBANKED;
 const char *message_get_buffered(UINT8 id) NONBANKED;

@@ -1237,21 +1237,16 @@ static void hide_actor_sprite(const Actor *actor) {
 }
 
 static UINT8 actor_visible_in_current_area(const Actor *actor) {
-    if (current_area_is_town_like()) {
-        return (UINT8)(actor->kind == ACTOR_KIND_NPC);
-    }
-
     if (current_area == AREA_FIELD) {
-        /*
-         * rpg068:
-         * Field encounters are random step encounters.
-         * Existing enemy actor data remains as a battle template only, so all
-         * non-player map actors are hidden from the field for now.
-         */
+        /* Field encounters are random step encounters. */
         return 0u;
     }
 
-    return 1u;
+    if (current_area_is_town_like() || current_area_is_dangerous()) {
+        return (UINT8)(actor->kind == ACTOR_KIND_NPC);
+    }
+
+    return 0u;
 }
 
 static void draw_all_actors(void) {
@@ -1460,6 +1455,7 @@ static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
 static void change_area_marker(UINT8 before_msg, UINT8 area, UINT8 music, UINT8 tx, UINT8 ty, Direction dir, UINT8 after_msg) {
     if (before_msg != MSG_NONE_LOCAL) message_show(before_msg);
     current_area = area;
+    actor_runtime_apply_area_npcs(current_area);
     audio_play_music(music);
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
     warp_player_to_tile(tx, ty, dir);
@@ -1606,12 +1602,12 @@ static void try_interact(void) {
     if (index >= 0) {
         actors[(UINT8)index].dir = opposite_dir(player_dir);
         draw_all_actors();
-        if (check_event_flag(FLAG_ENEMY_DEFEATED)) {
+        if (current_area_is_town_like() && check_event_flag(FLAG_ENEMY_DEFEATED)) {
             message_show(MSG_ENEMY_DEFEATED_REVIVE);
+            prompt_enemy_revive_choice();
         } else {
             message_show(actors[(UINT8)index].message_id);
         }
-        prompt_enemy_revive_choice();
         return;
     }
 
@@ -2888,6 +2884,7 @@ static void init_game(void) {
     prev_keys = 0u;
     current_enemy_index = 0xFFu;
     current_area = AREA_FIELD;
+    actor_runtime_apply_area_npcs(current_area);
     camera_tx = 0u;
     camera_ty = 0u;
     camera_px = 0u;
