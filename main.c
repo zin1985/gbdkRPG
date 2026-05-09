@@ -1888,7 +1888,7 @@ static void load_battle_enemy_sprite_data(void) {
     /* rpg128: load battle enemy art into BG tile space.  Field map BG tiles are
      * restored by draw_object_map()/restore_field_vram_state() after battle.
      */
-    battle_enemy_bg_load_tiles();
+    battle_enemy_bg_load_tiles_for_formation(battle_enemy_count, battle_enemy_sprite_kinds, battle_enemy_size_kinds);
 }
 
 static void show_battle_enemy_sprites(void) {
@@ -1905,7 +1905,7 @@ static void battle_copy_enemy_from_data(UINT8 slot) {
     enemy_battles[slot].heal_power = 0u;
     enemy_battles[slot].agility = battle_enemy_data_slots[slot].agility;
     battle_enemy_sprite_kinds[slot] = battle_enemy_data_slots[slot].sprite_kind;
-    if (battle_enemy_sprite_kinds[slot] > 2u) battle_enemy_sprite_kinds[slot] = 0u;
+    if (battle_enemy_sprite_kinds[slot] > 4u) battle_enemy_sprite_kinds[slot] = 0u;
     battle_enemy_size_kinds[slot] = battle_enemy_data_slots[slot].size_kind;
     if (battle_enemy_size_kinds[slot] > BATTLE_ENEMY_SIZE_L) battle_enemy_size_kinds[slot] = BATTLE_ENEMY_SIZE_M;
 }

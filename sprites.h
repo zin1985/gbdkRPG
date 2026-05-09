@@ -81,12 +81,13 @@ extern const unsigned char battle_enemy_tiles[48u * 16u];
  * field draw_object_map() after battle.
  */
 #define BATTLE_ENEMY_BG_TILE_BASE 80u
-#define BATTLE_ENEMY_BG_TILE_COUNT 112u
+#define BATTLE_ENEMY_BG_TILE_COUNT 48u
 #define BATTLE_ENEMY_BG_W 4u
 #define BATTLE_ENEMY_BG_H 4u
 #define BATTLE_ENEMY_BG_Y 5u
 
 void battle_enemy_bg_load_tiles(void) BANKED;
+void battle_enemy_bg_load_tiles_for_formation(UINT8 count, UINT8 *sprite_kinds, const UINT8 *size_kinds) BANKED;
 void battle_enemy_bg_draw_all(UINT8 count, const UINT8 *sprite_kinds, const UINT8 *alive_flags) BANKED;
 void battle_enemy_bg_draw_slot(UINT8 count, UINT8 slot, UINT8 sprite_kind, UINT8 alive) BANKED;
 void battle_enemy_bg_draw_all_sized(UINT8 count, const UINT8 *sprite_kinds, const UINT8 *size_kinds, const UINT8 *alive_flags) BANKED;

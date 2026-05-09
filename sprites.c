@@ -529,16 +529,74 @@ const unsigned char battle_cursor_tiles[32u] = {
  *   M = 32x32, up to 3 bodies
  *   L = 96x32, one large body
  *
- * The current art source is still the existing 32x32 enemy sheet.  S uses the
- * upper 16x16 quadrant.  L repeats the 32x32 motif vertically as a safe
- * placeholder is no longer needed because dedicated 96x32 golem art is added.
+ * Enemy BG tiles must stay inside 80-127 because the Japanese font cache uses
+ * 128-223.  rpg152 therefore loads only the current formation art into the
+ * safe 48-tile window and remaps sprite_kind values to runtime slots 0-2.
+ * L-size golem uses all 48 safe tiles by itself.
  */
-#define BATTLE_ENEMY_BG_TILE_BASE_GOLEM_L (BATTLE_ENEMY_BG_TILE_BASE + 64u)
+static const unsigned char *battle_enemy_tile_source(UINT8 kind) {
+    if (kind == 3u) return battle_enemy_tiles_warmachine;
+    if (kind > 2u) kind = 0u;
+    return &battle_enemy_tiles[(UINT16)kind * 16u * 16u];
+}
 
 void battle_enemy_bg_load_tiles(void) BANKED {
     set_bkg_data(BATTLE_ENEMY_BG_TILE_BASE, 48u, battle_enemy_tiles);
-    set_bkg_data((UINT8)(BATTLE_ENEMY_BG_TILE_BASE + 48u), 16u, battle_enemy_tiles_warmachine);
-    set_bkg_data(BATTLE_ENEMY_BG_TILE_BASE_GOLEM_L, 48u, battle_enemy_tiles_golem_l);
+}
+
+static UINT8 battle_runtime_art_slot(UINT8 kind, UINT8 *unique_kinds, UINT8 *unique_count) {
+    UINT8 i;
+
+    for (i = 0u; i < *unique_count; i++) {
+        if (unique_kinds[i] == kind) return i;
+    }
+
+    if (*unique_count >= 3u) return 0u;
+
+    unique_kinds[*unique_count] = kind;
+    *unique_count = (UINT8)(*unique_count + 1u);
+    return (UINT8)(*unique_count - 1u);
+}
+
+void battle_enemy_bg_load_tiles_for_formation(UINT8 count, UINT8 *sprite_kinds, const UINT8 *size_kinds) BANKED {
+    UINT8 i;
+    UINT8 slot;
+    UINT8 has_l;
+    UINT8 unique_count;
+    UINT8 unique_kinds[3];
+
+    if (count > 6u) count = 6u;
+
+    has_l = 0u;
+    for (i = 0u; i < count; i++) {
+        if (size_kinds[i] == BATTLE_ENEMY_SIZE_L) {
+            has_l = 1u;
+            break;
+        }
+    }
+
+    if (has_l) {
+        /* Dedicated L-size golem: use the entire safe enemy tile window. */
+        set_bkg_data(BATTLE_ENEMY_BG_TILE_BASE, 48u, battle_enemy_tiles_golem_l);
+        for (i = 0u; i < count; i++) sprite_kinds[i] = 0u;
+        return;
+    }
+
+    unique_count = 0u;
+    unique_kinds[0] = 0u;
+    unique_kinds[1] = 0u;
+    unique_kinds[2] = 0u;
+
+    for (i = 0u; i < count; i++) {
+        slot = battle_runtime_art_slot(sprite_kinds[i], unique_kinds, &unique_count);
+        sprite_kinds[i] = slot;
+    }
+
+    for (i = 0u; i < unique_count; i++) {
+        set_bkg_data((UINT8)(BATTLE_ENEMY_BG_TILE_BASE + (UINT8)(i << 4)),
+                     16u,
+                     battle_enemy_tile_source(unique_kinds[i]));
+    }
 }
 
 static void battle_enemy_bg_origin_for_slot(UINT8 count, UINT8 slot, UINT8 size_kind, UINT8 *x, UINT8 *y) {
@@ -591,7 +649,7 @@ void battle_enemy_bg_draw_slot_sized(UINT8 count, UINT8 slot, UINT8 sprite_kind,
     unsigned char tiles[48];
 
     if (slot >= 6u) return;
-    if (sprite_kind > 4u) sprite_kind = 0u;
+    if (sprite_kind > 2u) sprite_kind = 0u;
     if (size_kind > 2u) size_kind = 1u;
 
     battle_enemy_bg_origin_for_slot(count, slot, size_kind, &x, &y);
@@ -615,7 +673,7 @@ void battle_enemy_bg_draw_slot_sized(UINT8 count, UINT8 slot, UINT8 sprite_kind,
             battle_enemy_bg_clear_rect(x, y, 12u, 4u);
         } else {
             UINT8 row;
-            base = BATTLE_ENEMY_BG_TILE_BASE_GOLEM_L;
+            base = BATTLE_ENEMY_BG_TILE_BASE;
             for (row = 0u; row < 48u; row++) {
                 tiles[row] = (UINT8)(base + row);
             }
