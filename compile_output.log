@@ -24,3 +24,6 @@ field_feature_runtime.c:
 heavy_metal_celtic_battle_bgm.c:
 heavy_metal_celtic_battle_bgm.c:227: warning 94: comparison is always false due to limited range of data type
 heavy_metal_celtic_battle_bgm.c:228: warning 126: unreachable code
+sunset_ruins_field_bgm.c:
+sunset_ruins_field_bgm.c:206: warning 94: comparison is always false due to limited range of data type
+sunset_ruins_field_bgm.c:207: warning 126: unreachable code

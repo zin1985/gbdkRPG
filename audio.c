@@ -1,15 +1,15 @@
 #include "audio.h"
 #include "heavy_metal_celtic_battle_bgm.h"
+#include "sunset_ruins_field_bgm.h"
 
 /*
  * rpg083_music:
  * Tiny register-based DMG music driver.
  *
  * This is intentionally much smaller than adding a tracker driver while the
- * battle renderer is still being stabilized.  It uses square channel 1 for the
- * melody, square channel 2 for a soft bass/drone, and a tiny noise hit for the
- * battle loop.  The melodies are original and only aim for an old handheld RPG
- * mood: field = march, town = calm, battle = urgent.
+ * battle renderer is still being stabilized. The richer field and battle themes
+ * are provided by separate BANKED drivers, keeping this file as the dispatcher
+ * plus the small town fallback track.
  */
 
 typedef struct MusicStep {
@@ -38,13 +38,6 @@ typedef struct MusicStep {
 #define N_E5 1847u
 #define N_G5 1884u
 
-static const MusicStep music_field[] = {
-    {N_C4, N_C3, 12u}, {N_E4, N_C3, 12u}, {N_G4, N_G3, 12u}, {N_C5, N_G3, 12u},
-    {N_B4, N_G3, 12u}, {N_G4, N_C3, 12u}, {N_E4, N_C3, 12u}, {N_G4, N_G3, 12u},
-    {N_A4, N_F3, 12u}, {N_C5, N_F3, 12u}, {N_A4, N_A3, 12u}, {N_G4, N_G3, 12u},
-    {N_E4, N_C3, 12u}, {N_D4, N_G3, 12u}, {N_E4, N_C3, 12u}, {N_REST, N_C3, 12u}
-};
-
 static const MusicStep music_town[] = {
     {N_E4, N_C3, 24u}, {N_G4, N_C3, 24u}, {N_A4, N_F3, 24u}, {N_G4, N_F3, 24u},
     {N_E4, N_C3, 24u}, {N_D4, N_G3, 24u}, {N_C4, N_C3, 36u}, {N_REST, N_C3, 12u},
@@ -52,7 +45,7 @@ static const MusicStep music_town[] = {
     {N_D4, N_G3, 24u}, {N_C4, N_C3, 48u}
 };
 
-/* Battle track is provided by heavy_metal_celtic_battle_bgm.c in ROM bank 15. */
+/* Field and battle tracks are provided by BANKED BGM drivers. */
 
 
 static UINT8 audio_current_track;
@@ -60,23 +53,25 @@ static UINT8 audio_step_index;
 static UINT8 audio_step_frames;
 static UINT8 audio_started;
 
-static void audio_stop_battle_bgm_if_needed(void) {
+static void audio_stop_external_bgm_if_needed(void) {
+    if (audio_current_track == AUDIO_TRACK_FIELD) {
+        sunset_ruins_field_bgm_stop();
+    }
     if (audio_current_track == AUDIO_TRACK_BATTLE) {
         heavy_metal_celtic_battle_bgm_stop();
     }
 }
 
 static UINT8 audio_track_length(UINT8 track) {
-    if (track == AUDIO_TRACK_FIELD) return (UINT8)(sizeof(music_field) / sizeof(music_field[0]));
     if (track == AUDIO_TRACK_TOWN) return (UINT8)(sizeof(music_town) / sizeof(music_town[0]));
+    if (track == AUDIO_TRACK_FIELD) return 0u;
     if (track == AUDIO_TRACK_BATTLE) return 0u;
     return 0u;
 }
 
 static const MusicStep *audio_track_step(UINT8 track, UINT8 index) {
-    if (track == AUDIO_TRACK_FIELD) return &music_field[index];
     if (track == AUDIO_TRACK_TOWN) return &music_town[index];
-    return &music_field[0];
+    return &music_town[0];
 }
 
 static void audio_trigger_pulse1(UINT16 note) {
@@ -135,7 +130,7 @@ void audio_init(void) {
 }
 
 void audio_stop_music(void) {
-    audio_stop_battle_bgm_if_needed();
+    audio_stop_external_bgm_if_needed();
     audio_current_track = AUDIO_TRACK_NONE;
     audio_step_index = 0u;
     audio_step_frames = 0u;
@@ -148,11 +143,16 @@ void audio_play_music(UINT8 track) {
     if (!audio_started) audio_init();
     if (audio_current_track == track) return;
 
-    audio_stop_battle_bgm_if_needed();
+    audio_stop_external_bgm_if_needed();
 
     audio_current_track = track;
     audio_step_index = 0u;
     audio_step_frames = 0u;
+
+    if (track == AUDIO_TRACK_FIELD) {
+        sunset_ruins_field_bgm_init();
+        return;
+    }
 
     if (track == AUDIO_TRACK_BATTLE) {
         heavy_metal_celtic_battle_bgm_init();
@@ -164,6 +164,11 @@ void audio_play_music(UINT8 track) {
 
 void audio_update(void) {
     if (audio_current_track == AUDIO_TRACK_NONE) return;
+
+    if (audio_current_track == AUDIO_TRACK_FIELD) {
+        sunset_ruins_field_bgm_update();
+        return;
+    }
 
     if (audio_current_track == AUDIO_TRACK_BATTLE) {
         heavy_metal_celtic_battle_bgm_update();

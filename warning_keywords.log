@@ -6,3 +6,5 @@ battle_data_bank.c:
 battle_text.c:29: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
 heavy_metal_celtic_battle_bgm.c:227: warning 94: comparison is always false due to limited range of data type
 heavy_metal_celtic_battle_bgm.c:228: warning 126: unreachable code
+sunset_ruins_field_bgm.c:206: warning 94: comparison is always false due to limited range of data type
+sunset_ruins_field_bgm.c:207: warning 126: unreachable code
