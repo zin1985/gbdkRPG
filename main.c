@@ -616,6 +616,7 @@ static UINT8 apply_map_event_transition(UINT8 event_id);
 static void check_step_event(void);
 static UINT8 current_area_is_dangerous(void);
 static UINT8 current_area_is_town_like(void);
+static UINT8 current_area_music_track(void);
 static void inspect_map_event(UINT8 event_id);
 static void try_interact(void);
 
@@ -1040,9 +1041,7 @@ static void open_main_menu(void) {
 
     hide_battle_enemy_sprites();
     restore_field_vram_state();
-    if (current_area_is_town_like()) audio_play_music(AUDIO_TRACK_TOWN);
-    else if (current_area_is_dungeon_like()) audio_play_music(AUDIO_TRACK_DUNGEON);
-    else audio_play_music(AUDIO_TRACK_FIELD);
+    audio_play_music(current_area_music_track());
 }
 
 static void wait_a_pressed(void) {
@@ -1429,6 +1428,13 @@ static UINT8 current_area_is_dungeon_like(void) {
     return (UINT8)(current_area == AREA_DUNGEON || current_area == AREA_RUINS);
 }
 
+static UINT8 current_area_music_track(void) {
+    if (current_area_is_town_like()) return AUDIO_TRACK_TOWN;
+    if (current_area == AREA_DUNGEON) return AUDIO_TRACK_DUNGEON;
+    if (current_area == AREA_RUINS) return AUDIO_TRACK_RUINS;
+    return AUDIO_TRACK_FIELD;
+}
+
 static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
     player_moving = 0u;
     move_pixels_remaining = 0u;
@@ -1494,7 +1500,7 @@ static void leave_dungeon_marker(void) {
 }
 
 static void enter_ruins_marker(void) {
-    change_area_marker(MSG_ENTER_RUINS, AREA_RUINS, AUDIO_TRACK_DUNGEON, 13u, 13u, DIR_UP, MSG_ARRIVE_RUINS);
+    change_area_marker(MSG_ENTER_RUINS, AREA_RUINS, AUDIO_TRACK_RUINS, 13u, 13u, DIR_UP, MSG_ARRIVE_RUINS);
     quest_advance(QUEST_LOST_KEY);
 }
 
@@ -2560,9 +2566,7 @@ static void return_to_map_after_battle(UINT8 won) {
         }
     }
     restore_field_vram_state();
-    if (current_area_is_town_like()) audio_play_music(AUDIO_TRACK_TOWN);
-    else if (current_area_is_dungeon_like()) audio_play_music(AUDIO_TRACK_DUNGEON);
-    else audio_play_music(AUDIO_TRACK_FIELD);
+    audio_play_music(current_area_music_track());
 }
 
 static void battle_load_current_actor(Fighter *out) {

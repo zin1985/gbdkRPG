@@ -1,17 +1,19 @@
 #include "audio.h"
+#include "deep_eerie_motif_dungeon_bgm.h"
 #include "heavy_metal_celtic_battle_bgm.h"
 #include "peaceful_harp_town_bgm.h"
 #include "sunset_ruins_field_bgm.h"
 #include "sunset_strings_adventure_field_bgm.h"
 
 /*
- * rpg143_town_harp_bgm:
+ * rpg144_deep_eerie_dungeon_bgm:
  * Central audio dispatcher.
  *
  * Heavy data-driven BGM players are BANKED and kept out of Bank 0:
  * - FIELD   : sunset_strings_adventure_field_bgm   bank 13
  * - TOWN    : peaceful_harp_town_bgm               bank 12
- * - DUNGEON : sunset_ruins_field_bgm                bank 14
+ * - DUNGEON : deep_eerie_motif_dungeon_bgm       bank 11
+ * - RUINS   : sunset_ruins_field_bgm             bank 14
  * - BATTLE  : heavy_metal_celtic_battle_bgm         bank 15
  *
  * audio.c intentionally remains small: it only switches tracks and calls the
@@ -27,6 +29,8 @@ static void audio_stop_external_bgm_if_needed(void) {
     } else if (audio_current_track == AUDIO_TRACK_TOWN) {
         peaceful_harp_town_bgm_stop();
     } else if (audio_current_track == AUDIO_TRACK_DUNGEON) {
+        deep_eerie_motif_dungeon_bgm_stop();
+    } else if (audio_current_track == AUDIO_TRACK_RUINS) {
         sunset_ruins_field_bgm_stop();
     } else if (audio_current_track == AUDIO_TRACK_BATTLE) {
         heavy_metal_celtic_battle_bgm_stop();
@@ -71,6 +75,11 @@ void audio_play_music(UINT8 track) {
     }
 
     if (track == AUDIO_TRACK_DUNGEON) {
+        deep_eerie_motif_dungeon_bgm_init();
+        return;
+    }
+
+    if (track == AUDIO_TRACK_RUINS) {
         sunset_ruins_field_bgm_init();
         return;
     }
@@ -95,6 +104,11 @@ void audio_update(void) {
     }
 
     if (audio_current_track == AUDIO_TRACK_DUNGEON) {
+        deep_eerie_motif_dungeon_bgm_update();
+        return;
+    }
+
+    if (audio_current_track == AUDIO_TRACK_RUINS) {
         sunset_ruins_field_bgm_update();
         return;
     }
