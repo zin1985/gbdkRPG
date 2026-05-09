@@ -14,6 +14,7 @@
 #define MAP_EVENT_RUINS_EXIT 8u
 #define MAP_EVENT_CHEST 9u
 #define MAP_EVENT_RUIN_LORE 10u
+#define MAP_EVENT_HEAL_SPRING 11u
 
 #define AREA_FIELD 0u
 #define AREA_TOWN 1u

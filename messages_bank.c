@@ -22,31 +22,31 @@ const char msg_test_short_bank[] =
 
 
 const char msg_growth_hp_bank[] =
-    "HPが\n"
+    "ゆうしゃの HPが\n"
     "あがった！";
 
 const char msg_growth_mp_bank[] =
-    "MPが\n"
+    "ゆうしゃの MPが\n"
     "あがった！";
 
 const char msg_growth_atk_bank[] =
-    "ちからが\n"
+    "ゆうしゃの ちからが\n"
     "あがった！";
 
 const char msg_growth_def_bank[] =
-    "まもりが\n"
+    "ゆうしゃの まもりが\n"
     "あがった！";
 
 const char msg_growth_skill_bank[] =
-    "とくぎが\n"
+    "ゆうしゃの とくぎが\n"
     "あがった！";
 
 const char msg_growth_heal_bank[] =
-    "かいふくが\n"
+    "ゆうしゃの かいふくが\n"
     "あがった！";
 
 const char msg_growth_agi_bank[] =
-    "すばやさが\n"
+    "ゆうしゃの すばやさが\n"
     "あがった！";
 
 const char msg_enemy_still_bank[] =
@@ -221,6 +221,10 @@ const char msg_ruins_npc_spirit_bank[] =
     "しずかな いしのこえを\n"
     "きけるものだけ すすめ。";
 
+const char msg_heal_spring_bank[] =
+    "いずみの ひかりで\n"
+    "みんな かいふくした！";
+
 const char * const message_table[MSG_COUNT] = {
     msg_common_npc_bank,
     msg_test_short_bank,
@@ -273,5 +277,6 @@ const char * const message_table[MSG_COUNT] = {
     msg_dungeon_npc_guide_bank,
     msg_dungeon_npc_wounded_bank,
     msg_ruins_npc_scholar_bank,
-    msg_ruins_npc_spirit_bank
+    msg_ruins_npc_spirit_bank,
+    msg_heal_spring_bank
 };

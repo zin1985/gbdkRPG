@@ -53,6 +53,9 @@ UINT8 party_active_alive_count(void) BANKED;
 UINT8 party_choose_random_alive_active_slot(UINT8 random_value) BANKED;
 void party_damage_active(UINT8 active_slot, UINT16 damage) BANKED;
 UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED;
+UINT16 party_heal_active(UINT8 active_slot, UINT16 amount) BANKED;
+void party_heal_all_active(void) BANKED;
+void party_menu_show_heal_skill_loop(void) BANKED;
 void party_after_battle_growth(UINT8 enemy_rank, UINT8 random_seed) BANKED;
 
 UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id) BANKED;

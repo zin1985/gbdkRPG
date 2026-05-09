@@ -15,6 +15,8 @@
 #include "actor_runtime.h"
 #include "quest.h"
 #include "field_feature_runtime.h"
+#include "battle_skill_runtime.h"
+#include "battle_growth_runtime.h"
 
 /*
  * ============================================================================
@@ -371,7 +373,9 @@ typedef enum GameMode {
 
 typedef enum BattleState {
     BSTATE_PLAYER = 0,
+    BSTATE_SKILL,
     BSTATE_TARGET,
+    BSTATE_ALLY_TARGET,
     BSTATE_ENEMY,
     BSTATE_WIN,
     BSTATE_LOSE,
@@ -409,6 +413,7 @@ typedef enum SkillKind {
 typedef enum TargetType {
     TARGET_ENEMY = 0,
     TARGET_SELF,
+    TARGET_ALLY,
     TARGET_ALL_ENEMY,
     TARGET_ALL_ALLY
 } TargetType;
@@ -443,7 +448,7 @@ typedef struct PlayerSkillSet {
 static const SkillDef skill_table[SKILL_MAX] = {
     {SKILL_NONE,         SKILL_KIND_DAMAGE, TARGET_ENEMY, 0u, 0u, 100u, 0u},
     {SKILL_POWER_STRIKE, SKILL_KIND_DAMAGE, TARGET_ENEMY, 2u, 4u,  95u, SKILL_FLAG_AI_OK},
-    {SKILL_HEAL_SIMPLE,  SKILL_KIND_HEAL,   TARGET_SELF,  4u, 6u, 100u, SKILL_FLAG_FIELD_OK},
+    {SKILL_HEAL_SIMPLE,  SKILL_KIND_HEAL,   TARGET_ALLY,  4u, 6u, 100u, SKILL_FLAG_FIELD_OK},
     {SKILL_FIRE,         SKILL_KIND_DAMAGE, TARGET_ENEMY, 3u, 6u,  90u, SKILL_FLAG_AI_OK},
     {SKILL_GUARD_BREAK,  SKILL_KIND_DEBUFF, TARGET_ENEMY, 3u, 0u,  85u, SKILL_FLAG_AI_OK}
 };
@@ -500,10 +505,9 @@ static UINT8 menu_index;
 static UINT8 rand_seed;
 static UINT8 encounter_grace_steps;
 static UINT8 event_flags[EVENT_FLAG_COUNT];
-static UINT8 last_growth_type;
-static GrowthResult last_growth;
-static UINT8 battle_enemy_rank;
-static const UINT8 growth_chance_by_rank[] = {0u, 40u, 45u, 50u, 55u, 60u};
+UINT8 last_growth_type;
+GrowthResult last_growth;
+UINT8 battle_enemy_rank;
 static PlayerSkillSet player_skills;
 /* Japanese UTF-8 battle messages can exceed 48 bytes.
  * Keeping this too small can corrupt nearby globals such as current_enemy_index,
@@ -531,14 +535,17 @@ static const char *battle_message_text;
 static UINT8 battle_first_player_refresh_pending;
 static UINT8 battle_screen_ready;
 static UINT8 battle_party_turn_slot;
+static UINT8 battle_selected_skill;
+static UINT16 map_idle_frames;
+static UINT8 map_overlay_visible;
 #define enemy_battle (enemy_battles[battle_target_index])
-static UINT16 player_max_hp_stat;
-static UINT16 player_max_mp_stat;
-static UINT8 player_attack_stat;
-static UINT8 player_defense_stat;
-static UINT8 player_skill_power_stat;
-static UINT8 player_heal_power_stat;
-static UINT8 player_agility_stat;
+UINT16 player_max_hp_stat;
+UINT16 player_max_mp_stat;
+UINT8 player_attack_stat;
+UINT8 player_defense_stat;
+UINT8 player_skill_power_stat;
+UINT8 player_heal_power_stat;
+UINT8 player_agility_stat;
 static UINT8 player_tx;
 static UINT8 player_ty;
 static UINT8 spawn_player_tx;
@@ -557,7 +564,7 @@ static INT8 player_vy;
 static UINT8 move_pixels_remaining;
 static UINT8 walk_anim_counter;
 
-static UINT8 random_u8(void);
+UINT8 random_u8(void);
 static void init_event_flags(void);
 static void set_event_flag(UINT8 id);
 static void clear_event_flag(UINT8 id);
@@ -569,7 +576,6 @@ static INT16 screen_y_from_world(UINT8 py);
 static UINT8 camera_max_px_x(void);
 static UINT8 camera_max_px_y(void);
 static UINT8 camera_tile_from_px(UINT8 px);
-static UINT8 camera_sub_from_px(UINT8 px);
 static UINT8 step_toward_u8(UINT8 current, UINT8 target, UINT8 step);
 static void update_camera_target_for_player(void);
 static void apply_camera_scroll(void);
@@ -664,9 +670,8 @@ static void map_input(void);
 static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defender);
 static UINT16 calc_skill_damage(const Fighter *attacker, const Fighter *defender, const SkillDef *skill);
 static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill);
-static UINT8 fighter_try_consume_mp(Fighter *actor, UINT16 cost);
 static const SkillDef *skill_get_def(UINT8 skill_id);
-static UINT8 player_get_skill_slot(UINT8 slot);
+UINT8 player_get_skill_slot(UINT8 slot);
 static void init_player_skills(void);
 static void player_use_skill(UINT8 skill_id);
 static void draw_battle_frame(void);
@@ -675,7 +680,6 @@ static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
 static void draw_battle_enemy_names(void);
 static void draw_party_status_box(void);
 static void draw_battle_message_area(void);
-static void battle_prepare_player_turn_ui(void);
 static void battle_prepare_first_command_ui(void);
 static void battle_reposition_party_icons_only(void);
 static void battle_reposition_enemy_sprites_only(void);
@@ -721,7 +725,6 @@ static void load_battle_enemy_sprite_data(void);
 static void battle_copy_enemy_from_data(UINT8 slot);
 static UINT8 battle_select_first_alive(void);
 static UINT8 battle_ensure_selected_alive(void);
-static UINT8 battle_alive_count(void);
 static void draw_battle_menu(void);
 static void update_battle_menu_cursor(UINT8 old_index, UINT8 new_index);
 static void update_battle_status(void);
@@ -733,28 +736,25 @@ static void enter_battle_screen(void);
 static void init_random_battle_from_field(void);
 static void enter_random_battle(void);
 static void battle_prepare_enemy_rank(void);
-static void clear_growth_result(void);
-static UINT8 get_growth_chance(UINT8 enemy_rank);
-static UINT8 should_growth_happen(UINT8 enemy_rank);
-static UINT8 apply_player_stat_growth(UINT8 stat_type);
-static void apply_battle_growth(void);
-static void show_growth_message(void);
 static void return_to_map_after_battle(UINT8 won);
 static void battle_load_current_actor(Fighter *out);
 static UINT8 battle_select_next_party_turn(void);
 static void battle_finish_party_action(void);
-static UINT8 battle_current_special_skill(void);
 static UINT8 battle_current_consume_mp(UINT16 cost);
-static void battle_heal_current_actor(UINT16 amount);
+static void battle_heal_actor_slot(UINT8 target_slot, UINT16 amount);
 static void player_attack(void);
 static void player_skill(void);
 static void player_heal(void);
 static void player_run(void);
+static void battle_skill_input(void);
+static void battle_ally_target_input(void);
+static void field_overlay_hide(void);
+static void field_overlay_show(void);
 static void enemy_turn(void);
 static void battle_input(void);
 static void init_game(void);
 
-static UINT8 random_u8(void) { rand_seed = (UINT8)(rand_seed * 17u + 29u); return rand_seed; }
+UINT8 random_u8(void) { rand_seed = (UINT8)(rand_seed * 17u + 29u); return rand_seed; }
 
 static UINT8 current_collision16_at(UINT8 tx, UINT8 ty) {
     if (tx >= MAP16_W || ty >= MAP16_H) return 1u;
@@ -800,7 +800,6 @@ static UINT8 camera_max_px_y(void) {
 }
 
 static UINT8 camera_tile_from_px(UINT8 px) { return (UINT8)(px / TILE16_PX); }
-static UINT8 camera_sub_from_px(UINT8 px) { return (UINT8)(px & 15u); }
 
 static UINT8 step_toward_u8(UINT8 current, UINT8 target, UINT8 step) {
     UINT8 delta;
@@ -1460,10 +1459,20 @@ static UINT8 field_random_encounter_should_start(void) {
     return (UINT8)(roll < field_feature_encounter_rate(current_area, RANDOM_ENCOUNTER_RATE));
 }
 
+static void activate_heal_spring(void) {
+    party_heal_all_active();
+    message_show(MSG_HEAL_SPRING);
+    draw_all_actors();
+}
+
 static void check_step_event(void) {
     UINT8 event_id;
     event_id = map_event_at_tile(player_tx, player_ty);
     if (apply_map_event_transition(event_id)) return;
+    if (event_id == MAP_EVENT_HEAL_SPRING) {
+        activate_heal_spring();
+        return;
+    }
     if (event_id != MAP_EVENT_NONE) return;
 
     if (current_area_is_dangerous() && current_object16_at(player_tx, player_ty) == 5u) {
@@ -1495,6 +1504,8 @@ static void inspect_map_event(UINT8 event_id) {
         }
     } else if (event_id == MAP_EVENT_RUIN_LORE) {
         message_show(MSG_RUIN_LORE);
+    } else if (event_id == MAP_EVENT_HEAL_SPRING) {
+        activate_heal_spring();
     }
 }
 
@@ -1625,6 +1636,34 @@ static void update_player_movement(void) {
     }
 }
 
+static void field_overlay_hide(void) {
+    if (!map_overlay_visible) return;
+    map_overlay_visible = 0u;
+    draw_object_map();
+    apply_camera_scroll();
+    draw_all_actors();
+}
+
+static void field_overlay_show(void) {
+    UINT8 x;
+    UINT8 y;
+    if (map_overlay_visible) return;
+    map_overlay_visible = 1u;
+    x = (UINT8)(((camera_px >> 3u) + 11u) & 31u);
+    y = (UINT8)(((camera_py >> 3u) + 11u) & 31u);
+    if (x > 24u) x = 11u;
+    if (y > 26u) y = 11u;
+    draw_bkg_box(x, y, 9u, 7u);
+    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 1u), "HP");
+    put_u16((UINT8)(x + 4u), (UINT8)(y + 1u), party_get_active_hp(0u));
+    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 2u), "MP");
+    put_u16((UINT8)(x + 4u), (UINT8)(y + 2u), party_get_active_mp(0u));
+    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 4u), "MAP");
+    put_u16((UINT8)(x + 5u), (UINT8)(y + 4u), player_tx);
+    jp_put_bkg_text((UINT8)(x + 6u), (UINT8)(y + 4u), ",");
+    put_u16((UINT8)(x + 7u), (UINT8)(y + 4u), player_ty);
+}
+
 static void map_input(void) {
     UINT8 keys;
     UINT8 new_keys;
@@ -1636,6 +1675,14 @@ static void map_input(void) {
 
     keys = joypad();
     new_keys = (UINT8)(keys & (UINT8)(~prev_keys));
+
+    if (keys != 0u || player_moving || dialogue_is_active()) {
+        map_idle_frames = 0u;
+        if (map_overlay_visible) field_overlay_hide();
+    } else if (!map_overlay_visible) {
+        if (map_idle_frames < 130u) map_idle_frames++;
+        if (map_idle_frames >= 120u) field_overlay_show();
+    }
 
     if (dialogue_is_active()) {
         prev_keys = keys;
@@ -1707,13 +1754,6 @@ static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill) {
     return (UINT16)((UINT16)actor->heal_power * 2u + (UINT16)skill->power);
 }
 
-static UINT8 fighter_try_consume_mp(Fighter *actor, UINT16 cost) {
-    if (actor->mp < cost) {
-        return 0u;
-    }
-    actor->mp = (UINT16)(actor->mp - cost);
-    return 1u;
-}
 
 static const SkillDef *skill_get_def(UINT8 skill_id) {
     if (skill_id >= SKILL_MAX) {
@@ -1722,7 +1762,7 @@ static const SkillDef *skill_get_def(UINT8 skill_id) {
     return &skill_table[skill_id];
 }
 
-static UINT8 player_get_skill_slot(UINT8 slot) {
+UINT8 player_get_skill_slot(UINT8 slot) {
     if (slot >= PLAYER_SKILL_SLOT_COUNT) {
         return SKILL_NONE;
     }
@@ -1732,8 +1772,8 @@ static UINT8 player_get_skill_slot(UINT8 slot) {
 static void init_player_skills(void) {
     player_skills.slots[0] = SKILL_POWER_STRIKE;
     player_skills.slots[1] = SKILL_HEAL_SIMPLE;
-    player_skills.slots[2] = SKILL_NONE;
-    player_skills.slots[3] = SKILL_NONE;
+    player_skills.slots[2] = SKILL_FIRE;
+    player_skills.slots[3] = SKILL_GUARD_BREAK;
 }
 
 /*
@@ -1761,28 +1801,9 @@ static void battle_clear_bg_full(void) {
 }
 
 static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
-    UINT8 x;
-    UINT8 y;
-    UINT8 t;
-
-    if (w < 2u || h < 2u) return;
-
-    for (y = 0u; y < h; y++) {
-        for (x = 0u; x < w; x++) {
-            t = JP_FRAME_BASE + 0u;
-            if (y == 0u && x == 0u) t = JP_FRAME_BASE + 3u; /* UL */
-            else if (y == 0u && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 4u; /* UR */
-            else if (y == (UINT8)(h - 1u) && x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 5u; /* LR */
-            else if (y == (UINT8)(h - 1u) && x == 0u) t = JP_FRAME_BASE + 6u; /* LL */
-            else if (y == 0u) t = JP_FRAME_BASE + 1u; /* top */
-            else if (x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u; /* right */
-            else if (y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 7u; /* bottom */
-            else if (x == 0u) t = JP_FRAME_BASE + 8u; /* left */
-
-            set_bkg_tiles(BATTLE_BG_X((UINT8)(x0 + x)), (UINT8)(y0 + y), 1u, 1u, &t);
-        }
-    }
+    jp_draw_bkg_frame(BATTLE_BG_X(x0), y0, w, h);
 }
+
 
 static void battle_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
     jp_bkg_clear_area(BATTLE_BG_X(x0), y0, w, h);
@@ -1792,19 +1813,54 @@ static void battle_put_bkg_text(UINT8 col, UINT8 row, const char *text) {
     jp_put_bkg_text(BATTLE_BG_X(col), row, text);
 }
 
+static char battle_enemy_name_lines[3][20];
+
+static void copy_enemy_line(UINT8 line, const char *name, UINT8 count) {
+    UINT8 i;
+    UINT8 max;
+
+    if (line >= 3u) return;
+    i = 0u;
+    max = (count >= 2u) ? 16u : 19u;
+    while (name != 0 && name[i] != '\0' && i < max) {
+        battle_enemy_name_lines[line][i] = name[i];
+        i++;
+    }
+    if (count >= 2u && i < 17u) {
+        battle_enemy_name_lines[line][i++] = 'x';
+        battle_enemy_name_lines[line][i++] = (char)('0' + count);
+    }
+    battle_enemy_name_lines[line][i] = '\0';
+}
+
 static void draw_battle_enemy_names(void) {
     UINT8 i;
+    UINT8 j;
+    UINT8 line;
+    UINT8 count;
+    UINT8 used[BATTLE_MAX_ENEMY_COUNT];
 
-    /* rpg082: keep enemy-name box above the bottom message strip.
-     * Rows 12-14 hold up to three enemy names; rows 15-17 are message-only.
-     */
-    draw_bkg_box(0u, 11u, 9u, 4u);
-    battle_bkg_clear_area(1u, 12u, 7u, 3u);
+    draw_bkg_box(0u, 9u, 9u, 5u);
+    battle_bkg_clear_area(1u, 10u, 7u, 3u);
 
-    for (i = 0u; i < battle_enemy_count && i < 3u; i++) {
-        if (enemy_battles[i].hp > 0u) {
-            battle_put_bkg_text(1u, (UINT8)(12u + i), enemy_battles[i].name);
+    for (i = 0u; i < BATTLE_MAX_ENEMY_COUNT; i++) used[i] = 0u;
+
+    line = 0u;
+    for (i = 0u; i < battle_enemy_count && line < 3u; i++) {
+        if (used[i] || enemy_battles[i].hp == 0u) continue;
+        count = 1u;
+        used[i] = 1u;
+        for (j = (UINT8)(i + 1u); j < battle_enemy_count; j++) {
+            if (enemy_battles[j].hp > 0u &&
+                battle_enemy_sprite_kinds[j] == battle_enemy_sprite_kinds[i] &&
+                battle_enemy_size_kinds[j] == battle_enemy_size_kinds[i]) {
+                used[j] = 1u;
+                count++;
+            }
         }
+        copy_enemy_line(line, enemy_battles[i].name, count);
+        battle_put_bkg_text(1u, (UINT8)(10u + line), battle_enemy_name_lines[line]);
+        line++;
     }
 }
 
@@ -1814,7 +1870,7 @@ static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
     name = party_get_active_name(slot);
     if (name == 0) return;
 
-    battle_put_bkg_text((UINT8)(x - 1u), 1u, (slot == battle_party_turn_slot) ? ">" : " ");
+    battle_put_bkg_text((UINT8)(x - 1u), 1u, " ");
     battle_put_bkg_text(x, 1u, name);
     battle_put_bkg_text(x, 2u, "H ");
     put_u16(BATTLE_BG_X((UINT8)(x + 2u)), 2u, party_get_active_hp(slot));
@@ -1929,15 +1985,6 @@ static UINT8 battle_ensure_selected_alive(void) {
     return battle_select_first_alive();
 }
 
-static UINT8 battle_alive_count(void) {
-    UINT8 i;
-    UINT8 count = 0u;
-
-    for (i = 0u; i < battle_enemy_count; i++) {
-        if (enemy_battles[i].hp > 0u) count++;
-    }
-    return count;
-}
 
 static void draw_battle_frame(void) {
     /*
@@ -1965,38 +2012,40 @@ static void draw_battle_message_area(void) {
 }
 
 static void draw_battle_menu(void) {
-    /* rpg096:
-     * Move the command window one BG row up.
-     * rpg095 expanded the bottom message frame to rows 14-17, so the old
-     * command box at rows 11-14 overlapped the message top border during the
-     * first command transition.  Keep the same x layout but use rows 10-13.
-     */
-    draw_bkg_box(9u, 10u, 11u, 4u);
+    /* rpg154: expand command window upward by one BG block. */
+    draw_bkg_box(9u, 9u, 11u, 5u);
 
-    battle_put_bkg_text(11u, 11u, "こうげき");
-    battle_put_bkg_text(16u, 11u, "とくぎ");
-    battle_put_bkg_text(11u, 12u, "かいふく");
-    battle_put_bkg_text(16u, 12u, "にげる");
+    battle_put_bkg_text(11u, 10u, "こうげき");
+    battle_put_bkg_text(16u, 10u, "とくぎ");
+    battle_put_bkg_text(11u, 11u, "かいふく");
+    battle_put_bkg_text(16u, 11u, "にげる");
 }
 
 static void battle_command_cursor_bg_pos(UINT8 index, UINT8 *col, UINT8 *row) {
     switch (index) {
-        case CMD_ATTACK: *col = 10u; *row = 11u; break;
-        case CMD_SKILL:  *col = 15u; *row = 11u; break;
-        case CMD_HEAL:   *col = 10u; *row = 12u; break;
-        case CMD_RUN:    *col = 15u; *row = 12u; break;
-        default:         *col = 10u; *row = 11u; break;
+        case CMD_ATTACK: *col = 10u; *row = 10u; break;
+        case CMD_SKILL:  *col = 15u; *row = 10u; break;
+        case CMD_HEAL:   *col = 10u; *row = 11u; break;
+        case CMD_RUN:    *col = 15u; *row = 11u; break;
+        default:         *col = 10u; *row = 10u; break;
     }
+}
+
+static void battle_clear_command_cursor_bg(void) {
+    battle_put_bkg_text(10u, 10u, " ");
+    battle_put_bkg_text(15u, 10u, " ");
+    battle_put_bkg_text(10u, 11u, " ");
+    battle_put_bkg_text(15u, 11u, " ");
 }
 
 static void battle_move_command_cursor_obj(void) {
     UINT8 col;
     UINT8 row;
 
+    battle_hide_command_cursor_obj();
+    battle_clear_command_cursor_bg();
     battle_command_cursor_bg_pos(menu_index, &col, &row);
-    move_sprite(BATTLE_CURSOR_SPRITE,
-                (UINT8)(col * 8u + 8u),
-                (UINT8)(row * 8u + 16u));
+    battle_put_bkg_text(col, row, ">");
 }
 
 static void battle_target_bg_origin(UINT8 slot, UINT8 *col, UINT8 *row) {
@@ -2142,15 +2191,6 @@ static void battle_prepare_first_command_ui(void) {
     battle_move_command_cursor_obj();
 }
 
-static void battle_prepare_player_turn_ui(void) {
-    battle_hide_window_and_reset_scroll();
-    draw_battle_frame();
-    show_battle_party_icons();
-    show_battle_enemy_sprites();
-    battle_move_command_cursor_obj();
-    battle_set_message_dirty("");
-    battle_update_dirty();
-}
 
 static void battle_show_message(const char *text) {
     battle_set_message_dirty(text);
@@ -2357,156 +2397,14 @@ static void battle_prepare_enemy_rank(void) {
     battle_enemy_rank = max_rank;
 }
 
-static void clear_growth_result(void) {
-    last_growth_type = GROWTH_NONE;
-    last_growth.actor_id = 0u;
-    last_growth.stat_type = GROWTH_NONE;
-    last_growth.old_value = 0u;
-    last_growth.new_value = 0u;
-}
-
-static UINT8 get_growth_chance(UINT8 enemy_rank) {
-    if (enemy_rank == 0u) {
-        enemy_rank = 1u;
-    }
-    if (enemy_rank > ENEMY_RANK_MAX) {
-        enemy_rank = ENEMY_RANK_MAX;
-    }
-
-    return growth_chance_by_rank[enemy_rank];
-}
-
-static UINT8 should_growth_happen(UINT8 enemy_rank) {
-    return (UINT8)((random_u8() % 100u) < get_growth_chance(enemy_rank));
-}
-
-static UINT8 apply_player_stat_growth(UINT8 stat_type) {
-    last_growth.actor_id = 0u;
-    last_growth.stat_type = GROWTH_NONE;
-    last_growth.old_value = 0u;
-    last_growth.new_value = 0u;
-
-    switch (stat_type) {
-        case GROWTH_HP:
-            if (player_max_hp_stat < PLAYER_HP_MP_MAX) {
-                last_growth.old_value = player_max_hp_stat;
-                player_max_hp_stat++;
-                last_growth.new_value = player_max_hp_stat;
-                last_growth.stat_type = GROWTH_HP;
-                return 1u;
-            }
-            break;
-
-        case GROWTH_MP:
-            if (player_max_mp_stat < PLAYER_HP_MP_MAX) {
-                last_growth.old_value = player_max_mp_stat;
-                player_max_mp_stat++;
-                last_growth.new_value = player_max_mp_stat;
-                last_growth.stat_type = GROWTH_MP;
-                return 1u;
-            }
-            break;
-
-        case GROWTH_ATK:
-            if (player_attack_stat < PLAYER_STAT_MAX) {
-                last_growth.old_value = player_attack_stat;
-                player_attack_stat++;
-                last_growth.new_value = player_attack_stat;
-                last_growth.stat_type = GROWTH_ATK;
-                return 1u;
-            }
-            break;
-
-        case GROWTH_DEF:
-            if (player_defense_stat < PLAYER_STAT_MAX) {
-                last_growth.old_value = player_defense_stat;
-                player_defense_stat++;
-                last_growth.new_value = player_defense_stat;
-                last_growth.stat_type = GROWTH_DEF;
-                return 1u;
-            }
-            break;
-
-        case GROWTH_SKILL:
-            if (player_skill_power_stat < PLAYER_STAT_MAX) {
-                last_growth.old_value = player_skill_power_stat;
-                player_skill_power_stat++;
-                last_growth.new_value = player_skill_power_stat;
-                last_growth.stat_type = GROWTH_SKILL;
-                return 1u;
-            }
-            break;
-
-        case GROWTH_HEAL:
-            if (player_heal_power_stat < PLAYER_STAT_MAX) {
-                last_growth.old_value = player_heal_power_stat;
-                player_heal_power_stat++;
-                last_growth.new_value = player_heal_power_stat;
-                last_growth.stat_type = GROWTH_HEAL;
-                return 1u;
-            }
-            break;
-
-        case GROWTH_AGI:
-            if (player_agility_stat < PLAYER_STAT_MAX) {
-                last_growth.old_value = player_agility_stat;
-                player_agility_stat++;
-                last_growth.new_value = player_agility_stat;
-                last_growth.stat_type = GROWTH_AGI;
-                return 1u;
-            }
-            break;
-    }
-
-    return 0u;
-}
-
-static void apply_battle_growth(void) {
-    UINT8 stat_type;
-
-    stat_type = last_growth_type;
-    clear_growth_result();
-
-    if (!should_growth_happen(battle_enemy_rank)) {
-        return;
-    }
-
-    if (stat_type == GROWTH_SKILL) {
-        stat_type = (random_u8() & 1u) ? GROWTH_SKILL : GROWTH_MP;
-    } else if (stat_type == GROWTH_ATK) {
-        stat_type = (random_u8() & 1u) ? GROWTH_ATK : GROWTH_AGI;
-    } else if (stat_type == GROWTH_NONE) {
-        stat_type = (UINT8)(GROWTH_HP + (random_u8() % GROWTH_STAT_COUNT));
-    }
-    apply_player_stat_growth(stat_type);
-}
-
-static void show_growth_message(void) {
-    if (last_growth.stat_type == GROWTH_HP) {
-        message_show(MSG_GROWTH_HP);
-    } else if (last_growth.stat_type == GROWTH_MP) {
-        message_show(MSG_GROWTH_MP);
-    } else if (last_growth.stat_type == GROWTH_ATK) {
-        message_show(MSG_GROWTH_ATK);
-    } else if (last_growth.stat_type == GROWTH_DEF) {
-        message_show(MSG_GROWTH_DEF);
-    } else if (last_growth.stat_type == GROWTH_SKILL) {
-        message_show(MSG_GROWTH_SKILL);
-    } else if (last_growth.stat_type == GROWTH_HEAL) {
-        message_show(MSG_GROWTH_HEAL);
-    } else if (last_growth.stat_type == GROWTH_AGI) {
-        message_show(MSG_GROWTH_AGI);
-    }
-}
-
 static void return_to_map_after_battle(UINT8 won) {
     game_mode = MODE_MAP;
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
 
     if (won) {
-        apply_battle_growth();
+        battle_growth_apply();
         party_after_battle_growth(battle_enemy_rank, random_u8());
-        show_growth_message();
+        battle_growth_show_message();
         if (current_enemy_index < ACTOR_COUNT &&
             actors[current_enemy_index].kind == ACTOR_KIND_ENEMY) {
             actors[current_enemy_index].active = 0u;
@@ -2597,25 +2495,26 @@ static void battle_finish_party_action(void) {
     }
 }
 
-static UINT8 battle_current_special_skill(void) {
-    UINT8 member_id;
-
-    member_id = party_get_active_member_id(battle_party_turn_slot);
-    if (member_id == PARTY_MEMBER_MAGE) return SKILL_FIRE;
-    if (member_id == PARTY_MEMBER_PRIEST) return SKILL_HEAL_SIMPLE;
-    if (member_id == PARTY_MEMBER_HERO) return player_get_skill_slot(PLAYER_SKILL_SLOT_SPECIAL);
-    return SKILL_POWER_STRIKE;
+static void battle_start_skill_select(void) {
+    battle_skill_runtime_start(battle_party_turn_slot);
+    battle_state = BSTATE_SKILL;
 }
+
+static void battle_start_ally_target_select(UINT8 skill_id) {
+    battle_skill_runtime_start_ally(skill_id);
+    battle_state = BSTATE_ALLY_TARGET;
+}
+
 
 static UINT8 battle_current_consume_mp(UINT16 cost) {
     return (UINT8)party_battle_op(PARTY_OP_TRY_CONSUME_MP, battle_party_turn_slot, cost);
 }
 
-static void battle_heal_current_actor(UINT16 amount) {
+static void battle_heal_actor_slot(UINT8 target_slot, UINT16 amount) {
     UINT16 hp;
 
-    hp = party_battle_op(PARTY_OP_HEAL_ACTIVE, battle_party_turn_slot, amount);
-    if (battle_party_turn_slot == 0u) {
+    hp = party_heal_active(target_slot, amount);
+    if (target_slot == 0u) {
         player_battle.hp = hp;
     }
 }
@@ -2648,10 +2547,11 @@ static void player_attack(void) {
 }
 
 
-static void player_use_skill(UINT8 skill_id) {
+static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
     const SkillDef *skill;
     UINT16 amount;
     Fighter actor;
+    PartyBattleFighter target;
 
     if (skill_id == SKILL_NONE) {
         battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
@@ -2664,7 +2564,8 @@ static void player_use_skill(UINT8 skill_id) {
     skill = skill_get_def(skill_id);
 
     if (skill->kind == SKILL_KIND_HEAL) {
-        if (actor.hp >= actor.max_hp) {
+        party_get_active_fighter(ally_slot, &target);
+        if (target.hp >= target.max_hp) {
             battle_show_message(message_get_buffered(MSG_BATTLE_HP_FULL));
             battle_state = BSTATE_PLAYER;
             update_battle_status();
@@ -2680,9 +2581,9 @@ static void player_use_skill(UINT8 skill_id) {
 
         amount = calc_heal_amount(&actor, skill);
         if (battle_party_turn_slot == 0u) last_growth_type = GROWTH_HEAL;
-        battle_heal_current_actor(amount);
+        battle_heal_actor_slot(ally_slot, amount);
 
-        battle_show_message("かいふくした!");
+        battle_show_damage_message("かいふく!", amount);
         battle_finish_party_action();
         return;
     }
@@ -2704,18 +2605,22 @@ static void player_use_skill(UINT8 skill_id) {
     if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
     else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
 
-    battle_show_damage_message("とくぎを つかった!", amount);
+    battle_show_damage_message("とくぎ!", amount);
     battle_flash_enemy_sprite(battle_target_index);
 
     battle_finish_party_action();
 }
 
+static void player_use_skill(UINT8 skill_id) {
+    player_use_skill_on_target(skill_id, battle_party_turn_slot);
+}
+
 static void player_skill(void) {
-    player_use_skill(battle_current_special_skill());
+    player_use_skill(battle_selected_skill);
 }
 
 static void player_heal(void) {
-    player_use_skill(SKILL_HEAL_SIMPLE);
+    battle_start_ally_target_select(SKILL_HEAL_SIMPLE);
 }
 
 static void player_run(void) {
@@ -2842,11 +2747,7 @@ static void battle_input(void) {
                 battle_start_target_select(CMD_ATTACK);
                 break;
             case CMD_SKILL:
-                if (skill_get_def(battle_current_special_skill())->kind == SKILL_KIND_HEAL) {
-                    player_skill();
-                } else {
-                    battle_start_target_select(CMD_SKILL);
-                }
+                battle_start_skill_select();
                 break;
             case CMD_HEAL:
                 player_heal();
@@ -2857,6 +2758,44 @@ static void battle_input(void) {
             default: break;
         }
 
+        if (battle_state == BSTATE_PLAYER) {
+            battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
+            battle_update_dirty();
+        }
+    }
+}
+
+static void battle_skill_input(void) {
+    UINT8 skill_id;
+    UINT8 ev;
+
+    ev = battle_skill_runtime_update(&skill_id);
+    if (ev == BATTLE_SKILL_EVENT_CANCEL) {
+        battle_state = BSTATE_PLAYER;
+        draw_battle_menu();
+        battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
+        battle_update_dirty();
+    } else if (ev == BATTLE_SKILL_EVENT_ENEMY_SKILL) {
+        battle_selected_skill = skill_id;
+        battle_start_target_select(CMD_SKILL);
+    } else if (ev == BATTLE_SKILL_EVENT_ALLY_SKILL) {
+        battle_start_ally_target_select(skill_id);
+    }
+}
+
+static void battle_ally_target_input(void) {
+    UINT8 skill_id;
+    UINT8 ally_slot;
+    UINT8 ev;
+
+    ev = battle_skill_runtime_update_ally(&skill_id, &ally_slot);
+    if (ev == BATTLE_SKILL_EVENT_CANCEL) {
+        battle_state = BSTATE_PLAYER;
+        draw_battle_menu();
+        battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
+        battle_update_dirty();
+    } else if (ev == BATTLE_SKILL_EVENT_ALLY_SKILL) {
+        player_use_skill_on_target(skill_id, ally_slot);
         if (battle_state == BSTATE_PLAYER) {
             battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
             battle_update_dirty();
@@ -2879,6 +2818,7 @@ static void battle_target_input(void) {
         audio_waitpadup();
     } else if (keys & J_B) {
         battle_state = BSTATE_PLAYER;
+        draw_battle_menu();
         battle_set_message_dirty("");
         battle_update_dirty();
         battle_move_command_cursor_obj();
@@ -2904,7 +2844,7 @@ static void init_game(void) {
     init_event_flags();
     actor_runtime_init_actors();
     party_init_roster_defaults();
-    clear_growth_result();
+    battle_growth_clear();
     battle_enemy_rank = 1u;
     spawn_player_tx = 1u;
     spawn_player_ty = 2u;
@@ -2943,6 +2883,8 @@ static void init_game(void) {
     walk_anim_counter = 0u;
     battle_first_player_refresh_pending = 0u;
     battle_party_turn_slot = 0u;
+    map_idle_frames = 0u;
+    map_overlay_visible = 0u;
     game_mode = MODE_MAP;
 }
 
@@ -2967,8 +2909,14 @@ void main(void) {
                     case BSTATE_PLAYER:
                         battle_input();
                         break;
+                    case BSTATE_SKILL:
+                        battle_skill_input();
+                        break;
                     case BSTATE_TARGET:
                         battle_target_input();
+                        break;
+                    case BSTATE_ALLY_TARGET:
+                        battle_ally_target_input();
                         break;
                     case BSTATE_ENEMY:
                         enemy_turn();

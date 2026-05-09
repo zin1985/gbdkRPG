@@ -61,7 +61,8 @@
 #define MSG_DUNGEON_NPC_WOUNDED 49u
 #define MSG_RUINS_NPC_SCHOLAR   50u
 #define MSG_RUINS_NPC_SPIRIT    51u
-#define MSG_COUNT       52u
+#define MSG_HEAL_SPRING     52u
+#define MSG_COUNT       53u
 
 void message_show(UINT8 id) NONBANKED;
 const char *message_get_buffered(UINT8 id) NONBANKED;

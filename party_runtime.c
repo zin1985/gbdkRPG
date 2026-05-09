@@ -876,6 +876,42 @@ UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED {
     return 0u;
 }
 
+UINT16 party_heal_active(UINT8 active_slot, UINT16 amount) BANKED {
+    UINT16 after;
+    PartyMemberRuntime *member;
+
+    member = party_get_active_member(active_slot);
+    if (member == 0) return 0u;
+    if (member->hp == 0u) return member->hp;
+
+    after = (UINT16)(member->hp + amount);
+    if (after > member->max_hp || after < member->hp) {
+        after = member->max_hp;
+    }
+    member->hp = after;
+    member->status_flags &= (UINT8)~(PARTY_STATUS_SLEEP | PARTY_STATUS_STUN | PARTY_STATUS_DOWN | PARTY_STATUS_TIRED);
+    if (member->fatigue > 1u) member->fatigue = (UINT8)(member->fatigue - 2u);
+    else member->fatigue = 0u;
+    return member->hp;
+}
+
+void party_heal_all_active(void) BANKED {
+    UINT8 i;
+    PartyMemberRuntime *member;
+
+    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
+        member = party_get_active_member(i);
+        if (member == 0) continue;
+        member->hp = member->max_hp;
+        member->mp = member->max_mp;
+        member->status_flags &= (UINT8)~(PARTY_STATUS_POISON | PARTY_STATUS_SLEEP | PARTY_STATUS_STUN | PARTY_STATUS_DOWN | PARTY_STATUS_TIRED);
+        if (member->fatigue > 2u) member->fatigue = (UINT8)(member->fatigue - 3u);
+        else member->fatigue = 0u;
+    }
+}
+
+
+
 UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id) BANKED {
     UINT8 i;
 
@@ -1011,6 +1047,55 @@ static void party_draw_status_page(UINT8 active_slot) BANKED {
     }
     jp_put_bkg_text(1u,16u, "< > なかま  A/Bもどる");
 }
+
+void party_menu_show_heal_skill_loop(void) BANKED {
+    UINT8 keys;
+    UINT8 target_slot;
+    UINT8 caster_slot;
+    PartyBattleFighter caster;
+    PartyBattleFighter target;
+    UINT16 amount;
+
+    caster_slot = (PARTY_ACTIVE_COUNT > 1u) ? 1u : 0u;
+    target_slot = 0u;
+    party_ui_clear();
+    jp_put_bkg_text(1u, 1u, "かいふく特技");
+    jp_put_bkg_text(1u,16u, "上下 A使用 B戻る");
+
+    while (1) {
+        party_get_active_fighter(target_slot, &target);
+        jp_bkg_clear_area(1u, 3u, 18u, 6u);
+        jp_put_bkg_text(1u, 3u, "対象");
+        jp_put_bkg_text(7u, 3u, target.name);
+        jp_put_bkg_text(1u, 5u, "HP"); party_put_u16(5u, 5u, target.hp); jp_put_bkg_text(8u,5u,"/"); party_put_u16(10u,5u,target.max_hp);
+        jp_put_bkg_text(1u, 7u, "MP4 で回復");
+
+        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
+        audio_waitpadup();
+        if (keys & J_UP) {
+            if (target_slot == 0u) target_slot = PARTY_ACTIVE_COUNT - 1u;
+            else target_slot--;
+        } else if (keys & J_DOWN) {
+            target_slot++;
+            if (target_slot >= PARTY_ACTIVE_COUNT) target_slot = 0u;
+        } else if (keys & (J_B | J_START)) {
+            break;
+        } else if (keys & J_A) {
+            party_get_active_fighter(caster_slot, &caster);
+            if (caster.hp == 0u || caster.mp < 4u || target.hp >= target.max_hp) {
+                jp_bkg_clear_area(1u, 12u, 18u, 1u);
+                jp_put_bkg_text(1u, 12u, "使えません");
+            } else {
+                party_battle_op(PARTY_OP_TRY_CONSUME_MP, caster_slot, 4u);
+                amount = (UINT16)((UINT16)caster.heal_power * 2u + 6u);
+                party_heal_active(target_slot, amount);
+                jp_bkg_clear_area(1u, 12u, 18u, 1u);
+                jp_put_bkg_text(1u, 12u, "回復しました");
+            }
+        }
+    }
+}
+
 
 void party_menu_show_status_loop(void) BANKED {
     UINT8 keys;

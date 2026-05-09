@@ -12,8 +12,9 @@ BANKREF(menu_runtime_bank)
 #define MENU_STATUS    0u
 #define MENU_ITEM      1u
 #define MENU_EQUIP     2u
-#define MENU_OBJECTIVE 3u
-#define MENU_COUNT     4u
+#define MENU_SKILL     3u
+#define MENU_OBJECTIVE 4u
+#define MENU_COUNT     5u
 
 static void menu_screen_clear(void) {
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
@@ -31,7 +32,8 @@ static void menu_draw_static(void) {
     jp_put_bkg_text(3u, 3u, "つよさ");
     jp_put_bkg_text(3u, 4u, "もちもの");
     jp_put_bkg_text(3u, 5u, "そうび");
-    jp_put_bkg_text(3u, 6u, "もくてき");
+    jp_put_bkg_text(3u, 6u, "とくぎ");
+    jp_put_bkg_text(3u, 7u, "もくてき");
     jp_put_bkg_text(1u,16u, "A けってい B もどる");
 }
 
@@ -39,7 +41,8 @@ static void menu_draw_cursor(UINT8 cursor) {
     menu_put_cursor(1u, 3u, (UINT8)(cursor == MENU_STATUS));
     menu_put_cursor(1u, 4u, (UINT8)(cursor == MENU_ITEM));
     menu_put_cursor(1u, 5u, (UINT8)(cursor == MENU_EQUIP));
-    menu_put_cursor(1u, 6u, (UINT8)(cursor == MENU_OBJECTIVE));
+    menu_put_cursor(1u, 6u, (UINT8)(cursor == MENU_SKILL));
+    menu_put_cursor(1u, 7u, (UINT8)(cursor == MENU_OBJECTIVE));
 }
 
 static void menu_show_objective(UINT8 enemy_defeated) {
@@ -86,6 +89,8 @@ void menu_runtime_open(UINT8 enemy_defeated) BANKED {
                 inventory_menu_show_items_loop();
             } else if (cursor == MENU_EQUIP) {
                 party_menu_show_equip_loop();
+            } else if (cursor == MENU_SKILL) {
+                party_menu_show_heal_skill_loop();
             } else {
                 menu_show_objective(enemy_defeated);
                 audio_waitpad(J_A | J_B | J_START);

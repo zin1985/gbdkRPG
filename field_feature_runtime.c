@@ -12,6 +12,7 @@ UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED {
         if (tx == 14u && ty == 14u) return MAP_EVENT_PORT_TOWN;
         if (tx == 1u && ty == 14u) return MAP_EVENT_DUNGEON;
         if (tx == 1u && ty == 2u) return MAP_EVENT_RUINS;
+        if (tx == 8u && ty == 8u) return MAP_EVENT_HEAL_SPRING;
     } else if (area == AREA_TOWN) {
         if (tx == 2u && ty == 14u) return MAP_EVENT_FIELD_EXIT;
     } else if (area == AREA_PORT) {
