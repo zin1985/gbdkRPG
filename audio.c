@@ -1,17 +1,17 @@
 #include "audio.h"
 #include "deep_eerie_motif_dungeon_bgm.h"
 #include "heavy_metal_celtic_battle_bgm.h"
-#include "gentle_strings_town_bgm.h"
+#include "peaceful_balanced_town_bgm.h"
 #include "sunset_ruins_field_bgm.h"
 #include "sunset_strings_adventure_field_bgm.h"
 
 /*
- * rpg145_gentle_strings_town_bgm:
+ * rpg147_peaceful_balanced_town_bgm:
  * Central audio dispatcher.
  *
  * Heavy data-driven BGM players are BANKED and kept out of Bank 0:
  * - FIELD   : sunset_strings_adventure_field_bgm   bank 13
- * - TOWN    : gentle_strings_town_bgm                bank 12
+ * - TOWN    : peaceful_balanced_town_bgm             bank 12
  * - DUNGEON : deep_eerie_motif_dungeon_bgm       bank 11
  * - RUINS   : sunset_ruins_field_bgm             bank 14
  * - BATTLE  : heavy_metal_celtic_battle_bgm         bank 15
@@ -27,7 +27,7 @@ static void audio_stop_external_bgm_if_needed(void) {
     if (audio_current_track == AUDIO_TRACK_FIELD) {
         sunset_strings_adventure_field_bgm_stop();
     } else if (audio_current_track == AUDIO_TRACK_TOWN) {
-        gentle_strings_town_bgm_stop();
+        peaceful_balanced_town_bgm_stop();
     } else if (audio_current_track == AUDIO_TRACK_DUNGEON) {
         deep_eerie_motif_dungeon_bgm_stop();
     } else if (audio_current_track == AUDIO_TRACK_RUINS) {
@@ -70,7 +70,7 @@ void audio_play_music(UINT8 track) {
     }
 
     if (track == AUDIO_TRACK_TOWN) {
-        gentle_strings_town_bgm_init();
+        peaceful_balanced_town_bgm_init();
         return;
     }
 
@@ -99,7 +99,7 @@ void audio_update(void) {
     }
 
     if (audio_current_track == AUDIO_TRACK_TOWN) {
-        gentle_strings_town_bgm_update();
+        peaceful_balanced_town_bgm_update();
         return;
     }
 
