@@ -29,14 +29,14 @@
 #define ITEM_FEATHER       33u
 #define ITEM_DEBUG_NO_ENCOUNT 34u
 
-void inventory_clear(void);
-void inventory_seed_defaults(void);
-UINT8 inventory_get_count(UINT8 item_id);
-UINT8 inventory_has(UINT8 item_id, UINT8 amount);
-UINT8 inventory_add(UINT8 item_id, UINT8 amount);
-UINT8 inventory_remove(UINT8 item_id, UINT8 amount);
-void inventory_copy_to(UINT8 *dst);
-void inventory_copy_from(const UINT8 *src);
+void inventory_clear(void) BANKED;
+void inventory_seed_defaults(void) BANKED;
+UINT8 inventory_get_count(UINT8 item_id) BANKED;
+UINT8 inventory_has(UINT8 item_id, UINT8 amount) BANKED;
+UINT8 inventory_add(UINT8 item_id, UINT8 amount) BANKED;
+UINT8 inventory_remove(UINT8 item_id, UINT8 amount) BANKED;
+void inventory_copy_to(UINT8 *dst) BANKED;
+void inventory_copy_from(const UINT8 *src) BANKED;
 void inventory_menu_show_items_loop(void) BANKED;
 
 #endif

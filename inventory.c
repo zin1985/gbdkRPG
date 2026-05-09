@@ -9,7 +9,7 @@
 
 static UINT8 g_inventory_counts[INVENTORY_ITEM_MAX];
 
-void inventory_clear(void) {
+void inventory_clear(void) BANKED {
     UINT8 i;
 
     for (i = 0u; i < INVENTORY_ITEM_MAX; i++) {
@@ -17,7 +17,7 @@ void inventory_clear(void) {
     }
 }
 
-void inventory_seed_defaults(void) {
+void inventory_seed_defaults(void) BANKED {
     inventory_clear();
     inventory_add(ITEM_HERB, 6u);
     inventory_add(ITEM_MANA_HERB, 2u);
@@ -31,17 +31,17 @@ void inventory_seed_defaults(void) {
     inventory_add(ITEM_DEBUG_NO_ENCOUNT, 1u);
 }
 
-UINT8 inventory_get_count(UINT8 item_id) {
+UINT8 inventory_get_count(UINT8 item_id) BANKED {
     if (item_id >= INVENTORY_ITEM_MAX) return 0u;
     return g_inventory_counts[item_id];
 }
 
-UINT8 inventory_has(UINT8 item_id, UINT8 amount) {
+UINT8 inventory_has(UINT8 item_id, UINT8 amount) BANKED {
     if (item_id >= INVENTORY_ITEM_MAX) return 0u;
     return (g_inventory_counts[item_id] >= amount) ? 1u : 0u;
 }
 
-UINT8 inventory_add(UINT8 item_id, UINT8 amount) {
+UINT8 inventory_add(UINT8 item_id, UINT8 amount) BANKED {
     UINT16 total;
 
     if (item_id == ITEM_NONE) return 0u;
@@ -58,7 +58,7 @@ UINT8 inventory_add(UINT8 item_id, UINT8 amount) {
     return 1u;
 }
 
-UINT8 inventory_remove(UINT8 item_id, UINT8 amount) {
+UINT8 inventory_remove(UINT8 item_id, UINT8 amount) BANKED {
     if (item_id >= INVENTORY_ITEM_MAX) return 0u;
     if (amount == 0u) return 1u;
     if (g_inventory_counts[item_id] < amount) return 0u;
@@ -67,7 +67,7 @@ UINT8 inventory_remove(UINT8 item_id, UINT8 amount) {
     return 1u;
 }
 
-void inventory_copy_to(UINT8 *dst) {
+void inventory_copy_to(UINT8 *dst) BANKED {
     UINT8 i;
 
     if (dst == 0) return;
@@ -77,7 +77,7 @@ void inventory_copy_to(UINT8 *dst) {
     }
 }
 
-void inventory_copy_from(const UINT8 *src) {
+void inventory_copy_from(const UINT8 *src) BANKED {
     UINT8 i;
 
     if (src == 0) return;
