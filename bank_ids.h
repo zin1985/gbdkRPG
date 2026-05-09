@@ -30,4 +30,10 @@
 #define ROM_BANK_FUTURE_AUDIO         14u
 #define ROM_BANK_FUTURE_SAVE_COMPAT   15u
 
+/* rpg143 concrete audio usage aliases */
+#define ROM_BANK_AUDIO_TOWN_CONCRETE       12u
+#define ROM_BANK_AUDIO_FIELD_CONCRETE      13u
+#define ROM_BANK_AUDIO_DUNGEON_CONCRETE    14u
+#define ROM_BANK_AUDIO_BATTLE_CONCRETE     15u
+
 #endif

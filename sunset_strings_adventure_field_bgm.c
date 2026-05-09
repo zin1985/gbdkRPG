@@ -85,7 +85,7 @@ static const uint8_t strings_bass_seq[SUNSET_STRINGS_FIELD_LEN] = {
 };
 
 
-static uint8_t strings_pos = 0u;
+static uint16_t strings_pos = 0u;
 static uint8_t strings_tick = 0u;
 static uint8_t strings_playing = 0u;
 static uint8_t strings_ch3_loaded = 0u;
@@ -165,7 +165,7 @@ static void trigger_soft_noise(uint8_t kind) {
     NR44_REG = 0x80u;
 }
 
-static void strings_play_step(uint8_t pos) {
+static void strings_play_step(uint16_t pos) {
     uint8_t beat = (uint8_t)(pos & 15u);
     uint8_t lead_note = strings_lead_seq[pos];
     uint8_t harmony_note = strings_harmony_seq[pos];

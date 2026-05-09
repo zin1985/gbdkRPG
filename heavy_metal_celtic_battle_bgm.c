@@ -85,7 +85,7 @@ static const uint8_t metal_bass_seq[METAL_CELTIC_BATTLE_LEN] = {
 };
 
 
-static uint8_t metal_pos = 0u;
+static uint16_t metal_pos = 0u;
 static uint8_t metal_tick = 0u;
 static uint8_t metal_playing = 0u;
 static uint8_t metal_ch3_loaded = 0u;
@@ -170,7 +170,7 @@ static void trigger_drum_ch4(uint8_t kind, uint8_t metal_section) {
     NR44_REG = 0x80u;
 }
 
-static void play_metal_step(uint8_t pos) {
+static void play_metal_step(uint16_t pos) {
     uint8_t beat = (uint8_t)(pos & 15u);
     uint8_t metal_section = (pos >= METAL_DROP_POS);
 

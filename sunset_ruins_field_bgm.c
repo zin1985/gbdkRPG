@@ -81,7 +81,7 @@ static const uint8_t sunset_bass_seq[SUNSET_FIELD_LEN] = {
 };
 
 
-static uint8_t sunset_pos = 0u;
+static uint16_t sunset_pos = 0u;
 static uint8_t sunset_tick = 0u;
 static uint8_t sunset_playing = 0u;
 static uint8_t sunset_ch3_loaded = 0u;
@@ -162,7 +162,7 @@ static void trigger_soft_noise(uint8_t kind) {
     NR44_REG = 0x80u;
 }
 
-static void sunset_play_step(uint8_t pos) {
+static void sunset_play_step(uint16_t pos) {
     uint8_t beat = (uint8_t)(pos & 15u);
 
     trigger_lead_ch1(pulse_freq_table[sunset_lead_seq[pos]]);
