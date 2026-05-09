@@ -55,11 +55,11 @@ static UINT8 add_skill_choice(UINT8 skill_id) {
 
 static void draw_skill_window(void) {
     UINT8 i;
-    jp_draw_bkg_frame(9u, 9u, 11u, 5u);
-    jp_bkg_clear_area(10u, 10u, 9u, 3u);
+    jp_draw_bkg_frame(9u, 13u, 11u, 5u);
+    jp_bkg_clear_area(10u, 14u, 9u, 3u);
     for (i = 0u; i < skill_count && i < 3u; i++) {
-        jp_put_bkg_text(10u, (UINT8)(10u + i), (i == skill_cursor) ? ">" : " ");
-        jp_put_bkg_text(11u, (UINT8)(10u + i), runtime_skill_name(skill_ids[i]));
+        jp_put_bkg_text(10u, (UINT8)(14u + i), (i == skill_cursor) ? ">" : " ");
+        jp_put_bkg_text(11u, (UINT8)(14u + i), runtime_skill_name(skill_ids[i]));
     }
 }
 
@@ -120,11 +120,11 @@ UINT8 battle_skill_runtime_update(UINT8 *skill_id) BANKED {
 
 static void draw_ally_window(void) {
     UINT8 i;
-    jp_draw_bkg_frame(9u, 9u, 11u, 5u);
-    jp_bkg_clear_area(10u, 10u, 9u, 3u);
+    jp_draw_bkg_frame(9u, 13u, 11u, 5u);
+    jp_bkg_clear_area(10u, 14u, 9u, 3u);
     for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
-        jp_put_bkg_text(10u, (UINT8)(10u + i), (i == ally_cursor) ? ">" : " ");
-        jp_put_bkg_text(11u, (UINT8)(10u + i), party_get_active_name(i));
+        jp_put_bkg_text(10u, (UINT8)(14u + i), (i == ally_cursor) ? ">" : " ");
+        jp_put_bkg_text(11u, (UINT8)(14u + i), party_get_active_name(i));
     }
 }
 

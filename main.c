@@ -17,6 +17,7 @@
 #include "field_feature_runtime.h"
 #include "battle_skill_runtime.h"
 #include "battle_growth_runtime.h"
+#include "field_overlay_runtime.h"
 
 /*
  * ============================================================================
@@ -247,9 +248,9 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_ENEMY_TILE_BASE 80u
 #define BATTLE_ENEMY_TILE_COUNT 48u
 #define BATTLE_MSG_X 0u
-#define BATTLE_MSG_Y 14u
+#define BATTLE_MSG_Y 13u
 #define BATTLE_MSG_W 20u
-#define BATTLE_MSG_H 4u
+#define BATTLE_MSG_H 5u
 
 /* rpg090:
  * Keep battle UI at the real visible BG origin.  Earlier right-shift
@@ -1645,23 +1646,9 @@ static void field_overlay_hide(void) {
 }
 
 static void field_overlay_show(void) {
-    UINT8 x;
-    UINT8 y;
     if (map_overlay_visible) return;
     map_overlay_visible = 1u;
-    x = (UINT8)(((camera_px >> 3u) + 11u) & 31u);
-    y = (UINT8)(((camera_py >> 3u) + 11u) & 31u);
-    if (x > 24u) x = 11u;
-    if (y > 26u) y = 11u;
-    draw_bkg_box(x, y, 9u, 7u);
-    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 1u), "HP");
-    put_u16((UINT8)(x + 4u), (UINT8)(y + 1u), party_get_active_hp(0u));
-    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 2u), "MP");
-    put_u16((UINT8)(x + 4u), (UINT8)(y + 2u), party_get_active_mp(0u));
-    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 4u), "MAP");
-    put_u16((UINT8)(x + 5u), (UINT8)(y + 4u), player_tx);
-    jp_put_bkg_text((UINT8)(x + 6u), (UINT8)(y + 4u), ",");
-    put_u16((UINT8)(x + 7u), (UINT8)(y + 4u), player_ty);
+    field_overlay_runtime_show(current_area, player_tx, player_ty, camera_px, camera_py);
 }
 
 static void map_input(void) {
@@ -1840,8 +1827,8 @@ static void draw_battle_enemy_names(void) {
     UINT8 count;
     UINT8 used[BATTLE_MAX_ENEMY_COUNT];
 
-    draw_bkg_box(0u, 9u, 9u, 5u);
-    battle_bkg_clear_area(1u, 10u, 7u, 3u);
+    draw_bkg_box(0u, 13u, 9u, 5u);
+    battle_bkg_clear_area(1u, 14u, 7u, 3u);
 
     for (i = 0u; i < BATTLE_MAX_ENEMY_COUNT; i++) used[i] = 0u;
 
@@ -1859,7 +1846,7 @@ static void draw_battle_enemy_names(void) {
             }
         }
         copy_enemy_line(line, enemy_battles[i].name, count);
-        battle_put_bkg_text(1u, (UINT8)(10u + line), battle_enemy_name_lines[line]);
+        battle_put_bkg_text(1u, (UINT8)(14u + line), battle_enemy_name_lines[line]);
         line++;
     }
 }
@@ -1879,17 +1866,18 @@ static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
 }
 
 static void draw_party_status_box(void) {
-    /*
-     * rpg100:
-     * Render active party from party_roster[] instead of hard-coded dummy values.
-     * Redrawing the strip also repairs BG text if the JP glyph cache has been
-     * reused by long battle messages.
+    /* rpg158:
+     * Split the top party status into three compact boxes.  The former full
+     * width box made the second BG row look like one long white strip.
      */
-    draw_bkg_box(0u, 0u, 20u, 5u);
+    battle_bkg_clear_area(0u, 0u, 20u, 5u);
+    draw_bkg_box(0u, 0u, 6u, 5u);
+    draw_bkg_box(6u, 0u, 7u, 5u);
+    draw_bkg_box(13u, 0u, 7u, 5u);
 
     draw_battle_party_member_status(0u, 1u);
     draw_battle_party_member_status(1u, 7u);
-    draw_battle_party_member_status(2u, 13u);
+    draw_battle_party_member_status(2u, 14u);
 }
 
 static void hide_battle_enemy_sprites(void) {
@@ -1987,55 +1975,53 @@ static UINT8 battle_ensure_selected_alive(void) {
 
 
 static void draw_battle_frame(void) {
-    /*
-     * rpg091:
-     * Re-assert battle BG origin at every full-frame construction point so no
-     * field camera residue can shift the command/status windows.
-     */
+    /* rpg158: bottom command/name panels share the same area with messages. */
     battle_hide_window_and_reset_scroll();
     battle_clear_bg_full();
     draw_party_status_box();
-    draw_battle_enemy_names();
-    draw_battle_menu();
     draw_battle_message_area();
 }
 
 static void draw_battle_message_area(void) {
-    /*
-     * rpg095:
-     * Use the same two-line message style as growth messages.
-     * The command cursor phase keeps this box empty; action messages use rows
-     * 15 and 16 and never share the command window text area.
+    /* rpg158:
+     * The bottom area is shared.  When there is no message, show enemy names
+     * and commands.  When a message exists, cover that area with the message
+     * window only for the duration of the message.
      */
+    if (battle_message_text == 0 || battle_message_text[0] == '\0') {
+        draw_battle_enemy_names();
+        draw_battle_menu();
+        return;
+    }
+    battle_hide_command_cursor_obj();
     draw_bkg_box(BATTLE_MSG_X, BATTLE_MSG_Y, BATTLE_MSG_W, BATTLE_MSG_H);
-    battle_bkg_clear_area((UINT8)(BATTLE_MSG_X + 1u), (UINT8)(BATTLE_MSG_Y + 1u), (UINT8)(BATTLE_MSG_W - 2u), 2u);
+    battle_bkg_clear_area((UINT8)(BATTLE_MSG_X + 1u), (UINT8)(BATTLE_MSG_Y + 1u), (UINT8)(BATTLE_MSG_W - 2u), 3u);
 }
 
 static void draw_battle_menu(void) {
-    /* rpg154: expand command window upward by one BG block. */
-    draw_bkg_box(9u, 9u, 11u, 5u);
+    draw_bkg_box(9u, 13u, 11u, 5u);
 
-    battle_put_bkg_text(11u, 10u, "こうげき");
-    battle_put_bkg_text(16u, 10u, "とくぎ");
-    battle_put_bkg_text(11u, 11u, "かいふく");
-    battle_put_bkg_text(16u, 11u, "にげる");
+    battle_put_bkg_text(11u, 14u, "こうげき");
+    battle_put_bkg_text(16u, 14u, "とくぎ");
+    battle_put_bkg_text(11u, 15u, "かいふく");
+    battle_put_bkg_text(16u, 15u, "にげる");
 }
 
 static void battle_command_cursor_bg_pos(UINT8 index, UINT8 *col, UINT8 *row) {
     switch (index) {
-        case CMD_ATTACK: *col = 10u; *row = 10u; break;
-        case CMD_SKILL:  *col = 15u; *row = 10u; break;
-        case CMD_HEAL:   *col = 10u; *row = 11u; break;
-        case CMD_RUN:    *col = 15u; *row = 11u; break;
-        default:         *col = 10u; *row = 10u; break;
+        case CMD_ATTACK: *col = 10u; *row = 14u; break;
+        case CMD_SKILL:  *col = 15u; *row = 14u; break;
+        case CMD_HEAL:   *col = 10u; *row = 15u; break;
+        case CMD_RUN:    *col = 15u; *row = 15u; break;
+        default:         *col = 10u; *row = 14u; break;
     }
 }
 
 static void battle_clear_command_cursor_bg(void) {
-    battle_put_bkg_text(10u, 10u, " ");
-    battle_put_bkg_text(15u, 10u, " ");
-    battle_put_bkg_text(10u, 11u, " ");
-    battle_put_bkg_text(15u, 11u, " ");
+    battle_put_bkg_text(10u, 14u, " ");
+    battle_put_bkg_text(15u, 14u, " ");
+    battle_put_bkg_text(10u, 15u, " ");
+    battle_put_bkg_text(15u, 15u, " ");
 }
 
 static void battle_move_command_cursor_obj(void) {
@@ -2155,17 +2141,23 @@ static void battle_update_dirty(void) {
         battle_reposition_party_icons_only();
     }
     if (flags & BATTLE_DIRTY_ENEMY_OAM) {
-        draw_battle_enemy_names();
+        if (battle_message_text == 0 || battle_message_text[0] == '\0') {
+            draw_battle_enemy_names();
+        }
         show_battle_enemy_sprites();
     }
     if (flags & BATTLE_DIRTY_MESSAGE) {
         draw_battle_message_area();
         if (battle_message_text != 0 && battle_message_text[0] != '\0') {
-            battle_put_bkg_text(1u, 15u, battle_message_text);
+            battle_put_bkg_text(1u, 14u, battle_message_text);
+        } else if (battle_state == BSTATE_PLAYER) {
+            battle_move_command_cursor_obj();
         }
     }
     if (flags & BATTLE_DIRTY_CURSOR) {
-        battle_move_command_cursor_obj();
+        if (battle_message_text == 0 || battle_message_text[0] == '\0') {
+            battle_move_command_cursor_obj();
+        }
     }
 
     audio_wait_vbl();
@@ -2183,7 +2175,6 @@ static void battle_prepare_first_command_ui(void) {
     battle_hide_window_and_reset_scroll();
 
     battle_message_text = "";
-    draw_battle_menu();
     draw_battle_message_area();
 
     battle_reposition_party_icons_only();
@@ -2496,11 +2487,13 @@ static void battle_finish_party_action(void) {
 }
 
 static void battle_start_skill_select(void) {
+    battle_hide_command_cursor_obj();
     battle_skill_runtime_start(battle_party_turn_slot);
     battle_state = BSTATE_SKILL;
 }
 
 static void battle_start_ally_target_select(UINT8 skill_id) {
+    battle_hide_command_cursor_obj();
     battle_skill_runtime_start_ally(skill_id);
     battle_state = BSTATE_ALLY_TARGET;
 }
@@ -2772,7 +2765,7 @@ static void battle_skill_input(void) {
     ev = battle_skill_runtime_update(&skill_id);
     if (ev == BATTLE_SKILL_EVENT_CANCEL) {
         battle_state = BSTATE_PLAYER;
-        draw_battle_menu();
+        battle_set_message_dirty("");
         battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
         battle_update_dirty();
     } else if (ev == BATTLE_SKILL_EVENT_ENEMY_SKILL) {
@@ -2791,7 +2784,7 @@ static void battle_ally_target_input(void) {
     ev = battle_skill_runtime_update_ally(&skill_id, &ally_slot);
     if (ev == BATTLE_SKILL_EVENT_CANCEL) {
         battle_state = BSTATE_PLAYER;
-        draw_battle_menu();
+        battle_set_message_dirty("");
         battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
         battle_update_dirty();
     } else if (ev == BATTLE_SKILL_EVENT_ALLY_SKILL) {
@@ -2818,7 +2811,6 @@ static void battle_target_input(void) {
         audio_waitpadup();
     } else if (keys & J_B) {
         battle_state = BSTATE_PLAYER;
-        draw_battle_menu();
         battle_set_message_dirty("");
         battle_update_dirty();
         battle_move_command_cursor_obj();
