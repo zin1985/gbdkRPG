@@ -1,4 +1,6 @@
 main.c:
+main.c:1044: warning 112: function 'current_area_is_dungeon_like' implicit declaration
+main.c:1044: warning 84: 'auto' variable 'current_area_is_dungeon_like' may be used before initialization
 audio.c:
 sprites.c:
 dialogue.c:
@@ -27,3 +29,8 @@ heavy_metal_celtic_battle_bgm.c:228: warning 126: unreachable code
 sunset_ruins_field_bgm.c:
 sunset_ruins_field_bgm.c:206: warning 94: comparison is always false due to limited range of data type
 sunset_ruins_field_bgm.c:207: warning 126: unreachable code
+sunset_strings_adventure_field_bgm.c:
+sunset_strings_adventure_field_bgm.c:223: warning 94: comparison is always false due to limited range of data type
+sunset_strings_adventure_field_bgm.c:224: warning 126: unreachable code
+sunset_strings_adventure_field_bgm.c:225: warning 126: unreachable code
+sunset_strings_adventure_field_bgm.c:226: warning 126: unreachable code

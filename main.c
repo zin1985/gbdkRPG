@@ -1041,6 +1041,7 @@ static void open_main_menu(void) {
     hide_battle_enemy_sprites();
     restore_field_vram_state();
     if (current_area_is_town_like()) audio_play_music(AUDIO_TRACK_TOWN);
+    else if (current_area_is_dungeon_like()) audio_play_music(AUDIO_TRACK_DUNGEON);
     else audio_play_music(AUDIO_TRACK_FIELD);
 }
 
@@ -1424,6 +1425,10 @@ static UINT8 current_area_is_town_like(void) {
     return (UINT8)(current_area == AREA_TOWN || current_area == AREA_PORT);
 }
 
+static UINT8 current_area_is_dungeon_like(void) {
+    return (UINT8)(current_area == AREA_DUNGEON || current_area == AREA_RUINS);
+}
+
 static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
     player_moving = 0u;
     move_pixels_remaining = 0u;
@@ -1480,7 +1485,7 @@ static void leave_port_marker(void) {
 }
 
 static void enter_dungeon_marker(void) {
-    change_area_marker(MSG_ENTER_DUNGEON, AREA_DUNGEON, AUDIO_TRACK_FIELD, 2u, 13u, DIR_DOWN, MSG_ARRIVE_DUNGEON);
+    change_area_marker(MSG_ENTER_DUNGEON, AREA_DUNGEON, AUDIO_TRACK_DUNGEON, 2u, 13u, DIR_DOWN, MSG_ARRIVE_DUNGEON);
     quest_start(QUEST_LOST_KEY);
 }
 
@@ -1489,7 +1494,7 @@ static void leave_dungeon_marker(void) {
 }
 
 static void enter_ruins_marker(void) {
-    change_area_marker(MSG_ENTER_RUINS, AREA_RUINS, AUDIO_TRACK_FIELD, 13u, 13u, DIR_UP, MSG_ARRIVE_RUINS);
+    change_area_marker(MSG_ENTER_RUINS, AREA_RUINS, AUDIO_TRACK_DUNGEON, 13u, 13u, DIR_UP, MSG_ARRIVE_RUINS);
     quest_advance(QUEST_LOST_KEY);
 }
 
@@ -2556,6 +2561,7 @@ static void return_to_map_after_battle(UINT8 won) {
     }
     restore_field_vram_state();
     if (current_area_is_town_like()) audio_play_music(AUDIO_TRACK_TOWN);
+    else if (current_area_is_dungeon_like()) audio_play_music(AUDIO_TRACK_DUNGEON);
     else audio_play_music(AUDIO_TRACK_FIELD);
 }
 

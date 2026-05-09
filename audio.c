@@ -1,6 +1,7 @@
 #include "audio.h"
 #include "heavy_metal_celtic_battle_bgm.h"
 #include "sunset_ruins_field_bgm.h"
+#include "sunset_strings_adventure_field_bgm.h"
 
 /*
  * rpg083_music:
@@ -45,7 +46,7 @@ static const MusicStep music_town[] = {
     {N_D4, N_G3, 24u}, {N_C4, N_C3, 48u}
 };
 
-/* Field and battle tracks are provided by BANKED BGM drivers. */
+/* Field, dungeon, and battle tracks are provided by BANKED BGM drivers. */
 
 
 static UINT8 audio_current_track;
@@ -55,6 +56,9 @@ static UINT8 audio_started;
 
 static void audio_stop_external_bgm_if_needed(void) {
     if (audio_current_track == AUDIO_TRACK_FIELD) {
+        sunset_strings_adventure_field_bgm_stop();
+    }
+    if (audio_current_track == AUDIO_TRACK_DUNGEON) {
         sunset_ruins_field_bgm_stop();
     }
     if (audio_current_track == AUDIO_TRACK_BATTLE) {
@@ -65,6 +69,7 @@ static void audio_stop_external_bgm_if_needed(void) {
 static UINT8 audio_track_length(UINT8 track) {
     if (track == AUDIO_TRACK_TOWN) return (UINT8)(sizeof(music_town) / sizeof(music_town[0]));
     if (track == AUDIO_TRACK_FIELD) return 0u;
+    if (track == AUDIO_TRACK_DUNGEON) return 0u;
     if (track == AUDIO_TRACK_BATTLE) return 0u;
     return 0u;
 }
@@ -150,6 +155,11 @@ void audio_play_music(UINT8 track) {
     audio_step_frames = 0u;
 
     if (track == AUDIO_TRACK_FIELD) {
+        sunset_strings_adventure_field_bgm_init();
+        return;
+    }
+
+    if (track == AUDIO_TRACK_DUNGEON) {
         sunset_ruins_field_bgm_init();
         return;
     }
@@ -166,6 +176,11 @@ void audio_update(void) {
     if (audio_current_track == AUDIO_TRACK_NONE) return;
 
     if (audio_current_track == AUDIO_TRACK_FIELD) {
+        sunset_strings_adventure_field_bgm_update();
+        return;
+    }
+
+    if (audio_current_track == AUDIO_TRACK_DUNGEON) {
         sunset_ruins_field_bgm_update();
         return;
     }

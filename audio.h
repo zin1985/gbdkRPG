@@ -7,6 +7,7 @@
 #define AUDIO_TRACK_FIELD  1u
 #define AUDIO_TRACK_TOWN   2u
 #define AUDIO_TRACK_BATTLE 3u
+#define AUDIO_TRACK_DUNGEON 4u
 
 void audio_init(void);
 void audio_play_music(UINT8 track);
