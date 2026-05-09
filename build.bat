@@ -1,10 +1,10 @@
 @echo off
 setlocal
 
-set "PROJECT=rpg116_equipment_items_status_bank0_guard"
+set "PROJECT=rpg139_heavy_metal_celtic_battle_bgm"
 set "OUT=%PROJECT%.gb"
-set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c"
-set "ROM_BANKS=8"
+set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c field_feature_runtime.c heavy_metal_celtic_battle_bgm.c"
+set "ROM_BANKS=16"
 set "CART_TYPE=0x19"
 set "LOG=build.log"
 set "PRECHECK_LOG=precheck_output.log"

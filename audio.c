@@ -1,4 +1,5 @@
 #include "audio.h"
+#include "heavy_metal_celtic_battle_bgm.h"
 
 /*
  * rpg083_music:
@@ -51,30 +52,31 @@ static const MusicStep music_town[] = {
     {N_D4, N_G3, 24u}, {N_C4, N_C3, 48u}
 };
 
-static const MusicStep music_battle[] = {
-    {N_C4, N_C3, 6u}, {N_C4, N_G3, 6u}, {N_G4, N_C3, 6u}, {N_C5, N_G3, 6u},
-    {N_D5, N_D3, 6u}, {N_C5, N_G3, 6u}, {N_G4, N_C3, 6u}, {N_E4, N_G3, 6u},
-    {N_F4, N_F3, 6u}, {N_A4, N_C3, 6u}, {N_C5, N_F3, 6u}, {N_A4, N_C3, 6u},
-    {N_G4, N_G3, 6u}, {N_E4, N_C3, 6u}, {N_D4, N_G3, 6u}, {N_C4, N_C3, 6u}
-};
+/* Battle track is provided by heavy_metal_celtic_battle_bgm.c in ROM bank 15. */
+
 
 static UINT8 audio_current_track;
 static UINT8 audio_step_index;
 static UINT8 audio_step_frames;
 static UINT8 audio_started;
-static UINT8 audio_battle_noise_flip;
+
+static void audio_stop_battle_bgm_if_needed(void) {
+    if (audio_current_track == AUDIO_TRACK_BATTLE) {
+        heavy_metal_celtic_battle_bgm_stop();
+    }
+}
 
 static UINT8 audio_track_length(UINT8 track) {
     if (track == AUDIO_TRACK_FIELD) return (UINT8)(sizeof(music_field) / sizeof(music_field[0]));
     if (track == AUDIO_TRACK_TOWN) return (UINT8)(sizeof(music_town) / sizeof(music_town[0]));
-    if (track == AUDIO_TRACK_BATTLE) return (UINT8)(sizeof(music_battle) / sizeof(music_battle[0]));
+    if (track == AUDIO_TRACK_BATTLE) return 0u;
     return 0u;
 }
 
 static const MusicStep *audio_track_step(UINT8 track, UINT8 index) {
     if (track == AUDIO_TRACK_FIELD) return &music_field[index];
     if (track == AUDIO_TRACK_TOWN) return &music_town[index];
-    return &music_battle[index];
+    return &music_field[0];
 }
 
 static void audio_trigger_pulse1(UINT16 note) {
@@ -102,12 +104,6 @@ static void audio_trigger_pulse2(UINT16 note) {
     NR24_REG = (UINT8)(0x80u | ((note >> 8) & 0x07u));
 }
 
-static void audio_trigger_noise_tick(void) {
-    NR41_REG = 0x00u;
-    NR42_REG = 0x31u;
-    NR43_REG = 0x51u;
-    NR44_REG = 0x80u;
-}
 
 static void audio_trigger_current_step(void) {
     UINT8 len;
@@ -122,11 +118,6 @@ static void audio_trigger_current_step(void) {
     audio_trigger_pulse2(step->bass);
     audio_step_frames = step->frames;
 
-    if (audio_current_track == AUDIO_TRACK_BATTLE) {
-        audio_battle_noise_flip++;
-        if ((audio_battle_noise_flip & 0x03u) == 0u) audio_trigger_noise_tick();
-    }
-
     audio_step_index++;
     if (audio_step_index >= len) audio_step_index = 0u;
 }
@@ -140,11 +131,11 @@ void audio_init(void) {
     audio_current_track = AUDIO_TRACK_NONE;
     audio_step_index = 0u;
     audio_step_frames = 0u;
-    audio_battle_noise_flip = 0u;
     audio_started = 1u;
 }
 
 void audio_stop_music(void) {
+    audio_stop_battle_bgm_if_needed();
     audio_current_track = AUDIO_TRACK_NONE;
     audio_step_index = 0u;
     audio_step_frames = 0u;
@@ -157,15 +148,27 @@ void audio_play_music(UINT8 track) {
     if (!audio_started) audio_init();
     if (audio_current_track == track) return;
 
+    audio_stop_battle_bgm_if_needed();
+
     audio_current_track = track;
     audio_step_index = 0u;
     audio_step_frames = 0u;
-    audio_battle_noise_flip = 0u;
+
+    if (track == AUDIO_TRACK_BATTLE) {
+        heavy_metal_celtic_battle_bgm_init();
+        return;
+    }
+
     audio_trigger_current_step();
 }
 
 void audio_update(void) {
     if (audio_current_track == AUDIO_TRACK_NONE) return;
+
+    if (audio_current_track == AUDIO_TRACK_BATTLE) {
+        heavy_metal_celtic_battle_bgm_update();
+        return;
+    }
 
     if (audio_step_frames > 0u) {
         audio_step_frames--;
