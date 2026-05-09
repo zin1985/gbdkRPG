@@ -386,7 +386,7 @@ typedef enum BattleState {
 typedef enum CommandType {
     CMD_ATTACK = 0,
     CMD_SKILL,
-    CMD_DEFEND,
+    CMD_HEAL,
     CMD_RUN,
     CMD_COUNT
 } CommandType;
@@ -537,7 +537,6 @@ static UINT8 battle_first_player_refresh_pending;
 static UINT8 battle_screen_ready;
 static UINT8 battle_party_turn_slot;
 static UINT8 battle_selected_skill;
-static UINT8 battle_guard_flags;
 static UINT16 map_idle_frames;
 static UINT8 map_overlay_visible;
 #define enemy_battle (enemy_battles[battle_target_index])
@@ -746,7 +745,7 @@ static UINT8 battle_current_consume_mp(UINT16 cost);
 static void battle_heal_actor_slot(UINT8 target_slot, UINT16 amount);
 static void player_attack(void);
 static void player_skill(void);
-static void player_defend(void);
+static void player_heal(void);
 static void player_run(void);
 static void battle_skill_input(void);
 static void battle_ally_target_input(void);
@@ -2002,7 +2001,7 @@ static void draw_battle_menu(void) {
 
     battle_put_bkg_text(11u, 14u, "こうげき");
     battle_put_bkg_text(16u, 14u, "とくぎ");
-    battle_put_bkg_text(11u, 15u, "ぼうぎょ");
+    battle_put_bkg_text(11u, 15u, "かいふく");
     battle_put_bkg_text(16u, 15u, "にげる");
 }
 
@@ -2010,7 +2009,7 @@ static void battle_command_cursor_bg_pos(UINT8 index, UINT8 *col, UINT8 *row) {
     switch (index) {
         case CMD_ATTACK: *col = 10u; *row = 14u; break;
         case CMD_SKILL:  *col = 15u; *row = 14u; break;
-        case CMD_DEFEND: *col = 10u; *row = 15u; break;
+        case CMD_HEAL:   *col = 10u; *row = 15u; break;
         case CMD_RUN:    *col = 15u; *row = 15u; break;
         default:         *col = 10u; *row = 14u; break;
     }
@@ -2236,7 +2235,6 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     UINT8 i;
 
     current_enemy_index = enemy_index;
-    battle_guard_flags = 0u;
     battle_party_turn_slot = 0u;
     player_battle.name = "ゆうしゃ";
     player_battle.max_hp = player_max_hp_stat;
@@ -2267,7 +2265,6 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     battle_select_first_alive();
 
     menu_index = 0u;
-    battle_guard_flags = 0u;
     battle_state = BSTATE_PLAYER;
 }
 
@@ -2354,7 +2351,6 @@ static void init_random_battle_from_field(void) {
     battle_select_first_alive();
 
     menu_index = 0u;
-    battle_guard_flags = 0u;
     battle_state = BSTATE_PLAYER;
 }
 
@@ -2614,10 +2610,8 @@ static void player_skill(void) {
     player_use_skill(battle_selected_skill);
 }
 
-static void player_defend(void) {
-    battle_guard_flags |= (UINT8)(1u << battle_party_turn_slot);
-    battle_show_message("ぼうぎょ!");
-    battle_finish_party_action();
+static void player_heal(void) {
+    battle_start_ally_target_select(SKILL_HEAL_SIMPLE);
 }
 
 static void player_run(void) {
@@ -2673,9 +2667,6 @@ static void enemy_turn(void) {
         target_fighter.agility = party_target.agility;
 
         dmg = calc_attack_damage(&enemy_battles[i], &target_fighter);
-        if (battle_guard_flags & (UINT8)(1u << target_slot)) {
-            dmg = (UINT16)((dmg + 1u) >> 1);
-        }
         party_damage_active(target_slot, dmg);
 
         battle_show_damage_message("まものの こうげき!", dmg);
@@ -2687,7 +2678,6 @@ static void enemy_turn(void) {
         }
     }
 
-    battle_guard_flags = 0u;
     battle_party_turn_slot = 0u;
     if (party_get_active_hp(0u) == 0u) {
         if (!battle_select_next_party_turn()) {
@@ -2750,8 +2740,8 @@ static void battle_input(void) {
             case CMD_SKILL:
                 battle_start_skill_select();
                 break;
-            case CMD_DEFEND:
-                player_defend();
+            case CMD_HEAL:
+                player_heal();
                 break;
             case CMD_RUN:
                 player_run();
@@ -2882,7 +2872,6 @@ static void init_game(void) {
     move_pixels_remaining = 0u;
     walk_anim_counter = 0u;
     battle_first_player_refresh_pending = 0u;
-    battle_guard_flags = 0u;
     battle_party_turn_slot = 0u;
     map_idle_frames = 0u;
     map_overlay_visible = 0u;

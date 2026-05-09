@@ -124,7 +124,7 @@ static void draw_ally_window(void) {
     jp_bkg_clear_area(10u, 14u, 9u, 3u);
     for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
         jp_put_bkg_text(10u, (UINT8)(14u + i), (i == ally_cursor) ? ">" : " ");
-        party_put_active_name_battle(i, 11u, (UINT8)(14u + i));
+        jp_put_bkg_text(11u, (UINT8)(14u + i), party_get_active_name(i));
     }
 }
 

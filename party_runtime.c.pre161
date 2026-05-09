@@ -1065,66 +1065,45 @@ void party_menu_show_heal_skill_loop(void) BANKED {
     UINT8 keys;
     UINT8 target_slot;
     UINT8 caster_slot;
-    UINT8 phase;
     PartyBattleFighter caster;
     PartyBattleFighter target;
     UINT16 amount;
 
     caster_slot = (PARTY_ACTIVE_COUNT > 1u) ? 1u : 0u;
     target_slot = 0u;
-    phase = 0u;
     party_ui_clear();
-    jp_draw_bkg_frame(0u, 0u, 20u, 18u);
+    jp_put_bkg_text(1u, 1u, "かいふく特技");
+    jp_put_bkg_text(1u,16u, "上下 A使用 B戻る");
 
     while (1) {
-        if (phase == 0u) {
-            jp_bkg_clear_area(1u, 1u, 18u, 15u);
-            jp_put_bkg_text(1u, 1u, "特技一覧");
-            jp_put_bkg_text(1u, 4u, ">");
-            jp_put_bkg_text(3u, 4u, "かいふく");
-            jp_put_bkg_text(1u, 7u, "MP4 味方HP回復");
-            jp_put_bkg_text(1u,16u, "A選択 B戻る");
-            keys = audio_waitpad(J_A | J_B | J_START);
-            audio_waitpadup();
-            if (keys & (J_B | J_START)) break;
-            if (keys & J_A) {
-                phase = 1u;
-                target_slot = 0u;
-            }
-        } else {
-            party_get_active_fighter(target_slot, &target);
-            jp_bkg_clear_area(1u, 1u, 18u, 15u);
-            jp_put_bkg_text(1u, 1u, "かいふく 対象");
-            jp_put_bkg_text(1u, 3u, ">");
-            jp_put_bkg_text(3u, 3u, target.name);
-            jp_put_bkg_text(1u, 5u, "HP"); party_put_u16(5u, 5u, target.hp); jp_put_bkg_text(8u,5u,"/"); party_put_u16(10u,5u,target.max_hp);
-            jp_put_bkg_text(1u, 7u, "MP4 で回復");
-            jp_put_bkg_text(1u,16u, "上下 A使用 B一覧");
+        party_get_active_fighter(target_slot, &target);
+        jp_bkg_clear_area(1u, 3u, 18u, 6u);
+        jp_put_bkg_text(1u, 3u, "対象");
+        jp_put_bkg_text(7u, 3u, target.name);
+        jp_put_bkg_text(1u, 5u, "HP"); party_put_u16(5u, 5u, target.hp); jp_put_bkg_text(8u,5u,"/"); party_put_u16(10u,5u,target.max_hp);
+        jp_put_bkg_text(1u, 7u, "MP4 で回復");
 
-            keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
-            audio_waitpadup();
-            if (keys & J_UP) {
-                if (target_slot == 0u) target_slot = PARTY_ACTIVE_COUNT - 1u;
-                else target_slot--;
-            } else if (keys & J_DOWN) {
-                target_slot++;
-                if (target_slot >= PARTY_ACTIVE_COUNT) target_slot = 0u;
-            } else if (keys & J_B) {
-                phase = 0u;
-            } else if (keys & J_START) {
-                break;
-            } else if (keys & J_A) {
-                party_get_active_fighter(caster_slot, &caster);
-                if (caster.hp == 0u || caster.mp < 4u || target.hp >= target.max_hp) {
-                    jp_bkg_clear_area(1u, 12u, 18u, 1u);
-                    jp_put_bkg_text(1u, 12u, "使えません");
-                } else {
-                    party_battle_op(PARTY_OP_TRY_CONSUME_MP, caster_slot, 4u);
-                    amount = (UINT16)((UINT16)caster.heal_power * 2u + 6u);
-                    party_heal_active(target_slot, amount);
-                    jp_bkg_clear_area(1u, 12u, 18u, 1u);
-                    jp_put_bkg_text(1u, 12u, "回復しました");
-                }
+        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
+        audio_waitpadup();
+        if (keys & J_UP) {
+            if (target_slot == 0u) target_slot = PARTY_ACTIVE_COUNT - 1u;
+            else target_slot--;
+        } else if (keys & J_DOWN) {
+            target_slot++;
+            if (target_slot >= PARTY_ACTIVE_COUNT) target_slot = 0u;
+        } else if (keys & (J_B | J_START)) {
+            break;
+        } else if (keys & J_A) {
+            party_get_active_fighter(caster_slot, &caster);
+            if (caster.hp == 0u || caster.mp < 4u || target.hp >= target.max_hp) {
+                jp_bkg_clear_area(1u, 12u, 18u, 1u);
+                jp_put_bkg_text(1u, 12u, "使えません");
+            } else {
+                party_battle_op(PARTY_OP_TRY_CONSUME_MP, caster_slot, 4u);
+                amount = (UINT16)((UINT16)caster.heal_power * 2u + 6u);
+                party_heal_active(target_slot, amount);
+                jp_bkg_clear_area(1u, 12u, 18u, 1u);
+                jp_put_bkg_text(1u, 12u, "回復しました");
             }
         }
     }
