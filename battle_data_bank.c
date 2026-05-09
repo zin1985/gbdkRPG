@@ -20,16 +20,16 @@ typedef struct BattleEncounterTemplate {
     UINT8 enemy_ids[BATTLE_DATA_MAX_ENEMIES];
 } BattleEncounterTemplate;
 
-static const char name_slime[] = "スライム";
-static const char name_bat[]   = "こうもり";
+static const char name_bit[]   = "ビット";
 static const char name_beast[] = "けもの";
 static const char name_warmachine[] = "ウォーマシン";
 static const char name_golem[] = "ゴーレム";
 
 static const BattleEnemyTemplate enemy_table[] = {
     /* name,            hp,  atk, def, agi, art, size */
-    {name_slime,        20u, 5u, 2u, 5u, 0u, BATTLE_ENEMY_SIZE_S},
-    {name_bat,          14u, 4u, 1u, 8u, 1u, BATTLE_ENEMY_SIZE_S},
+    /* S-size kind 0 = ビット */
+    {name_bit,          16u, 4u, 1u, 8u, 0u, BATTLE_ENEMY_SIZE_S},
+    {name_bit,          16u, 4u, 1u, 8u, 0u, BATTLE_ENEMY_SIZE_S},
     {name_beast,        28u, 7u, 3u, 4u, 2u, BATTLE_ENEMY_SIZE_M},
     {name_warmachine,   36u, 9u, 4u, 5u, 3u, BATTLE_ENEMY_SIZE_M},
     {name_golem,        88u, 12u, 8u, 2u, 4u, BATTLE_ENEMY_SIZE_L}
@@ -40,12 +40,12 @@ static const BattleEncounterTemplate encounter_table[] = {
      * S = 16x16 up to 6, M = 32x32 up to 3, L = 96x32 one body.
      * Empty slots use 0u because count controls the active range.
      */
-    {6u, {0u, 1u, 0u, 1u, 0u, 1u}}, /* S x6 */
-    {4u, {0u, 1u, 0u, 1u, 0u, 0u}}, /* S x4 */
+    {6u, {0u, 0u, 0u, 0u, 0u, 0u}}, /* Bit S x6 */
+    {4u, {0u, 0u, 0u, 0u, 0u, 0u}}, /* Bit S x4 */
     {3u, {2u, 3u, 2u, 0u, 0u, 0u}}, /* M x3 */
     {2u, {2u, 3u, 0u, 0u, 0u, 0u}}, /* M x2 */
     {1u, {4u, 0u, 0u, 0u, 0u, 0u}}, /* L x1 */
-    {3u, {0u, 1u, 0u, 0u, 0u, 0u}}, /* S x3 */
+    {3u, {0u, 0u, 0u, 0u, 0u, 0u}}, /* Bit S x3 */
     {1u, {3u, 0u, 0u, 0u, 0u, 0u}}  /* M x1 */
 };
 

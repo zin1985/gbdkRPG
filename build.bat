@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set "PROJECT=rpg152_enemy_art_vram_font_cache_fix"
+set "PROJECT=rpg153_bit_s_size_enemy"
 set "OUT=%PROJECT%.gb"
 set "SRC=main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c menu_runtime.c field_feature_runtime.c heavy_metal_celtic_battle_bgm.c sunset_ruins_field_bgm.c sunset_strings_adventure_field_bgm.c peaceful_balanced_town_bgm.c deep_eerie_motif_dungeon_bgm.c"
 set "ROM_BANKS=16"
