@@ -331,6 +331,19 @@ const char *party_get_active_name(UINT8 active_slot) BANKED {
     return member->name;
 }
 
+void party_put_active_name_battle(UINT8 active_slot, UINT8 x, UINT8 y) BANKED {
+    PartyMemberRuntime *member;
+
+    member = party_get_active_member(active_slot);
+    if (member == 0) return;
+
+    /* rpg160: member->name points to string literals owned by this bank.
+     * Draw the name while this bank is active; returning the pointer to
+     * Bank 0 and drawing later can show blank/garbled text.
+     */
+    jp_put_bkg_text(x, y, member->name);
+}
+
 UINT16 party_get_active_hp(UINT8 active_slot) BANKED {
     PartyMemberRuntime *member;
 

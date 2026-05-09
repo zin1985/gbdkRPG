@@ -84,7 +84,7 @@ extern const unsigned char battle_enemy_tiles[48u * 16u];
 #define BATTLE_ENEMY_BG_TILE_COUNT 48u
 #define BATTLE_ENEMY_BG_W 4u
 #define BATTLE_ENEMY_BG_H 4u
-#define BATTLE_ENEMY_BG_Y 4u
+#define BATTLE_ENEMY_BG_Y 6u
 
 void battle_enemy_bg_load_tiles(void) BANKED;
 void battle_enemy_bg_load_tiles_for_formation(UINT8 count, UINT8 *sprite_kinds, const UINT8 *size_kinds) BANKED;

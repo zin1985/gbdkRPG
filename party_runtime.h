@@ -45,6 +45,7 @@ void party_sync_hero_from_values(UINT16 max_hp, UINT16 hp,
 
 UINT8 party_get_active_member_id(UINT8 active_slot) BANKED;
 const char *party_get_active_name(UINT8 active_slot) BANKED;
+void party_put_active_name_battle(UINT8 active_slot, UINT8 x, UINT8 y) BANKED;
 UINT16 party_get_active_hp(UINT8 active_slot) BANKED;
 UINT16 party_get_active_mp(UINT8 active_slot) BANKED;
 void party_get_active_fighter(UINT8 active_slot, PartyBattleFighter *out) BANKED;

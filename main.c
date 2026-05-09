@@ -1852,13 +1852,11 @@ static void draw_battle_enemy_names(void) {
 }
 
 static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
-    const char *name;
-
-    name = party_get_active_name(slot);
-    if (name == 0) return;
-
-    battle_put_bkg_text((UINT8)(x - 1u), 1u, " ");
-    battle_put_bkg_text(x, 1u, name);
+    /* rpg160:
+     * Draw party names via party_runtime while bank 7 string literals are
+     * still mapped.  HP/MP are scalar returns, so those remain safe here.
+     */
+    party_put_active_name_battle(slot, BATTLE_BG_X(x), 1u);
     battle_put_bkg_text(x, 2u, "H ");
     put_u16(BATTLE_BG_X((UINT8)(x + 2u)), 2u, party_get_active_hp(slot));
     battle_put_bkg_text(x, 3u, "M ");
@@ -1873,6 +1871,7 @@ static void draw_party_status_box(void) {
      */
     battle_bkg_clear_area(0u, 0u, 20u, 5u);
     draw_bkg_box(0u, 0u, 20u, 5u);
+    battle_bkg_clear_area(1u, 1u, 18u, 3u);
 
     draw_battle_party_member_status(0u, 1u);
     draw_battle_party_member_status(1u, 7u);
