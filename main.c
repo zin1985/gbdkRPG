@@ -11,6 +11,7 @@
 #include "battle_text.h"
 #include "party_runtime.h"
 #include "inventory.h"
+#include "menu_runtime.h"
 #include "actor_runtime.h"
 #include "quest.h"
 #include "field_feature_runtime.h"
@@ -227,7 +228,7 @@ BANKREF_EXTERN(sprite_data_bank)
  * - Battle command UI uses BG box tiles, matching the message-window style.
  * - Existing enemy OBJ tile sheet is reused for battle enemy sprites.
  * - Enemy data/encounter table lives in battle_data_bank.c bank 7.
- * - Supports up to 3 enemies at once, without adding map actors or map object kinds.
+ * - Supports S/M/L battle formations: S 16x16 up to 6, M 32x32 up to 3, L 32x96 up to 1.
  * - No new BG tiles, MAP_GFX_TILE_COUNT change, object kind, map switch, or
  *   sprite sheet path change.
  * ============================================================================
@@ -370,6 +371,7 @@ typedef enum GameMode {
 
 typedef enum BattleState {
     BSTATE_PLAYER = 0,
+    BSTATE_TARGET,
     BSTATE_ENEMY,
     BSTATE_WIN,
     BSTATE_LOSE,
@@ -520,8 +522,10 @@ static Fighter player_battle;
 static Fighter enemy_battles[BATTLE_MAX_ENEMY_COUNT];
 static BattleEnemyData battle_enemy_data_slots[BATTLE_MAX_ENEMY_COUNT];
 static UINT8 battle_enemy_sprite_kinds[BATTLE_MAX_ENEMY_COUNT];
+static UINT8 battle_enemy_size_kinds[BATTLE_MAX_ENEMY_COUNT];
 static UINT8 battle_enemy_count;
 static UINT8 battle_target_index;
+static UINT8 battle_pending_action;
 static UINT8 battle_dirty_flags;
 static const char *battle_message_text;
 static UINT8 battle_first_player_refresh_pending;
@@ -575,14 +579,8 @@ static UINT8 wait_choice_ab(void);
 static void revive_enemy_actor(void);
 static void prompt_enemy_revive_choice(void);
 static void open_main_menu(void);
-static void show_status_page(void);
-static void show_simple_page(const char *title, const char *line1, const char *line2);
-static void put_ascii(UINT8 col, UINT8 row, const char *text);
-static void put_cursor(UINT8 col, UINT8 row, UINT8 visible);
 static void u16_to_dec3(UINT16 value, char *out);
 static void put_u16(UINT8 col, UINT8 row, UINT16 value);
-static void screen_clear(void);
-static void wait_a_pressed(void);
 static void draw_object_map(void);
 static UINT8 current_collision16_at(UINT8 tx, UINT8 ty);
 static UINT8 current_object16_at(UINT8 tx, UINT8 ty);
@@ -687,24 +685,26 @@ static void battle_update_dirty(void);
 static void battle_set_message_dirty(const char *text);
 static void battle_show_message(const char *text);
 static void battle_move_command_cursor_obj(void);
+static void battle_move_target_cursor_obj(void);
 static void battle_hide_command_cursor_obj(void);
+static void battle_start_target_select(UINT8 action_id);
+static UINT8 battle_select_next_alive_target(UINT8 forward);
+static void battle_target_input(void);
 static void battle_flash_enemy_sprite(UINT8 enemy_index);
 static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
-    UINT8 alive_flags[3];
+    UINT8 alive_flags[BATTLE_MAX_ENEMY_COUNT];
     UINT8 i;
 
     (void)hide_first;
 
-    /* rpg128: enemy bodies are BG tiles. Keep old OBJ slots hidden so
-     * party icons/cursor/effects are the only battle OAM users.
-     */
+    /* rpg149: enemy bodies are BG tiles. S/M/L formations consume no enemy OAM. */
     hide_battle_enemy_sprites();
 
-    for (i = 0u; i < 3u; i++) {
+    for (i = 0u; i < BATTLE_MAX_ENEMY_COUNT; i++) {
         alive_flags[i] = (UINT8)((i < battle_enemy_count && enemy_battles[i].hp > 0u) ? 1u : 0u);
     }
 
-    battle_enemy_bg_draw_all(battle_enemy_count, battle_enemy_sprite_kinds, alive_flags);
+    battle_enemy_bg_draw_all_sized(battle_enemy_count, battle_enemy_sprite_kinds, battle_enemy_size_kinds, alive_flags);
 }
 
 static void battle_reposition_enemy_sprites_only(void) {
@@ -720,6 +720,7 @@ static void show_battle_enemy_sprites(void);
 static void load_battle_enemy_sprite_data(void);
 static void battle_copy_enemy_from_data(UINT8 slot);
 static UINT8 battle_select_first_alive(void);
+static UINT8 battle_ensure_selected_alive(void);
 static UINT8 battle_alive_count(void);
 static void draw_battle_menu(void);
 static void update_battle_menu_cursor(UINT8 old_index, UINT8 new_index);
@@ -904,24 +905,6 @@ static void prompt_enemy_revive_choice(void) {
 }
 
 
-/*
- * rpg060:
- * Definitions for the lightweight text helpers introduced in rpg059.
- * rpg059 had prototypes/call sites, but the helper function bodies were not
- * emitted into main.c, causing undefined global linker errors.
- */
-static void put_ascii(UINT8 col, UINT8 row, const char *text) {
-    jp_put_bkg_text(col, row, text);
-}
-
-static void put_cursor(UINT8 col, UINT8 row, UINT8 visible) {
-    if (visible) {
-        jp_put_bkg_text(col, row, ">");
-    } else {
-        jp_put_bkg_text(col, row, " ");
-    }
-}
-
 static void u16_to_dec3(UINT16 value, char *out) {
     UINT16 hundreds;
     UINT8 tens;
@@ -950,46 +933,8 @@ static void put_u16(UINT8 col, UINT8 row, UINT16 value) {
     jp_put_bkg_text(col, row, buf);
 }
 
-static void screen_clear(void) {
-    jp_bkg_clear_area(0u, 0u, 20u, 18u);
-    jp_draw_bkg_frame(0u, 0u, 20u, 18u);
-}
-
-static void show_status_page(void) {
-    party_menu_show_status_loop();
-}
-
-static void show_simple_page(const char *title, const char *line1, const char *line2) {
-    screen_clear();
-    jp_draw_bkg_frame(0u, 0u, 20u, 15u);
-    jp_draw_bkg_frame(0u, 15u, 20u, 3u);
-    jp_put_bkg_text(1u, 1u, title);
-    jp_put_bkg_text(2u, 4u, line1);
-    jp_put_bkg_text(2u, 6u, line2);
-    jp_put_bkg_text(1u,16u, "A/B/START もどる");
-}
-
-static void draw_main_menu_static(void) {
-    jp_draw_bkg_frame(0u, 0u, 10u, 10u);
-    jp_draw_bkg_frame(0u, 15u, 20u, 3u);
-    jp_put_bkg_text(1u, 1u, "メニュー");
-    jp_put_bkg_text(3u, 3u, "つよさ");
-    jp_put_bkg_text(3u, 4u, "もちもの");
-    jp_put_bkg_text(3u, 5u, "そうび");
-    jp_put_bkg_text(3u, 6u, "もくてき");
-    jp_put_bkg_text(1u,16u, "A けってい B もどる");
-}
-
-static void draw_main_menu_cursor(UINT8 cursor) {
-    put_cursor(1u, 3u, (UINT8)(cursor == MENU_STATUS));
-    put_cursor(1u, 4u, (UINT8)(cursor == MENU_ITEM));
-    put_cursor(1u, 5u, (UINT8)(cursor == MENU_EQUIP));
-    put_cursor(1u, 6u, (UINT8)(cursor == MENU_OBJECTIVE));
-}
-
 static void open_main_menu(void) {
-    UINT8 keys;
-    UINT8 cursor = MENU_STATUS;
+    UINT8 defeated;
 
     DISPLAY_OFF;
     HIDE_WIN;
@@ -999,54 +944,12 @@ static void open_main_menu(void) {
     DISPLAY_ON;
     audio_waitpadup();
 
-    screen_clear();
-    draw_main_menu_static();
-    draw_main_menu_cursor(cursor);
-
-    while (1) {
-        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
-        audio_waitpadup();
-
-        if (keys & J_UP) {
-            if (cursor == 0u) cursor = MENU_COUNT - 1u;
-            else cursor--;
-            draw_main_menu_cursor(cursor);
-        } else if (keys & J_DOWN) {
-            cursor++;
-            if (cursor >= MENU_COUNT) cursor = 0u;
-            draw_main_menu_cursor(cursor);
-        } else if (keys & (J_B | J_START)) {
-            break;
-        } else if (keys & J_A) {
-            if (cursor == MENU_STATUS) {
-                show_status_page();
-            } else if (cursor == MENU_ITEM) {
-                inventory_menu_show_items_loop();
-            } else if (cursor == MENU_EQUIP) {
-                party_menu_show_equip_loop();
-            } else {
-                if (check_event_flag(FLAG_ENEMY_DEFEATED)) {
-                    show_simple_page("もくてき", "まもの とうばつずみ", "NPCに はなすと ふっかつ");
-                } else {
-                    show_simple_page("もくてき", "まものを たおす", "つぎは まちと どうくつ");
-                }
-                audio_waitpad(J_A | J_B | J_START);
-                audio_waitpadup();
-            }
-            screen_clear();
-            draw_main_menu_static();
-            draw_main_menu_cursor(cursor);
-        }
-    }
+    defeated = check_event_flag(FLAG_ENEMY_DEFEATED);
+    menu_runtime_open(defeated);
 
     hide_battle_enemy_sprites();
     restore_field_vram_state();
     audio_play_music(current_area_music_track());
-}
-
-static void wait_a_pressed(void) {
-    audio_waitpad(J_A);
-    audio_waitpadup();
 }
 
 /* GRAPHICS HOTSPOT: draw_object_map()
@@ -1422,10 +1325,6 @@ static UINT8 current_area_is_dangerous(void) {
 
 static UINT8 current_area_is_town_like(void) {
     return (UINT8)(current_area == AREA_TOWN || current_area == AREA_PORT);
-}
-
-static UINT8 current_area_is_dungeon_like(void) {
-    return (UINT8)(current_area == AREA_DUNGEON || current_area == AREA_RUINS);
 }
 
 static UINT8 current_area_music_track(void) {
@@ -1902,7 +1801,7 @@ static void draw_battle_enemy_names(void) {
     draw_bkg_box(0u, 11u, 9u, 4u);
     battle_bkg_clear_area(1u, 12u, 7u, 3u);
 
-    for (i = 0u; i < battle_enemy_count; i++) {
+    for (i = 0u; i < battle_enemy_count && i < 3u; i++) {
         if (enemy_battles[i].hp > 0u) {
             battle_put_bkg_text(1u, (UINT8)(12u + i), enemy_battles[i].name);
         }
@@ -2007,6 +1906,8 @@ static void battle_copy_enemy_from_data(UINT8 slot) {
     enemy_battles[slot].agility = battle_enemy_data_slots[slot].agility;
     battle_enemy_sprite_kinds[slot] = battle_enemy_data_slots[slot].sprite_kind;
     if (battle_enemy_sprite_kinds[slot] > 2u) battle_enemy_sprite_kinds[slot] = 0u;
+    battle_enemy_size_kinds[slot] = battle_enemy_data_slots[slot].size_kind;
+    if (battle_enemy_size_kinds[slot] > BATTLE_ENEMY_SIZE_L) battle_enemy_size_kinds[slot] = BATTLE_ENEMY_SIZE_M;
 }
 
 static UINT8 battle_select_first_alive(void) {
@@ -2019,6 +1920,13 @@ static UINT8 battle_select_first_alive(void) {
         }
     }
     return 0u;
+}
+
+static UINT8 battle_ensure_selected_alive(void) {
+    if (battle_target_index < battle_enemy_count && enemy_battles[battle_target_index].hp > 0u) {
+        return 1u;
+    }
+    return battle_select_first_alive();
 }
 
 static UINT8 battle_alive_count(void) {
@@ -2091,6 +1999,46 @@ static void battle_move_command_cursor_obj(void) {
                 (UINT8)(row * 8u + 16u));
 }
 
+static void battle_target_bg_origin(UINT8 slot, UINT8 *col, UINT8 *row) {
+    UINT8 size_kind;
+
+    size_kind = battle_enemy_size_kinds[slot];
+    if (size_kind == BATTLE_ENEMY_SIZE_S) {
+        *col = (UINT8)(2u + (UINT8)(slot % 3u) * 6u);
+        *row = (slot < 3u) ? 5u : 8u;
+        return;
+    }
+    if (size_kind == BATTLE_ENEMY_SIZE_L) {
+        *col = 4u;
+        *row = 5u;
+        return;
+    }
+
+    if (battle_enemy_count <= 1u) {
+        *col = 8u;
+    } else if (battle_enemy_count == 2u) {
+        *col = (slot == 0u) ? 4u : 12u;
+    } else {
+        if (slot == 0u) *col = 1u;
+        else if (slot == 1u) *col = 8u;
+        else *col = 15u;
+    }
+    *row = BATTLE_ENEMY_BG_Y;
+}
+
+static void battle_move_target_cursor_obj(void) {
+    UINT8 col;
+    UINT8 row;
+
+    if (battle_target_index >= battle_enemy_count) {
+        battle_select_first_alive();
+    }
+    battle_target_bg_origin(battle_target_index, &col, &row);
+    move_sprite(BATTLE_CURSOR_SPRITE,
+                (UINT8)(col * 8u + 4u),
+                (UINT8)(row * 8u + 16u));
+}
+
 static void battle_hide_command_cursor_obj(void) {
     move_sprite(BATTLE_CURSOR_SPRITE, 0u, 0u);
 }
@@ -2106,12 +2054,12 @@ static void battle_flash_enemy_sprite(UINT8 enemy_index) {
     if (enemy_index >= battle_enemy_count) return;
 
     /* rpg128: flash only the target BG enemy slot. */
-    battle_enemy_bg_draw_slot(battle_enemy_count, enemy_index, battle_enemy_sprite_kinds[enemy_index], 0u);
+    battle_enemy_bg_draw_slot_sized(battle_enemy_count, enemy_index, battle_enemy_sprite_kinds[enemy_index], battle_enemy_size_kinds[enemy_index], 0u);
     audio_wait_vbl();
     audio_wait_vbl();
 
     if (enemy_battles[enemy_index].hp > 0u) {
-        battle_enemy_bg_draw_slot(battle_enemy_count, enemy_index, battle_enemy_sprite_kinds[enemy_index], 1u);
+        battle_enemy_bg_draw_slot_sized(battle_enemy_count, enemy_index, battle_enemy_sprite_kinds[enemy_index], battle_enemy_size_kinds[enemy_index], 1u);
     }
 }
 
@@ -2275,7 +2223,8 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
      * removed from the map after victory.
      */
     battle_data_load_random((UINT8)(enemy_index + 5u), battle_enemy_data_slots, &battle_enemy_count);
-    battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
+    if (battle_enemy_count == 0u) battle_enemy_count = 1u;
+    if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
 
     for (i = 0u; i < battle_enemy_count; i++) {
         battle_copy_enemy_from_data(i);
@@ -2600,6 +2549,38 @@ static UINT8 battle_select_next_party_turn(void) {
     return 0u;
 }
 
+static UINT8 battle_select_next_alive_target(UINT8 forward) {
+    UINT8 i;
+    UINT8 idx;
+
+    if (battle_enemy_count == 0u) return 0u;
+
+    for (i = 0u; i < battle_enemy_count; i++) {
+        if (forward) idx = (UINT8)((battle_target_index + 1u + i) % battle_enemy_count);
+        else idx = (UINT8)((battle_target_index + battle_enemy_count - 1u - i) % battle_enemy_count);
+
+        if (enemy_battles[idx].hp > 0u) {
+            battle_target_index = idx;
+            return 1u;
+        }
+    }
+
+    return 0u;
+}
+
+static void battle_start_target_select(UINT8 action_id) {
+    battle_pending_action = action_id;
+    if (!battle_select_first_alive()) {
+        battle_state = BSTATE_WIN;
+        return;
+    }
+
+    battle_state = BSTATE_TARGET;
+    battle_set_message_dirty("あいてを えらぶ");
+    battle_update_dirty();
+    battle_move_target_cursor_obj();
+}
+
 static void battle_finish_party_action(void) {
     update_battle_status();
 
@@ -2643,7 +2624,7 @@ static void player_attack(void) {
     UINT16 dmg;
     Fighter actor;
 
-    if (!battle_select_first_alive()) {
+    if (!battle_ensure_selected_alive()) {
         battle_state = BSTATE_WIN;
         return;
     }
@@ -2706,7 +2687,7 @@ static void player_use_skill(UINT8 skill_id) {
         return;
     }
 
-    if (!battle_select_first_alive()) {
+    if (!battle_ensure_selected_alive()) {
         battle_state = BSTATE_WIN;
         return;
     }
@@ -2857,11 +2838,57 @@ static void battle_input(void) {
     } else if (keys & J_A) {
         audio_waitpadup();
         switch (menu_index) {
-            case CMD_ATTACK: player_attack(); break;
-            case CMD_SKILL:  player_skill(); break;
-            case CMD_HEAL:   player_heal(); break;
-            case CMD_RUN:    player_run(); break;
+            case CMD_ATTACK:
+                battle_start_target_select(CMD_ATTACK);
+                break;
+            case CMD_SKILL:
+                if (skill_get_def(battle_current_special_skill())->kind == SKILL_KIND_HEAL) {
+                    player_skill();
+                } else {
+                    battle_start_target_select(CMD_SKILL);
+                }
+                break;
+            case CMD_HEAL:
+                player_heal();
+                break;
+            case CMD_RUN:
+                player_run();
+                break;
             default: break;
+        }
+
+        if (battle_state == BSTATE_PLAYER) {
+            battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
+            battle_update_dirty();
+        }
+    }
+}
+
+static void battle_target_input(void) {
+    UINT8 keys;
+
+    keys = joypad();
+
+    if (keys & (UINT8)(J_LEFT | J_UP)) {
+        battle_select_next_alive_target(0u);
+        battle_move_target_cursor_obj();
+        audio_waitpadup();
+    } else if (keys & (UINT8)(J_RIGHT | J_DOWN)) {
+        battle_select_next_alive_target(1u);
+        battle_move_target_cursor_obj();
+        audio_waitpadup();
+    } else if (keys & J_B) {
+        battle_state = BSTATE_PLAYER;
+        battle_set_message_dirty("");
+        battle_update_dirty();
+        battle_move_command_cursor_obj();
+        audio_waitpadup();
+    } else if (keys & J_A) {
+        audio_waitpadup();
+        if (battle_pending_action == CMD_SKILL) {
+            player_skill();
+        } else {
+            player_attack();
         }
 
         if (battle_state == BSTATE_PLAYER) {
@@ -2939,6 +2966,9 @@ void main(void) {
                 switch (battle_state) {
                     case BSTATE_PLAYER:
                         battle_input();
+                        break;
+                    case BSTATE_TARGET:
+                        battle_target_input();
                         break;
                     case BSTATE_ENEMY:
                         enemy_turn();

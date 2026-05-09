@@ -1,6 +1,7 @@
 #include <gb/gb.h>
 #include <string.h>
 #include "jpfont.h"
+#include "audio.h"
 typedef struct JpCacheEntry {
     UINT16 code;
     UINT8 tile;
@@ -11,6 +12,28 @@ typedef struct JpCacheEntry {
 static JpCacheEntry jp_cache[JP_CACHE_SIZE];
 static UINT16 jp_cache_clock;
 static UINT8 jp_next_tile;
+
+
+/* rpg148:
+ * Busy UI drawing can spend many tile writes without reaching the normal
+ * main-loop VBlank wait.  The data-driven BGM players advance from
+ * audio_update(), so long menu/status/item redraws can sound like the music
+ * briefly stops.  Service audio during large JP font/window drawing work,
+ * but only once per small batch to avoid making menus crawl.
+ */
+static UINT8 jp_audio_busy_budget;
+
+static void jp_audio_busy_tick(void) {
+    jp_audio_busy_budget++;
+    if (jp_audio_busy_budget >= 64u) {
+        jp_audio_busy_budget = 0u;
+        if (LCDC_REG & 0x80u) {
+            audio_wait_vbl();
+        } else {
+            audio_update();
+        }
+    }
+}
 
 /* 共通UI枠。
  * - 角はユーザー指定のSaGa風コーナー寄りの見た目に変更。
@@ -130,6 +153,7 @@ static UINT8 jp_cache_store(UINT16 code, const byte *font8) {
     }
 
     set_bkg_data(jp_cache[slot].tile, 1u, tile);
+    jp_audio_busy_tick();
     jp_cache[slot].used = 1u;
     jp_cache[slot].code = code;
     jp_cache[slot].stamp = jp_cache_clock++;
@@ -201,6 +225,7 @@ void jp_window_prepare(void) {
             else if (y == (UINT8)(JP_WIN_H - 1u)) t = JP_FRAME_BASE + 7u; /* bottom */
             else if (x == 0u) t = JP_FRAME_BASE + 8u; /* left */
             set_win_tiles(x, y, 1u, 1u, &t);
+            jp_audio_busy_tick();
         }
     }
     move_win(JP_WIN_X, JP_WIN_Y);
@@ -213,6 +238,7 @@ void jp_window_clear_text(void) {
     for (y = 1u; y <= JP_TEXT_ROWS; y++) {
         for (x = 1u; x <= JP_TEXT_COLS; x++) {
             set_win_tiles(x, y, 1u, 1u, &t);
+            jp_audio_busy_tick();
         }
     }
 }
@@ -220,6 +246,7 @@ void jp_window_clear_text(void) {
 UINT8 jp_put_glyph_utf8(UINT8 col, UINT8 row, const char *p, UINT8 *consumed) {
     UINT8 tile = jp_get_tile_for_utf8(p, consumed);
     set_win_tiles(col, row, 1u, 1u, &tile);
+    jp_audio_busy_tick();
     return tile;
 }
 
@@ -230,6 +257,7 @@ void jp_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
     for (y = 0u; y < h; y++) {
         for (x = 0u; x < w; x++) {
             set_bkg_tiles((UINT8)(x0 + x), (UINT8)(y0 + y), 1u, 1u, &blank);
+            jp_audio_busy_tick();
         }
     }
 }
@@ -253,6 +281,7 @@ void jp_draw_bkg_frame(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
             else if (y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 7u;
             else if (x == 0u) t = JP_FRAME_BASE + 8u;
             set_bkg_tiles((UINT8)(x0 + x), (UINT8)(y0 + y), 1u, 1u, &t);
+            jp_audio_busy_tick();
         }
     }
 }
@@ -272,6 +301,7 @@ void jp_put_bkg_text(UINT8 col, UINT8 row, const char *text) {
         }
         tile = jp_get_tile_for_utf8(p, &consumed);
         set_bkg_tiles(x, row, 1u, 1u, &tile);
+        jp_audio_busy_tick();
         p += (consumed == 0u) ? 1 : consumed;
         x++;
         if (x >= 20u) break;
@@ -279,5 +309,5 @@ void jp_put_bkg_text(UINT8 col, UINT8 row, const char *text) {
 }
 
 void jp_wait_vbl(UINT8 n) {
-    while (n--) wait_vbl_done();
+    while (n--) audio_wait_vbl();
 }

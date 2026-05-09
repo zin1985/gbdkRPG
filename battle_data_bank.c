@@ -12,34 +12,41 @@ typedef struct BattleEnemyTemplate {
     UINT8 defense;
     UINT8 agility;
     UINT8 sprite_kind;
+    UINT8 size_kind;
 } BattleEnemyTemplate;
 
 typedef struct BattleEncounterTemplate {
     UINT8 count;
-    UINT8 enemy0;
-    UINT8 enemy1;
-    UINT8 enemy2;
+    UINT8 enemy_ids[BATTLE_DATA_MAX_ENEMIES];
 } BattleEncounterTemplate;
 
 static const char name_slime[] = "スライム";
 static const char name_bat[]   = "こうもり";
 static const char name_beast[] = "けもの";
+static const char name_warmachine[] = "ウォーマシン";
+static const char name_golem[] = "ゴーレム";
 
 static const BattleEnemyTemplate enemy_table[] = {
-    {name_slime, 20u, 5u, 2u, 5u, 0u},
-    {name_bat,   14u, 4u, 1u, 8u, 1u},
-    {name_beast, 28u, 7u, 3u, 4u, 2u}
+    /* name,            hp,  atk, def, agi, art, size */
+    {name_slime,        20u, 5u, 2u, 5u, 0u, BATTLE_ENEMY_SIZE_S},
+    {name_bat,          14u, 4u, 1u, 8u, 1u, BATTLE_ENEMY_SIZE_S},
+    {name_beast,        28u, 7u, 3u, 4u, 2u, BATTLE_ENEMY_SIZE_M},
+    {name_warmachine,   36u, 9u, 4u, 5u, 3u, BATTLE_ENEMY_SIZE_M},
+    {name_golem,        88u, 12u, 8u, 2u, 4u, BATTLE_ENEMY_SIZE_L}
 };
 
 static const BattleEncounterTemplate encounter_table[] = {
-    /* rpg081: every visible battle starts with three enemies. */
-    {3u, 0u, 0u, 0u},
-    {3u, 1u, 0u, 1u},
-    {3u, 2u, 0u, 2u},
-    {3u, 0u, 1u, 0u},
-    {3u, 0u, 0u, 2u},
-    {3u, 0u, 1u, 2u},
-    {3u, 0u, 0u, 1u}
+    /* rpg150: encounter formations are organized by monster size.
+     * S = 16x16 up to 6, M = 32x32 up to 3, L = 96x32 one body.
+     * Empty slots use 0u because count controls the active range.
+     */
+    {6u, {0u, 1u, 0u, 1u, 0u, 1u}}, /* S x6 */
+    {4u, {0u, 1u, 0u, 1u, 0u, 0u}}, /* S x4 */
+    {3u, {2u, 3u, 2u, 0u, 0u, 0u}}, /* M x3 */
+    {2u, {2u, 3u, 0u, 0u, 0u, 0u}}, /* M x2 */
+    {1u, {4u, 0u, 0u, 0u, 0u, 0u}}, /* L x1 */
+    {3u, {0u, 1u, 0u, 0u, 0u, 0u}}, /* S x3 */
+    {1u, {3u, 0u, 0u, 0u, 0u, 0u}}  /* M x1 */
 };
 
 #define ENEMY_TABLE_COUNT ((UINT8)(sizeof(enemy_table) / sizeof(enemy_table[0])))
@@ -90,6 +97,7 @@ void battle_data_copy_enemy_bank(UINT8 enemy_id, BattleEnemyData *out) {
     out->defense = enemy_table[enemy_id].defense;
     out->agility = enemy_table[enemy_id].agility;
     out->sprite_kind = enemy_table[enemy_id].sprite_kind;
+    out->size_kind = enemy_table[enemy_id].size_kind;
 }
 
 void battle_data_load_encounter_bank(UINT8 encounter_id, BattleEnemyData *out, UINT8 *count) {
@@ -102,11 +110,10 @@ void battle_data_load_encounter_bank(UINT8 encounter_id, BattleEnemyData *out, U
     if (*count == 0u) *count = 1u;
     if (*count > BATTLE_DATA_MAX_ENEMIES) *count = BATTLE_DATA_MAX_ENEMIES;
 
-    battle_data_copy_enemy_bank(enc.enemy0, &out[0]);
-    if (*count > 1u) {
-        battle_data_copy_enemy_bank(enc.enemy1, &out[1]);
-    }
-    if (*count > 2u) {
-        battle_data_copy_enemy_bank(enc.enemy2, &out[2]);
+    {
+        UINT8 i;
+        for (i = 0u; i < *count; i++) {
+            battle_data_copy_enemy_bank(enc.enemy_ids[i], &out[i]);
+        }
     }
 }
