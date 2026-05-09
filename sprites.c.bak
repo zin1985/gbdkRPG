@@ -627,7 +627,7 @@ void battle_enemy_bg_load_tiles_for_formation(UINT8 count, UINT8 *sprite_kinds, 
 static void battle_enemy_bg_origin_for_slot(UINT8 count, UINT8 slot, UINT8 size_kind, UINT8 *x, UINT8 *y) {
     if (size_kind == 0u) { /* S 16x16, 3 columns x 2 rows */
         *x = (UINT8)(2u + (UINT8)(slot % 3u) * 6u);
-        *y = (slot < 3u) ? BATTLE_ENEMY_BG_Y : (UINT8)(BATTLE_ENEMY_BG_Y + 3u);
+        *y = (slot < 3u) ? 5u : 8u;
         return;
     }
 
@@ -635,7 +635,7 @@ static void battle_enemy_bg_origin_for_slot(UINT8 count, UINT8 slot, UINT8 size_
         (void)count;
         (void)slot;
         *x = 4u;
-        *y = BATTLE_ENEMY_BG_Y;
+        *y = 5u;
         return;
     }
 

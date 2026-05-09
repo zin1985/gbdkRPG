@@ -1866,13 +1866,14 @@ static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
 }
 
 static void draw_party_status_box(void) {
-    /* rpg159:
-     * Use one continuous top status frame.
-     * This removes the vertical divider lines between party panels while
-     * keeping all three members visible in the same shared box.
+    /* rpg158:
+     * Split the top party status into three compact boxes.  The former full
+     * width box made the second BG row look like one long white strip.
      */
     battle_bkg_clear_area(0u, 0u, 20u, 5u);
-    draw_bkg_box(0u, 0u, 20u, 5u);
+    draw_bkg_box(0u, 0u, 6u, 5u);
+    draw_bkg_box(6u, 0u, 7u, 5u);
+    draw_bkg_box(13u, 0u, 7u, 5u);
 
     draw_battle_party_member_status(0u, 1u);
     draw_battle_party_member_status(1u, 7u);
@@ -2039,12 +2040,12 @@ static void battle_target_bg_origin(UINT8 slot, UINT8 *col, UINT8 *row) {
     size_kind = battle_enemy_size_kinds[slot];
     if (size_kind == BATTLE_ENEMY_SIZE_S) {
         *col = (UINT8)(2u + (UINT8)(slot % 3u) * 6u);
-        *row = (slot < 3u) ? BATTLE_ENEMY_BG_Y : (UINT8)(BATTLE_ENEMY_BG_Y + 3u);
+        *row = (slot < 3u) ? 5u : 8u;
         return;
     }
     if (size_kind == BATTLE_ENEMY_SIZE_L) {
         *col = 4u;
-        *row = BATTLE_ENEMY_BG_Y;
+        *row = 5u;
         return;
     }
 
