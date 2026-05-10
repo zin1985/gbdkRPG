@@ -32,6 +32,10 @@
 #define ROM_BANK_FUTURE_AUDIO         14u
 #define ROM_BANK_FUTURE_SAVE_COMPAT   15u
 
+
+/* rpg194 concrete split: move actor runtime out of overfull bank 7. */
+#define ROM_BANK_ACTOR_RUNTIME_CONCRETE 8u
+
 /* rpg175 concrete split: move inventory runtime out of overfull bank 7. */
 #define ROM_BANK_INVENTORY_RUNTIME_CONCRETE 11u
 
