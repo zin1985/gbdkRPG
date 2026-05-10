@@ -23,104 +23,8 @@
 #include "save_bridge_runtime.h"
 #include "revive_runtime.h"
 
-/*
- * ============================================================================
- * rpg060 HELPER DEFINITION FIX
- * ============================================================================
- * rpg059 failed at link time because helper functions were declared and used
- * but their definitions were missing from main.c. This version adds the helper
- * bodies without changing BG tiles, OAM, actors, object kinds, or map data.
- * ============================================================================
- */
-
-
-/*
- * ============================================================================
- * rpg059 NO CONSOLE/STDIO POLICY
- * ============================================================================
- * Bank 0 remains very tight. Do not use the old console text helpers
- * in gameplay screens. Use jpfont helpers and tiny local number conversion.
- * ============================================================================
- */
-
-
-/*
- * ============================================================================
- * rpg058 MAP DATA BANK POLICY
- * ============================================================================
- * rpg057 still showed romusage warnings for non-banked areas.
- * The 16x16 collision/object arrays are now moved out of main.c into
- * map_data_bank.c (ROM bank 4). main.c reads them through NONBANKED wrappers.
- * ============================================================================
- */
-
 BANKREF_EXTERN(sprite_data_bank)
 
-/*
- * ============================================================================
- * rpg056 GRAPHICS BANK POLICY
- * ============================================================================
- * rpg055 still overflowed from bank 1 into bank 2.
- * The large graphics arrays in sprites.c are now moved to ROM bank 3.
- * main.c must load graphics through banked_graphics.c NONBANKED wrappers.
- * Do not call set_bkg_data()/set_sprite_data() directly for banked assets.
- * ============================================================================
- */
-
-
-
-/*
- * ============================================================================
- * GBDK RPG GRAPHICS SAFETY CHECKPOINT (rpg030)
- * ============================================================================
- *
- * This project previously white-screened when graphics were expanded too quickly.
- * The boot path is:
- *
- *   main()
- *     -> dialogue_init()
- *     -> init_game()
- *     -> load_map_mode()
- *          -> DISPLAY_OFF
- *          -> snap_camera_to_player()
- *          -> draw_object_map()
- *               -> build 32x32 BG buffer
- *               -> set_bkg_data(MAP_TILE_BASE, MAP_GFX_TILE_COUNT, map_gfx_tiles)
- *               -> set_bkg_tiles(...)
- *          -> init_map_sprites()
- *               -> set_sprite_data(...) for actor sheets
- *               -> draw_all_actors()
- *          -> DISPLAY_ON
- *
- * If the emulator shows a white screen immediately, suspect the code above
- * BEFORE checking NPC dialogue, town events, battle, or late game logic.
- *
- * Safe modification order:
- *   1. BG tile bytes only, keeping MAP_GFX_TILE_COUNT unchanged.
- *   2. BG tile count increase only, with no object/collision/actor changes.
- *   3. BG overlay placement only, using already-loaded tiles.
- *   4. Object/collision data change only.
- *   5. Actor/NPC slot behavior change only.
- *   6. Sprite/OAM addition only, one OAM group at a time.
- *
- * Static objects such as forest, soft mountains, pots, chests, town signs:
- *   Prefer BG/metatile overlays first.
- *
- * Dynamic objects such as player, NPCs, enemies, cursors, effects:
- *   Use OAM sprites with a fixed slot budget. Do not mix with BG tile numbers.
- *
- * Do not edit draw_object_map(), init_map_sprites(), or MAP_GFX_TILE_COUNT
- * without first reading docs:
- *   GRAPHICS_ARCHITECTURE_030.md
- *   SAFE_GRAPHICS_CHECKPOINT_030.md
- * ============================================================================
- */
-
-/* Map dimension scaffolding.
- * Current safe renderer still draws a 16x16 logical map into a 32x32 BG buffer.
- * Future field expansion must first introduce FIELD_MAP16_W/H and renderer
- * loops that use the active area's width/height. Town size should remain 16x16.
- */
 #define FIELD_MAP16_W 16u
 #define FIELD_MAP16_H 16u
 #define TOWN_MAP16_W 16u
@@ -130,13 +34,7 @@ BANKREF_EXTERN(sprite_data_bank)
 #define TILE16_PX 16u
 #define BG_W 20u
 #define BG_H 18u
-/*
- * Latest v2 flicker fix:
- * Draw the full 32x32 Game Boy BG map once while entering/restoring field.
- * During movement, only move_bkg(camera_px,camera_py) is used.
- * This avoids repeated 22x20 redraws during smooth camera movement, which caused
- * visible flicker on VBA.
- */
+
 #define BG_DRAW_W 32u
 #define BG_DRAW_H 32u
 #define DRAW_MAP16_W MAP16_W
@@ -144,42 +42,16 @@ BANKREF_EXTERN(sprite_data_bank)
 #define SCREEN_PX_W 160u
 #define SCREEN_PX_H 144u
 
-/* OAM slot budget.
- * Keep this table updated before adding NPCs, enemies, cursors, effects, or
- * decorative sprites. Static map objects should be BG first, not OAM.
- *
- * Field:
- *  0-3   player 16x16
- *  4-7   npc0 16x16
- *  8-11  enemy0 16x16
- *  12-15 reserved test actor
- * Battle:
- *  enemies are rendered as BG tiles (rpg128) so 3 x 32x32 bodies do not
- *  consume OAM or hit the 10-OBJ-per-scanline hardware limit.
- *  24-29 party icons, 3 members x 16x16 (2 sprites each)
- *  30    command cursor
- *  31-39 spare / emergency hide area
- */
 #define PLAYER_SPRITE_BASE 0u
 #define NPC0_SPRITE_BASE   4u
 #define ENEMY0_SPRITE_BASE 8u
 
-/* rpg046 data-only test:
- * Reserve OAM 12-15 through an inactive Actor entry.
- * No new function is added. Existing draw_all_actors() will call
- * hide_actor_sprite() for inactive actors.
- */
 #define TEST_ACTOR_SPRITE_BASE 12u
 #define BATTLE_PARTY_ICON0_SPRITE 24u
 #define BATTLE_PARTY_ICON1_SPRITE 26u
 #define BATTLE_PARTY_ICON2_SPRITE 28u
 #define BATTLE_PARTY_ICON_TILE_BASE NPC0_TILE_BASE
 
-/* VRAM tile budget.
- * Actor OBJ tile sheets use 0-95.
- * BG tiles start at 96. MAP_GFX_TILE_COUNT controls how many BG tiles are
- * uploaded in draw_object_map(). Keep BG tile IDs and OBJ tile IDs separate.
- */
 #define PLAYER_TILE_BASE 0u
 #define NPC0_TILE_BASE   32u
 #define ENEMY0_TILE_BASE 64u
@@ -225,27 +97,11 @@ BANKREF_EXTERN(sprite_data_bank)
 #define RANDOM_ENCOUNTER_RATE 20u
 #define RANDOM_ENCOUNTER_GRACE_STEPS 3u
 
-/*
- * ============================================================================
- * rpg071 BATTLE SCENE / ENCOUNTER TABLE POLICY
- * ============================================================================
- * Fix battle screen residue and add a small encounter table.
- *
- * - Full 32x32 battle BG is cleared with already-loaded JP frame blank tile.
- * - Battle command UI uses BG box tiles, matching the message-window style.
- * - Existing enemy OBJ tile sheet is reused for battle enemy sprites.
- * - Enemy data/encounter table lives in battle_data_bank.c bank 7.
- * - Supports S/M/L battle formations: S 16x16 up to 6, M 32x32 up to 3, L 32x96 up to 1.
- * - No new BG tiles, MAP_GFX_TILE_COUNT change, object kind, map switch, or
- *   sprite sheet path change.
- * ============================================================================
- */
-
 #define BATTLE_MAX_ENEMY_COUNT BATTLE_DATA_MAX_ENEMIES
 #define BATTLE_ENEMY0_SPRITE_BASE 0u
 #define BATTLE_ENEMY1_SPRITE_BASE 8u
 #define BATTLE_ENEMY2_SPRITE_BASE 16u
-/* rpg126: place enemies below the 5-row party status box (0-39px). */
+
 #define BATTLE_ENEMY_SPRITE_Y 40u
 #define BATTLE_CURSOR_SPRITE 30u
 #define BATTLE_CURSOR_TILE 44u
@@ -256,12 +112,6 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_MSG_W 20u
 #define BATTLE_MSG_H 5u
 
-/* rpg090:
- * Keep battle UI at the real visible BG origin.  Earlier right-shift
- * experiments used SCX compensation, but that made the battle windows look
- * offset on some paths.  Battle UI code must now draw with raw tile
- * coordinates and force BG scroll to 0 while battle is active.
- */
 #define BATTLE_BG_SHIFT_X 0u
 #define BATTLE_BG_SCROLL_X 0u
 #define BATTLE_BG_X(x) ((UINT8)(x))
@@ -273,23 +123,6 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_DIRTY_MESSAGE   0x04u
 #define BATTLE_DIRTY_CURSOR    0x08u
 #define BATTLE_DIRTY_ENEMY_OAM 0x10u
-
-
-/*
- * ============================================================================
- * rpg069 FONT CACHE / BATTLE TEXT CLEANUP
- * ============================================================================
- * rpg068 worked but text could corrupt because the temporary byte-based glyph
- * cache key could collide.  jpfont.c now uses the normalized UTF-16 key again.
- *
- * Battle screen cleanup:
- * - reset jpfont cache before drawing battle BG text
- * - redraw battle frame/menu after the opening dialogue closes
- * - avoid decorative ASCII border lines to reduce unnecessary glyph cache use
- * ============================================================================
- */
-
-
 
 #define EVENT_FLAG_COUNT 16u
 #define FLAG_ENEMY_DEFEATED 0u
@@ -321,55 +154,7 @@ typedef struct GrowthResult {
 #define MENU_OBJECTIVE 3u
 #define MENU_COUNT 4u
 
-/* rpg132: map event/area constants moved to field_feature_runtime.h */
-
-
-/*
- * ============================================================================
- * rpg068 FIELD RANDOM ENCOUNTER POLICY
- * ============================================================================
- * Field encounters are now step-based random encounters.
- *
- * - Existing ENEMY actor data is used only as a battle template.
- * - Enemy actor OAM is hidden on FIELD and TOWN.
- * - Random encounter check runs only after a completed player step in FIELD.
- * - No new actor entry, OAM slot, BG tile, object kind, or sprite sheet.
- * - Battle start effect is palette flash only; no new VRAM data.
- * ============================================================================
- */
-
-
-/*
- * ============================================================================
- * rpg067 AREA / ACTOR VISIBILITY POLICY
- * ============================================================================
- * This version adds only area-based actor visibility.
- *
- * AREA_FIELD:
- *   - show ENEMY actors
- *   - hide town NPC actors
- *
- * AREA_TOWN:
- *   - show NPC actors
- *   - hide ENEMY actors
- *
- * This does not add actors, object kinds, BG tiles, sprite sheets, or VRAM load
- * paths. It only changes whether existing actor OAM slots are drawn/blocked/
- * talkable in the current area.
- * ============================================================================
- */
-
-
-/* rpg008 safe sharp mountain: field impassable visuals use existing kind 2.
- * This is data-only: no new BG tiles, no new kind, no new actor, no new draw branch.
- */
-
-/* Base05 safety toggle.
- * Default is full-sheet loading because player/NPC art was restored from the
- * known-working demo. Flip to 1 only for emergency isolation.
- */
 #define SAFE_DUPLICATE_FIRST_ACTOR_FRAME 0
-
 
 typedef enum GameMode {
     MODE_MAP = 0,
@@ -391,15 +176,11 @@ typedef enum CommandType {
     CMD_ATTACK = 0,
     CMD_SKILL,
     CMD_DEFEND,
+    CMD_ITEM,
     CMD_RUN,
     CMD_COUNT
 } CommandType;
 
-/* rpg088:
- * Keep the visible 4-command menu, but move special actions toward a small
- * SkillDef table.  This is the first step toward multiple skills without
- * adding a skill-list UI yet.
- */
 typedef enum SkillId {
     SKILL_NONE = 0,
     SKILL_POWER_STRIKE,
@@ -445,11 +226,6 @@ typedef struct PlayerSkillSet {
     UINT8 slots[PLAYER_SKILL_SLOT_COUNT];
 } PlayerSkillSet;
 
-/* rpg089:
- * Keep the visible 4-command menu unchanged, but route the old とくぎ / かいふく
- * commands through fixed skill slots. This is the safe internal step before a
- * full skill-list UI.
- */
 static const SkillDef skill_table[SKILL_MAX] = {
     {SKILL_NONE,         SKILL_KIND_DAMAGE, TARGET_ENEMY, 0u, 0u, 100u, 0u},
     {SKILL_POWER_STRIKE, SKILL_KIND_DAMAGE, TARGET_ENEMY, 2u, 4u,  95u, SKILL_FLAG_AI_OK},
@@ -483,7 +259,6 @@ typedef struct Fighter {
     UINT8 agility;
 } Fighter;
 
-
 typedef struct Actor {
     ActorKind kind;
     UINT8 active;
@@ -499,8 +274,6 @@ typedef struct Actor {
     Fighter stats;
 } Actor;
 
-/* rpg058: map collision/object arrays moved to map_data_bank.c. */
-
 Actor actors[3u];
 #define ACTOR_COUNT ((UINT8)(sizeof(actors) / sizeof(actors[0])))
 
@@ -515,10 +288,7 @@ GrowthResult last_growth;
 UINT8 battle_enemy_rank;
 static PlayerSkillSet player_skills;
 static SaveSnapshot save_snapshot_work;
-/* Japanese UTF-8 battle messages can exceed 48 bytes.
- * Keeping this too small can corrupt nearby globals such as current_enemy_index,
- * which made the NPC disappear after defeating the enemy.
- */
+
 static UINT8 prev_keys;
 static UINT8 current_enemy_index;
 UINT8 current_area;
@@ -630,46 +400,6 @@ static UINT8 current_area_music_track(void);
 static void inspect_map_event(UINT8 event_id);
 static void try_interact(void);
 
-/*
- * ============================================================================
- * rpg055 BANKED MESSAGE POLICY
- * ============================================================================
- * rpg050 white-screened with:
- *   Warning: Write from one bank spans into the next. 0x7fff -> 0x8001
- *
- * Therefore, new dialogue strings must not be added to main.c.
- * Dialogue text is moved to messages_bank.c and copied to WRAM by
- * message_show() before rendering. main.c should keep message IDs only.
- * ============================================================================
- */
-
-/*
- * ============================================================================
- * rpg049 SAFE EVENT POLICY
- * ============================================================================
- *
- * rpg048 white-screened, but rpg048b worked.
- *
- * Current interpretation:
- * - The added actor with talkable=1 is safe when implemented as data-only.
- * - The risky part is likely code/string/layout growth around try_interact(),
- *   not the OAM 12-15 actor slot itself.
- *
- * For now, safe feature additions must prefer:
- *   1. Existing actor/message flow.
- *   2. Existing BG tiles only.
- *   3. Existing object kinds only.
- *   4. No new sprite sheet.
- *   5. No new MAP_GFX_TILE_COUNT.
- *   6. No set_bkg_data()/set_sprite_data() changes.
- *
- * Avoid until explicitly isolated:
- *   - Adding new long Japanese strings and new branching logic together.
- *   - Adding actor entries and interaction logic in the same build.
- *   - Adding BG graphics and event logic in the same build.
- *   - Adding WINDOW/console debug visual code.
- * ============================================================================
- */
 static void start_move(Direction dir);
 static void update_player_movement(void);
 static void map_input(void);
@@ -823,10 +553,7 @@ static void update_camera_target_for_player(void) {
 }
 
 static void apply_camera_scroll(void) {
-    /* Full 32x32 BG map mode: scroll by the real camera pixel offset.
-     * The old viewport mode scrolled only the low 4 bits and redrew the BG when
-     * camera_tx/camera_ty changed. That redraw could flicker during movement.
-     */
+    
     move_bkg(camera_px, camera_py);
 }
 
@@ -847,10 +574,7 @@ static UINT8 update_camera_for_player(void) {
     camera_px = step_toward_u8(camera_px, camera_target_px, CAMERA_SPEED_PX);
     camera_py = step_toward_u8(camera_py, camera_target_py, CAMERA_SPEED_PX);
 
-    /* Keep tile coordinates for status/debug only.  Do not redraw the BG here.
-     * The full 32x32 BG map is already loaded, so redrawing while DISPLAY_ON is
-     * unnecessary and was the source of visible movement flicker.
-     */
+    
     camera_tx = camera_tile_from_px(camera_px);
     camera_ty = camera_tile_from_px(camera_py);
     apply_camera_scroll();
@@ -885,7 +609,6 @@ static void prompt_enemy_revive_choice(void) {
     }
     draw_all_actors();
 }
-
 
 static void u16_to_dec3(UINT16 value, char *out) {
     UINT16 hundreds;
@@ -933,22 +656,6 @@ static void open_main_menu(void) {
     audio_play_music(current_area_music_track());
 }
 
-/* GRAPHICS HOTSPOT: draw_object_map()
- *
- * Responsibilities:
- * - Convert current area's 16x16 object map into the 32x32 BG buffer.
- * - Apply visual-only BG overlays such as forest markers.
- * - Upload BG tile data and BG map data.
- *
- * Safe extension:
- * - Add new BG art by appending map_gfx_tiles and increasing
- *   MAP_GFX_TILE_COUNT in sprites.h only after testing the count alone.
- * - Add passable visual objects as overlays here without touching collision.
- *
- * Unsafe combined changes:
- * - Increasing MAP_GFX_TILE_COUNT + changing collision + changing actors.
- * - Adding new object kind + changing town/field switch + adding sprites.
- */
 static void draw_object_map(void) {
     UINT8 x;
     UINT8 y;
@@ -965,13 +672,7 @@ static void draw_object_map(void) {
     UINT16 bg_i;
     UINT16 top_left_i;
 
-    /*
-     * Base06 wall rewrite:
-     * - Use UINT16 indexes.  The 22x20 buffer has 440 cells, so UINT8 indexes
-     *   wrap past 255 and corrupt the lower half of the BG buffer.
-     * - Build walls as real 16x16 metatiles using four independent 8x8 tiles.
-     *   This replaces the old repeated single-tile wall drawing completely.
-     */
+    
     for (y = 0u; y < BG_DRAW_H; y++) {
         for (x = 0u; x < BG_DRAW_W; x++) {
             bg_i = (UINT16)y * (UINT16)BG_DRAW_W + (UINT16)x;
@@ -981,16 +682,10 @@ static void draw_object_map(void) {
 
     for (y = 0u; y < DRAW_MAP16_H; y++) {
         for (x = 0u; x < DRAW_MAP16_W; x++) {
-            /* Full-map BG mode: draw world tile x/y directly into the 32x32 BG.
-             * Camera movement is handled only by move_bkg(), so no redraw is
-             * needed during normal walking.
-             */
+            
             wx = x;
             wy = y;
-            /* DRAW_MAP16_W/H are equal to MAP16_W/H in full-map BG mode,
-             * so the bounds fallback was always unreachable and triggered
-             * SDCC warnings 110/126.  The loop range is already safe here.
-             */
+            
             kind = current_object16_at(wx, wy);
 
             sx = (UINT8)(x * 2u);
@@ -1009,7 +704,12 @@ static void draw_object_map(void) {
                     br = MAP_TILE_WALL_BR;
                 }
             } else if (kind == 2u || kind == 5u) {
-                if (current_area_is_dangerous()) {
+                if (current_area == AREA_PORT) {
+                    tl = MAP_TILE_DUNGEON_PIT_TL;
+                    tr = MAP_TILE_DUNGEON_PIT_TR;
+                    bl = MAP_TILE_DUNGEON_PIT_BL;
+                    br = MAP_TILE_DUNGEON_PIT_BR;
+                } else if (current_area_is_dangerous()) {
                     tl = MAP_TILE_DUNGEON_PIT_TL;
                     tr = MAP_TILE_DUNGEON_PIT_TR;
                     bl = MAP_TILE_DUNGEON_PIT_BL;
@@ -1036,10 +736,10 @@ static void draw_object_map(void) {
                 bl = MAP_TILE_DUNGEON_PIT_BL;
                 br = MAP_TILE_DUNGEON_PIT_BR;
             } else if (kind == 7u) {
-                tl = MAP_TILE_CHEST_TL;
-                tr = MAP_TILE_CHEST_TR;
-                bl = MAP_TILE_CHEST_BL;
-                br = MAP_TILE_CHEST_BR;
+                tl = MAP_TILE_FOREST_TL;
+                tr = MAP_TILE_FOREST_TR;
+                bl = MAP_TILE_FOREST_BL;
+                br = MAP_TILE_FOREST_BR;
             } else {
                 tl = MAP_TILE_FLOOR;
                 tr = MAP_TILE_FLOOR;
@@ -1055,14 +755,7 @@ static void draw_object_map(void) {
         }
     }
 
-    /* rpg022: draw-only forest BG overlay.
-     * This is a visual-only overlay:
-     * - adds only 4 BG tiles for forest, keeping town marker tiles intact
-     * - no new object kind / no collision change
-     * - no new object kind
-     * - no collision change
-     * It reuses existing town-marker BG tiles as a temporary forest marker.
-     */
+    
     if (current_area == AREA_FIELD) {
         sx = (UINT8)(FOREST_BG_X * 2u);
         sy = (UINT8)(FOREST_BG_Y * 2u);
@@ -1074,6 +767,12 @@ static void draw_object_map(void) {
     }
 
     set_banked_bkg_data(MAP_TILE_BASE, MAP_GFX_TILE_COUNT, map_gfx_tiles, BANK(sprite_data_bank));
+    if (current_area == AREA_PORT) {
+        map_load_port_overlay_tiles(MAP_TILE_DUNGEON_PIT_TL, MAP_TILE_CHEST_TL);
+        map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
+    } else if (current_area == AREA_TOWN) {
+        map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
+    }
     set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
 }
 static void set_player_frame(Direction dir, UINT8 frame) {
@@ -1132,7 +831,7 @@ static void hide_actor_sprite(const Actor *actor) {
 
 static UINT8 actor_visible_in_current_area(const Actor *actor) {
     if (current_area == AREA_FIELD) {
-        /* Field encounters are random step encounters. */
+        
         return 0u;
     }
 
@@ -1160,12 +859,7 @@ static void draw_all_actors(void) {
 static void load_actor_sprite_data_safe(UINT8 tile_base, const unsigned char *tiles) {
 #if SAFE_DUPLICATE_FIRST_ACTOR_FRAME
     UINT8 frame;
-    /*
-     * Field stability first:
-     * duplicate the verified first 16x16 frame into all 8 logical frame slots.
-     * This prevents non-down directions / walk frames from using bad or unverified
-     * tile patterns while keeping the existing set_*_frame() indexing intact.
-     */
+    
     for (frame = 0u; frame < (UINT8)(ACTOR_TOTAL_TILES / ACTOR_TILE_COUNT); frame++) {
         set_banked_sprite_data((UINT8)(tile_base + frame * ACTOR_TILE_COUNT), ACTOR_TILE_COUNT, tiles, BANK(sprite_data_bank));
     }
@@ -1174,32 +868,14 @@ static void load_actor_sprite_data_safe(UINT8 tile_base, const unsigned char *ti
 #endif
 }
 
-/* GRAPHICS HOTSPOT: init_map_sprites()
- *
- * This function reloads OBJ graphics for player/NPC/enemy whenever map mode
- * starts or returns from battle/menu. White screens after sprite edits often
- * come from touching this path.
- *
- * Safe extension:
- * - Add one new actor sheet at a time.
- * - Reserve OAM slots first.
- * - Load OBJ tiles with set_sprite_data() only for OBJ sprites.
- *
- * Do not use BG tile numbers as sprite tile numbers.
- */
 static void init_map_sprites(void) {
     SPRITES_8x8;
-    /*
-     * Keep each actor in a non-overlapping 32-tile slot: player 0-31,
-     * NPC 32-63, enemy 64-95.  player/NPC are restored from the known-working demo.
-     * Full sheets are reloaded here every time map mode is restored.
-     */
+    
     load_actor_sprite_data_safe(PLAYER_TILE_BASE, player_tiles);
     load_actor_sprite_data_safe(NPC0_TILE_BASE,   npc_tiles);
     load_actor_sprite_data_safe(ENEMY0_TILE_BASE, enemy_tiles);
     draw_all_actors();
 }
-
 
 static void reload_field_bg_tiles(void) {
     draw_object_map();
@@ -1212,19 +888,10 @@ static void restore_field_vram_state(void) {
     SHOW_BKG;
     SHOW_SPRITES;
 
-    /*
-     * rpg091:
-     * Clear all OAM first so battle-only sprites (party icons / cursor / enemy
-     * bodies using higher OAM slots) cannot survive on the field screen after
-     * battle return.  init_map_sprites() redraws only the field actor slots.
-     */
+    
     hide_all_sprites_safe();
 
-    /*
-     * rpg069:
-     * Restore map BG and reset jpfont cache/window while the LCD is off.
-     * The map itself does not use dynamic jpfont cache tiles, so this is safe.
-     */
+    
     reload_field_bg_tiles();
     jp_init();
     init_map_sprites();
@@ -1232,11 +899,6 @@ static void restore_field_vram_state(void) {
     DISPLAY_ON;
 }
 
-/* BOOT/MAP RESTORE HOTSPOT: load_map_mode()
- *
- * If DISPLAY_ON is not reached, the emulator can remain white.
- * Keep this path boring and deterministic.
- */
 static void load_map_mode(void) {
     DISPLAY_OFF;
     SHOW_BKG;
@@ -1342,10 +1004,7 @@ static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
     player_dir = dir;
 
     snap_camera_to_player();
-    /* v3f: Separate town map arrays need the BG map to be redrawn after an
-     * area change.  This still uses the verified 32x32 full-BG redraw path and
-     * does not reload sprite data or introduce a new town VRAM pipeline.
-     */
+    
     draw_object_map();
     apply_camera_scroll();
     draw_all_actors();
@@ -1398,7 +1057,6 @@ static void leave_ruins_marker(void) {
     change_area_marker(MSG_DUNGEON_EXIT, AREA_FIELD, AUDIO_TRACK_FIELD, 2u, 2u, DIR_RIGHT, MSG_NONE_LOCAL);
 }
 
-
 static UINT8 apply_map_event_transition(UINT8 event_id) {
     if (event_id == MAP_EVENT_TOWN) {
         enter_town_marker();
@@ -1436,7 +1094,7 @@ static UINT8 field_random_encounter_should_start(void) {
     if (dialogue_is_active()) return 0u;
     if (player_moving) return 0u;
 
-    /* Do not trigger on special event tiles such as town entrance. */
+    
     if (map_event_at_tile(player_tx, player_ty) != MAP_EVENT_NONE) return 0u;
 
     if (encounter_grace_steps > 0u) {
@@ -1444,7 +1102,7 @@ static UINT8 field_random_encounter_should_start(void) {
         return 0u;
     }
 
-    /* Stir the simple LCG with DIV_REG so repeated boots do not feel identical. */
+    
     rand_seed ^= DIV_REG;
     roll = random_u8();
 
@@ -1505,11 +1163,6 @@ static void inspect_map_event(UINT8 event_id) {
     }
 }
 
-/* rpg049 note: keep this function small.
- * Do not add new actor branching and new message strings here in the same build.
- * rpg048b proved data-only talkable actors can work; interaction code growth
- * should be isolated separately.
- */
 static void try_interact(void) {
     INT8 index;
     UINT8 tx;
@@ -1737,15 +1390,9 @@ static UINT16 calc_skill_damage(const Fighter *attacker, const Fighter *defender
 }
 
 static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill) {
-    /*
-     * rpg106:
-     * actor->heal_power and skill->power are UINT8.
-     * Max possible value is 255*2+255 = 765, below HP/MP cap 999.
-     * Removing the unreachable clamp also shaves a few Bank0 bytes.
-     */
+    
     return (UINT16)((UINT16)actor->heal_power * 2u + (UINT16)skill->power);
 }
-
 
 static const SkillDef *skill_get_def(UINT8 skill_id) {
     if (skill_id >= SKILL_MAX) {
@@ -1768,21 +1415,12 @@ static void init_player_skills(void) {
     player_skills.slots[3] = SKILL_GUARD_BREAK;
 }
 
-/*
- * rpg074:
- * Keep battle UI updates in this small helper zone.  Do not add BG tiles or
- * change VRAM load order here.  The goal is to stabilize the first command
- * screen, then expand party/status display one visible slot at a time.
- */
 static void battle_clear_bg_full(void) {
     static UINT8 bg[BG_DRAW_W * BG_DRAW_H];
     UINT16 i;
     UINT8 blank;
 
-    /*
-     * Clear the full 32x32 BG map, not just the visible 20x18 area.
-     * This prevents field BG residue on the first battle command turn.
-     */
+    
     blank = (UINT8)(JP_FRAME_BASE + 0u);
     for (i = 0u; i < (UINT16)(BG_DRAW_W * BG_DRAW_H); i++) {
         bg[i] = blank;
@@ -1795,7 +1433,6 @@ static void battle_clear_bg_full(void) {
 static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
     jp_draw_bkg_frame(BATTLE_BG_X(x0), y0, w, h);
 }
-
 
 static void battle_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
     jp_bkg_clear_area(BATTLE_BG_X(x0), y0, w, h);
@@ -1857,10 +1494,7 @@ static void draw_battle_enemy_names(void) {
 }
 
 static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
-    /* rpg160:
-     * Draw party names via party_runtime while bank 7 string literals are
-     * still mapped.  HP/MP are scalar returns, so those remain safe here.
-     */
+    
     party_put_active_name_battle(slot, BATTLE_BG_X(x), 1u);
     battle_put_bkg_text(x, 2u, "H ");
     put_u16(BATTLE_BG_X((UINT8)(x + 2u)), 2u, party_get_active_hp(slot));
@@ -1869,11 +1503,7 @@ static void draw_battle_party_member_status(UINT8 slot, UINT8 x) {
 }
 
 static void draw_party_status_box(void) {
-    /* rpg159:
-     * Use one continuous top status frame.
-     * This removes the vertical divider lines between party panels while
-     * keeping all three members visible in the same shared box.
-     */
+    
     battle_bkg_clear_area(0u, 0u, 20u, 5u);
     draw_bkg_box(0u, 0u, 20u, 5u);
     battle_bkg_clear_area(1u, 1u, 18u, 3u);
@@ -1886,7 +1516,7 @@ static void draw_party_status_box(void) {
 static void hide_battle_enemy_sprites(void) {
     UINT8 i;
 
-    /* rpg126: 3 battle enemies reserve sprite slots 0-23. */
+    
     for (i = 0u; i < 24u; i++) {
         move_sprite(i, 0u, 0u);
     }
@@ -1900,14 +1530,12 @@ static void hide_all_sprites_safe(void) {
 }
 
 static void load_battle_party_icon_sprite_data(void) {
-    /* rpg080: load the user-provided party display icons into NPC tile slots.
-     * NPC field tiles are restored by init_map_sprites() after battle.
-     */
+    
     set_banked_sprite_data(BATTLE_PARTY_ICON_TILE_BASE, 12u, battle_party_display_tiles, BANK(sprite_data_bank));
 }
 
 static void show_party_icon_16(UINT8 sprite_base, UINT8 tile_base, UINT8 x, UINT8 y) {
-    /* battle mode uses 8x16 OBJ: one 16x16 icon = 2 sprites side by side. */
+    
     set_sprite_tile(sprite_base + 0u, tile_base + 0u);
     set_sprite_tile(sprite_base + 1u, tile_base + 2u);
 
@@ -1916,7 +1544,7 @@ static void show_party_icon_16(UINT8 sprite_base, UINT8 tile_base, UINT8 x, UINT
 }
 
 static void battle_place_party_icons(void) {
-    /* rpg104: shared party icon placement to avoid duplicate HOME code. */
+    
     show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u),  40u, 16u);
     show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
     show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u), 136u, 16u);
@@ -1932,9 +1560,7 @@ static void battle_reposition_party_icons_only(void) {
 }
 
 static void load_battle_enemy_sprite_data(void) {
-    /* rpg128: load battle enemy art into BG tile space.  Field map BG tiles are
-     * restored by draw_object_map()/restore_field_vram_state() after battle.
-     */
+    
     battle_enemy_bg_load_tiles_for_formation(battle_enemy_count, battle_enemy_sprite_kinds, battle_enemy_size_kinds);
 }
 
@@ -1944,7 +1570,7 @@ static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
 
     (void)hide_first;
 
-    /* Enemy bodies are BG tiles.  S/M/L formations consume no enemy OAM. */
+    
     hide_battle_enemy_sprites();
 
     for (i = 0u; i < BATTLE_MAX_ENEMY_COUNT; i++) {
@@ -1992,9 +1618,8 @@ static UINT8 battle_ensure_selected_alive(void) {
     return battle_select_first_alive();
 }
 
-
 static void draw_battle_frame(void) {
-    /* rpg158: bottom command/name panels share the same area with messages. */
+    
     battle_hide_window_and_reset_scroll();
     battle_clear_bg_full();
     draw_party_status_box();
@@ -2002,11 +1627,7 @@ static void draw_battle_frame(void) {
 }
 
 static void draw_battle_message_area(void) {
-    /* rpg158:
-     * The bottom area is shared.  When there is no message, show enemy names
-     * and commands.  When a message exists, cover that area with the message
-     * window only for the duration of the message.
-     */
+    
     if (battle_message_text == 0 || battle_message_text[0] == '\0') {
         draw_battle_enemy_names();
         draw_battle_menu();
@@ -2024,6 +1645,7 @@ static void draw_battle_menu(void) {
     battle_put_bkg_text(16u, 14u, "とくぎ");
     battle_put_bkg_text(11u, 15u, "ぼうぎょ");
     battle_put_bkg_text(16u, 15u, "どうぐ");
+    battle_put_bkg_text(11u, 16u, "にげる");
 }
 
 static void battle_move_command_cursor_obj(void) {
@@ -2035,9 +1657,16 @@ static void battle_move_command_cursor_obj(void) {
     battle_put_bkg_text(15u, 14u, " ");
     battle_put_bkg_text(10u, 15u, " ");
     battle_put_bkg_text(15u, 15u, " ");
+    battle_put_bkg_text(10u, 16u, " ");
+    battle_put_bkg_text(15u, 16u, " ");
 
-    col = (menu_index == CMD_SKILL || menu_index == CMD_RUN) ? 15u : 10u;
-    row = (menu_index == CMD_DEFEND || menu_index == CMD_RUN) ? 15u : 14u;
+    if (menu_index == CMD_RUN) {
+        col = 10u;
+        row = 16u;
+    } else {
+        col = (menu_index == CMD_SKILL || menu_index == CMD_ITEM) ? 15u : 10u;
+        row = (menu_index == CMD_DEFEND || menu_index == CMD_ITEM) ? 15u : 14u;
+    }
     battle_put_bkg_text(col, row, ">");
 }
 
@@ -2095,7 +1724,7 @@ static void update_battle_menu_cursor(UINT8 old_index, UINT8 new_index) {
 static void battle_flash_enemy_sprite(UINT8 enemy_index) {
     if (enemy_index >= battle_enemy_count) return;
 
-    /* rpg128: flash only the target BG enemy slot. */
+    
     battle_enemy_bg_draw_slot_sized(battle_enemy_count, enemy_index, battle_enemy_sprite_kinds[enemy_index], battle_enemy_size_kinds[enemy_index], 0u);
     audio_wait_vbl();
     audio_wait_vbl();
@@ -2106,10 +1735,7 @@ static void battle_flash_enemy_sprite(UINT8 enemy_index) {
 }
 
 static void battle_reset_bg_origin(void) {
-    /* rpg090: force battle BG windows back to the visible origin.
-     * move_bkg() is the normal GBDK path; SCX/SCY are also assigned so
-     * no field-camera scroll residue can survive the battle transition.
-     */
+    
     move_bkg(0u, 0u);
     SCX_REG = 0u;
     SCY_REG = 0u;
@@ -2133,11 +1759,7 @@ static void battle_update_dirty(void) {
 
     if (!battle_screen_ready) return;
 
-    /*
-     * rpg091:
-     * Dirty updates must also keep the battle screen pinned to origin.
-     * This prevents later battle steps from inheriting any map/window scroll.
-     */
+    
     battle_hide_window_and_reset_scroll();
 
     flags = battle_dirty_flags;
@@ -2171,14 +1793,7 @@ static void battle_update_dirty(void) {
 }
 
 static void battle_prepare_first_command_ui(void) {
-    /*
-     * rpg096:
-     * Fix the one-time UI drift when the appear message hands off to the first
-     * command cursor.  This is intentionally not a full redraw:
-     * no DISPLAY_OFF/ON, no battle_clear_bg_full(), no jp_init(), no sprite data
-     * reload.  Only align scroll, redraw the two non-overlapping BG windows,
-     * reposition existing OAM, and leave message text empty.
-     */
+    
     battle_hide_window_and_reset_scroll();
 
     battle_message_text = "";
@@ -2188,7 +1803,6 @@ static void battle_prepare_first_command_ui(void) {
     battle_reposition_enemy_sprites_only();
     battle_move_command_cursor_obj();
 }
-
 
 static void battle_show_message(const char *text) {
     battle_set_message_dirty(text);
@@ -2205,10 +1819,7 @@ static void battle_show_damage_message(const char *prefix, UINT16 value) {
 }
 
 static void battle_enter_render_once(void) {
-    /* rpg082:
-     * The only full battle BG/OAM construction point.  After this, command
-     * movement, messages, HP, and enemy visibility use dirty updates only.
-     */
+    
     DISPLAY_OFF;
     battle_screen_ready = 0u;
     battle_dirty_flags = BATTLE_DIRTY_NONE;
@@ -2257,10 +1868,7 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     player_battle.heal_power = player_heal_power_stat;
     player_battle.agility = player_agility_stat;
 
-    /* rpg081: field-touch battles also use the 3-body encounter table.
-     * The touched actor is still remembered in current_enemy_index so it can be
-     * removed from the map after victory.
-     */
+    
     battle_data_load_random((UINT8)(enemy_index + 5u), battle_enemy_data_slots, &battle_enemy_count);
     if (battle_enemy_count == 0u) battle_enemy_count = 1u;
     if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
@@ -2279,15 +1887,10 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     battle_state = BSTATE_PLAYER;
 }
 
-
 static void battle_start_effect(void) {
     UINT8 i;
 
-    /*
-     * rpg068:
-     * Palette flash only.  This avoids new BG tiles, new OBJ sprites, window
-     * debug layers, or extra VRAM transfers.
-     */
+    
     HIDE_WIN;
     SHOW_BKG;
     SHOW_SPRITES;
@@ -2308,9 +1911,7 @@ static void battle_start_effect(void) {
 }
 
 static void enter_battle_screen(void) {
-    /* Hide map OAM before the transition so the field player cannot leak into
-     * the battle intro.  The battle screen itself is then built exactly once.
-     */
+    
     party_prepare_battle_members(player_max_hp_stat, player_max_mp_stat,
                                  player_attack_stat, player_defense_stat,
                                  player_skill_power_stat, player_heal_power_stat,
@@ -2323,7 +1924,6 @@ static void enter_battle_screen(void) {
     battle_show_message(message_get_buffered(MSG_BATTLE_APPEAR));
     battle_first_player_refresh_pending = 1u;
 }
-
 
 static void enter_battle(UINT8 enemy_index) {
     game_mode = MODE_BATTLE;
@@ -2366,7 +1966,6 @@ static void init_random_battle_from_field(void) {
     battle_state = BSTATE_PLAYER;
 }
 
-
 static void enter_random_battle(void) {
     game_mode = MODE_BATTLE;
     player_moving = 0u;
@@ -2401,7 +2000,7 @@ static void battle_prepare_enemy_rank(void) {
 static void return_to_map_after_battle(UINT8 won) {
     game_mode = MODE_MAP;
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
-    /* rpg162: battle redraws BG; force the idle HP/MP overlay to be rebuilt later. */
+    
     map_overlay_visible = 0u;
 
     if (won) {
@@ -2510,7 +2109,6 @@ static void battle_start_ally_target_select(UINT8 skill_id) {
     battle_state = BSTATE_ALLY_TARGET;
 }
 
-
 static UINT8 battle_current_consume_mp(UINT16 cost) {
     return (UINT8)party_battle_op(PARTY_OP_TRY_CONSUME_MP, battle_party_turn_slot, cost);
 }
@@ -2550,7 +2148,6 @@ static void player_attack(void) {
 
     battle_finish_party_action();
 }
-
 
 static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
     const SkillDef *skill;
@@ -2625,10 +2222,19 @@ static void player_skill(void) {
 }
 
 static void player_battle_item(void) {
-    if (inventory_battle_use_auto(battle_party_turn_slot) != 2u) {
-        battle_show_message("つかえない");
+    UINT8 result;
+
+    battle_hide_command_cursor_obj();
+    result = inventory_battle_select_use(battle_party_turn_slot);
+
+    
+    battle_enter_render_once();
+
+    if (result != 2u) {
         battle_state = BSTATE_PLAYER;
-        update_battle_status();
+        battle_set_message_dirty("");
+        battle_dirty_flags |= BATTLE_DIRTY_CURSOR;
+        battle_update_dirty();
         return;
     }
     battle_show_message("どうぐを つかった!");
@@ -2727,7 +2333,6 @@ static void enemy_turn(void) {
     battle_state = BSTATE_PLAYER;
 }
 
-
 static void battle_input(void) {
     UINT8 keys;
     UINT8 old_menu_index;
@@ -2750,23 +2355,29 @@ static void battle_input(void) {
     old_menu_index = menu_index;
 
     if (keys & J_UP) {
-        if (menu_index >= 2u) menu_index = (UINT8)(menu_index - 2u);
-        else menu_index = (UINT8)(menu_index + 2u);
-        update_battle_menu_cursor(old_menu_index, menu_index);
-        audio_waitpadup();
-    } else if (keys & J_DOWN) {
-        if (menu_index < 2u) menu_index = (UINT8)(menu_index + 2u);
+        if (menu_index == CMD_ATTACK) menu_index = CMD_RUN;
+        else if (menu_index == CMD_SKILL) menu_index = CMD_ITEM;
         else menu_index = (UINT8)(menu_index - 2u);
         update_battle_menu_cursor(old_menu_index, menu_index);
         audio_waitpadup();
+    } else if (keys & J_DOWN) {
+        if (menu_index == CMD_RUN) menu_index = CMD_ATTACK;
+        else if (menu_index >= CMD_DEFEND) menu_index = CMD_RUN;
+        else menu_index = (UINT8)(menu_index + 2u);
+        update_battle_menu_cursor(old_menu_index, menu_index);
+        audio_waitpadup();
     } else if (keys & J_LEFT) {
-        if (menu_index & 1u) menu_index--;
-        else menu_index++;
+        if (menu_index != CMD_RUN) {
+            if (menu_index & 1u) menu_index--;
+            else menu_index++;
+        }
         update_battle_menu_cursor(old_menu_index, menu_index);
         audio_waitpadup();
     } else if (keys & J_RIGHT) {
-        if (menu_index & 1u) menu_index--;
-        else menu_index++;
+        if (menu_index != CMD_RUN) {
+            if (menu_index & 1u) menu_index--;
+            else menu_index++;
+        }
         update_battle_menu_cursor(old_menu_index, menu_index);
         audio_waitpadup();
     } else if (keys & J_A) {
@@ -2781,8 +2392,11 @@ static void battle_input(void) {
             case CMD_DEFEND:
                 player_defend();
                 break;
-            case CMD_RUN:
+            case CMD_ITEM:
                 player_battle_item();
+                break;
+            case CMD_RUN:
+                player_run();
                 break;
             default: break;
         }

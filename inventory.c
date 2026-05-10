@@ -1,4 +1,4 @@
-#pragma bank 8
+#pragma bank 11
 
 #include <gb/gb.h>
 #include "inventory.h"
@@ -15,6 +15,21 @@ static UINT16 g_inventory_money;
  * Keep the list in WRAM and refresh it only when counts change. */
 static UINT8 g_inventory_visible_ids[INVENTORY_ITEM_MAX];
 static UINT8 g_inventory_visible_count_cached;
+
+#define INVENTORY_GRID_ROWS 11u
+#define INVENTORY_GRID_COLS 2u
+#define INVENTORY_GRID_PAGE_COUNT ((UINT8)(INVENTORY_GRID_ROWS * INVENTORY_GRID_COLS))
+
+
+static UINT8 inventory_visible_count(void) BANKED;
+static UINT8 inventory_item_at_visible_index(UINT8 index) BANKED;
+static UINT8 inventory_clamp_page_top(UINT8 page_top, UINT8 visible_count) BANKED;
+static void inventory_draw_items_page(UINT8 cursor_index, UINT8 page_top, const char *message) BANKED;
+static void inventory_draw_cursor_only(UINT8 visible_index, UINT8 page_top, UINT8 enabled) BANKED;
+static void inventory_draw_page_counter(UINT8 cursor_index, UINT8 visible_count) BANKED;
+static UINT8 inventory_cursor_down(UINT8 cursor_index, UINT8 *page_top, UINT8 visible_count) BANKED;
+static UINT8 inventory_cursor_up(UINT8 cursor_index, UINT8 *page_top, UINT8 visible_count) BANKED;
+static UINT8 inventory_wait_menu_keys(UINT8 mask) BANKED;
 
 void inventory_clear(void) BANKED {
     UINT8 i;
@@ -186,6 +201,109 @@ UINT8 inventory_battle_use_auto(UINT8 active_slot) BANKED {
     return 2u;
 }
 
+
+static UINT8 inventory_is_battle_usable(UINT8 item_id) BANKED {
+    switch (item_id) {
+        case ITEM_HERB:
+        case ITEM_POTION:
+        case ITEM_MANA_HERB:
+        case ITEM_ANTIDOTE:
+        case ITEM_MEDICINE:
+        case ITEM_HIGH_POTION:
+        case ITEM_ELIXIR:
+        case ITEM_MANA_DROP:
+        case ITEM_MANA_BOTTLE:
+        case ITEM_FULL_HERB:
+        case ITEM_PANACEA:
+        case ITEM_WAKE_HERB:
+        case ITEM_EYE_DROP:
+        case ITEM_BARRIER_SEED:
+        case ITEM_POWER_SEED:
+        case ITEM_GUARD_SEED:
+        case ITEM_SPEED_SEED:
+        case ITEM_FOCUS_TEA:
+        case ITEM_MORALE_MEAT:
+        case ITEM_REVIVE_STONE:
+            return 1u;
+        default:
+            return 0u;
+    }
+}
+
+static void inventory_rebuild_battle_visible_cache(void) BANKED {
+    UINT8 id;
+    UINT8 count;
+
+    count = 0u;
+    for (id = 1u; id < INVENTORY_ITEM_MAX; id++) {
+        if (g_inventory_counts[id] == 0u) continue;
+        if (!inventory_is_battle_usable(id)) continue;
+        g_inventory_visible_ids[count] = id;
+        count++;
+    }
+    g_inventory_visible_count_cached = count;
+}
+
+UINT8 inventory_battle_select_use(UINT8 active_slot) BANKED {
+    UINT8 keys;
+    UINT8 cursor_index;
+    UINT8 page_top;
+    UINT8 visible_count;
+    UINT8 old_cursor;
+    UINT8 old_page;
+    UINT8 item_id;
+    UINT8 result;
+
+    ui_icons_load();
+    inventory_rebuild_battle_visible_cache();
+    visible_count = inventory_visible_count();
+    cursor_index = 0u;
+    page_top = 0u;
+    inventory_draw_items_page(cursor_index, page_top, "A=使う B=戻る");
+
+    while (1) {
+        visible_count = inventory_visible_count();
+        if (visible_count == 0u) {
+            inventory_draw_items_page(0u, 0u, "使える道具なし");
+            keys = inventory_wait_menu_keys(J_B | J_START | J_A);
+            (void)keys;
+            return 0u;
+        }
+        if (cursor_index >= visible_count) cursor_index = (UINT8)(visible_count - 1u);
+        page_top = inventory_clamp_page_top(page_top, visible_count);
+        old_cursor = cursor_index;
+        old_page = page_top;
+
+        keys = inventory_wait_menu_keys(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START);
+        if (keys & (J_B | J_START)) return 0u;
+        if (keys & J_UP) cursor_index = inventory_cursor_up(cursor_index, &page_top, visible_count);
+        else if (keys & J_DOWN) cursor_index = inventory_cursor_down(cursor_index, &page_top, visible_count);
+        else if (keys & J_LEFT) {
+            if ((cursor_index & 1u) && cursor_index > page_top) cursor_index--;
+        } else if (keys & J_RIGHT) {
+            if (((cursor_index & 1u) == 0u) && ((UINT8)(cursor_index + 1u) < visible_count) && ((UINT8)(cursor_index + 1u) < (UINT8)(page_top + INVENTORY_GRID_PAGE_COUNT))) cursor_index++;
+        } else if (keys & J_A) {
+            item_id = inventory_item_at_visible_index(cursor_index);
+            result = party_use_field_item_on_active(item_id, active_slot);
+            if (result != 0u) {
+                inventory_remove(item_id, 1u);
+                return 2u;
+            }
+            inventory_draw_items_page(cursor_index, page_top, "こうかが ない");
+            continue;
+        }
+
+        if (old_cursor != cursor_index || old_page != page_top) {
+            if (old_page != page_top) inventory_draw_items_page(cursor_index, page_top, "A=使う B=戻る");
+            else {
+                inventory_draw_cursor_only(old_cursor, page_top, 0u);
+                inventory_draw_cursor_only(cursor_index, page_top, 1u);
+                inventory_draw_page_counter(cursor_index, visible_count);
+            }
+        }
+    }
+}
+
 static const char *inventory_item_name(UINT8 item_id) BANKED {
     switch (item_id) {
         case ITEM_HERB: return "やくそう";
@@ -318,9 +436,53 @@ static void inventory_put_count(UINT8 x, UINT8 y, UINT8 value) BANKED {
     jp_put_bkg_text(x, y, buf);
 }
 
-#define INVENTORY_GRID_ROWS 11u
-#define INVENTORY_GRID_COLS 2u
-#define INVENTORY_GRID_PAGE_COUNT ((UINT8)(INVENTORY_GRID_ROWS * INVENTORY_GRID_COLS))
+
+#define INVENTORY_REPEAT_DELAY 12u
+#define INVENTORY_REPEAT_RATE   4u
+
+static UINT8 inventory_wait_menu_keys(UINT8 mask) BANKED {
+    static UINT8 last_keys;
+    static UINT8 repeat_count;
+    UINT8 keys;
+    UINT8 pressed;
+    UINT8 dirs;
+
+    while (1) {
+        keys = (UINT8)(joypad() & mask);
+        pressed = (UINT8)(keys & (UINT8)~last_keys);
+        if (pressed & (UINT8)(J_A | J_B | J_START)) {
+            last_keys = keys;
+            repeat_count = 0u;
+            return (UINT8)(pressed & (UINT8)(J_A | J_B | J_START));
+        }
+        dirs = (UINT8)(keys & (UINT8)(J_UP | J_DOWN | J_LEFT | J_RIGHT));
+        if (dirs != 0u) {
+            if (dirs != (UINT8)(last_keys & (UINT8)(J_UP | J_DOWN | J_LEFT | J_RIGHT))) {
+                last_keys = keys;
+                repeat_count = 0u;
+                return dirs;
+            }
+            if (repeat_count < INVENTORY_REPEAT_DELAY) {
+                repeat_count++;
+            } else {
+                repeat_count = (UINT8)(INVENTORY_REPEAT_DELAY - INVENTORY_REPEAT_RATE);
+                last_keys = keys;
+                return dirs;
+            }
+        } else {
+            repeat_count = 0u;
+        }
+        last_keys = keys;
+        audio_wait_vbl();
+    }
+}
+
+static void inventory_draw_page_arrows(UINT8 page_top, UINT8 visible_count) BANKED {
+    if (page_top >= INVENTORY_GRID_PAGE_COUNT) jp_put_bkg_text(18u, 2u, "▲");
+    else jp_put_bkg_text(18u, 2u, " ");
+    if ((UINT8)(page_top + INVENTORY_GRID_PAGE_COUNT) < visible_count) jp_put_bkg_text(18u, 14u, "▼");
+    else jp_put_bkg_text(18u, 14u, " ");
+}
 
 static void inventory_rebuild_visible_cache(void) BANKED {
     UINT8 id;
@@ -424,6 +586,7 @@ static void inventory_draw_items_page(UINT8 cursor_index, UINT8 page_top, const 
             idx++;
         }
         inventory_draw_page_counter(cursor_index, visible_count);
+        inventory_draw_page_arrows(page_top, visible_count);
     }
     if (message != 0) inventory_put_field_text(1u, 16u, 18u, message);
 }
@@ -543,8 +706,7 @@ void inventory_menu_show_items_loop(void) BANKED {
         else if (cursor_index >= visible_count) cursor_index = (UINT8)(visible_count - 1u);
         page_top = inventory_clamp_page_top(page_top, visible_count);
 
-        keys = audio_waitpad(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START);
-        audio_waitpadup();
+        keys = inventory_wait_menu_keys(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START);
         redraw_full = 0u;
         old_cursor = cursor_index;
         old_page = page_top;
@@ -570,8 +732,7 @@ void inventory_menu_show_items_loop(void) BANKED {
             inventory_draw_items_page(cursor_index, page_top, "だれに つかう?");
             inventory_draw_target_popup(cursor_item, target_slot);
             while (1) {
-                keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B);
-                audio_waitpadup();
+                keys = inventory_wait_menu_keys(J_UP | J_DOWN | J_A | J_B);
                 popup_redraw = 0u;
                 if (keys & J_UP) {
                     if (target_slot == 0u) target_slot = PARTY_ACTIVE_COUNT - 1u;

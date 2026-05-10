@@ -1,10 +1,13 @@
-#pragma bank 8
+#pragma bank 1
 
 #include <gb/gb.h>
 #include "ui_icons.h"
 #include "inventory.h"
 #include "party_runtime.h"
 #include "jpfont.h"
+#include <gbdk/platform.h>
+
+BANKREF(ui_icons_bank)
 
 /* rpg181: user-provided 8x8 category icons.
  * Order: item, sword, staff, tool-weapon, bow, armor, cloth, accessory.

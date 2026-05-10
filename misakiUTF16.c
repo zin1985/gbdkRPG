@@ -70,11 +70,10 @@ uint16_t utf16_HantoZen(uint16_t utf16) {
     utf16 = hkana2kana(utf16);
 
     /*
-     * rpg185:
-     * Keep ASCII as ASCII.  The project no longer keeps fullwidth alnum glyphs
-     * in the Misaki table, and half-width alnum is enough for numbers, IDs,
-     * money and debug text.  Japanese punctuation typed as UTF-8 fullwidth
-     * characters still renders through the font table.
+     * rpg188:
+     * Keep ASCII as ASCII for GBDK/default-style debug text.
+     * Fullwidth alphanumeric glyphs are restored in the Misaki table, so text
+     * written as fullwidth characters remains readable in Japanese UI labels.
      */
     return utf16;
 }

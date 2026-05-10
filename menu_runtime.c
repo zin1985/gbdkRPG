@@ -57,6 +57,45 @@ static void menu_put_cursor(UINT8 col, UINT8 row, UINT8 visible) {
     jp_put_bkg_text(col, row, visible ? ">" : " ");
 }
 
+#define MENU_REPEAT_DELAY 12u
+#define MENU_REPEAT_RATE   4u
+
+static UINT8 menu_wait_keys(UINT8 mask) BANKED {
+    static UINT8 last_keys;
+    static UINT8 repeat_count;
+    UINT8 keys;
+    UINT8 pressed;
+    UINT8 dirs;
+
+    while (1) {
+        keys = (UINT8)(joypad() & mask);
+        pressed = (UINT8)(keys & (UINT8)~last_keys);
+        if (pressed & (UINT8)(J_A | J_B | J_START)) {
+            last_keys = keys;
+            repeat_count = 0u;
+            return (UINT8)(pressed & (UINT8)(J_A | J_B | J_START));
+        }
+        dirs = (UINT8)(keys & (UINT8)(J_UP | J_DOWN));
+        if (dirs != 0u) {
+            if (dirs != (UINT8)(last_keys & (UINT8)(J_UP | J_DOWN))) {
+                last_keys = keys;
+                repeat_count = 0u;
+                return dirs;
+            }
+            if (repeat_count < MENU_REPEAT_DELAY) repeat_count++;
+            else {
+                repeat_count = (UINT8)(MENU_REPEAT_DELAY - MENU_REPEAT_RATE);
+                last_keys = keys;
+                return dirs;
+            }
+        } else {
+            repeat_count = 0u;
+        }
+        last_keys = keys;
+        audio_wait_vbl();
+    }
+}
+
 static void menu_draw_static(void) {
     jp_draw_bkg_frame(0u, 0u, 10u, 10u);
     jp_draw_bkg_frame(0u, 15u, 20u, 3u);
@@ -102,8 +141,7 @@ void menu_runtime_open(UINT8 enemy_defeated) BANKED {
     DISPLAY_ON;
 
     while (1) {
-        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
-        audio_waitpadup();
+        keys = menu_wait_keys(J_UP | J_DOWN | J_A | J_B | J_START);
 
         if (keys & J_UP) {
             if (cursor == 0u) cursor = MENU_COUNT - 1u;

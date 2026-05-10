@@ -13,6 +13,7 @@
  */
 
 #define ROM_BANK_CORE                 0u
+#define ROM_BANK_UI_ICONS_CONCRETE     1u
 #define ROM_BANK_BATTLE_RUNTIME       1u
 #define ROM_BANK_MESSAGES             2u
 #define ROM_BANK_GRAPHICS             3u
@@ -32,7 +33,7 @@
 #define ROM_BANK_FUTURE_SAVE_COMPAT   15u
 
 /* rpg175 concrete split: move inventory runtime out of overfull bank 7. */
-#define ROM_BANK_INVENTORY_RUNTIME_CONCRETE 8u
+#define ROM_BANK_INVENTORY_RUNTIME_CONCRETE 11u
 
 /* rpg164 concrete split: move quest runtime out of overfull bank 7. */
 #define ROM_BANK_QUEST_RUNTIME_CONCRETE 10u
@@ -46,5 +47,8 @@
 #define ROM_BANK_AUDIO_FIELD_CONCRETE      13u
 #define ROM_BANK_AUDIO_RUINS_CONCRETE      14u
 #define ROM_BANK_AUDIO_BATTLE_CONCRETE     15u
+
+/* rpg188 concrete split: battle_data_bank moved out of bank 7 to protect party/menu additions. */
+#define ROM_BANK_BATTLE_DATA_CONCRETE 10u
 
 #endif

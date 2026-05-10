@@ -2,6 +2,9 @@
 #define UI_ICONS_H
 
 #include <gb/gb.h>
+#include <gbdk/platform.h>
+
+BANKREF_EXTERN(ui_icons_bank)
 
 #define UI_ICON_TILE_BASE 244u
 #define UI_ICON_ITEM      0u
