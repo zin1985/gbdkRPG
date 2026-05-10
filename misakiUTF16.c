@@ -9,12 +9,8 @@
 
 static void rotateToRight(byte *data);
 
-static const uint8_t _hkremap[] = {
-   0x02,0x0C,0x0D,0x01,0xFB,0xF2,0xA1,0xA3,0xA5,0xA7,0xA9,0xE3,0xE5,0xE7,0xC3,0xFD,
-   0xA2,0xA4,0xA6,0xA8,0xAA,0xAB,0xAD,0xAF,0xB1,0xB3,0xB5,0xB7,0xB9,0xBB,0xBD,0xBF,
-   0xC1,0xC4,0xC6,0xC8,0xCA,0xCB,0xCC,0xCD,0xCE,0xCF,0xD2,0xD5,0xD8,0xDB,0xDE,0xDF,
-   0xE0,0xE1,0xE2,0xE4,0xE6,0xE8,0xE9,0xEA,0xEB,0xEC,0xED,0xEF,0xF3,0x9B,0x9C
-};
+/* rpg185: half-width kana table removed. Half-width kana is not used in this project. */
+
 
 static byte Sequential_read(uint32_t address, byte* rcvdata, byte n) {
     font_data_read((UINT16)address, rcvdata, n);
@@ -47,14 +43,8 @@ int findcode(uint16_t ucode) {
     return pos;
 }
 
-static uint8_t isHkana(uint16_t ucode) {
-    return (ucode >= 0xFF61 && ucode <= 0xFF9F) ? 1u : 0u;
-}
-
+/* rpg185: half-width kana support removed to keep the font table focused on RPG Japanese. */
 uint16_t hkana2kana(uint16_t utf16) {
-    if (isHkana(utf16)) {
-        return _hkremap[utf16 - 0xFF61] + 0x3000;
-    }
     return utf16;
 }
 
@@ -79,42 +69,14 @@ bool getFontDataByUTF16(byte*fontdata, uint16_t utf16) {
 uint16_t utf16_HantoZen(uint16_t utf16) {
     utf16 = hkana2kana(utf16);
 
-    if (utf16 > 0x00FF || utf16 < 0x0021) {
-        return utf16;
-    }
-
-    switch (utf16) {
-        case 0x005C:
-        case 0x00A2:
-        case 0x00A3:
-        case 0x00A7:
-        case 0x00A8:
-        case 0x00AC:
-        case 0x00B0:
-        case 0x00B1:
-        case 0x00B4:
-        case 0x00B6:
-        case 0x00D7:
-        case 0x00F7: return utf16;
-        case 0x00A5: return 0xFFE5;
-
-        case 0x0021: return 0xFF01;
-        case 0x0022: return 0x201D;
-        case 0x0023: return 0xFF03;
-        case 0x0024: return 0xFF04;
-        case 0x0025: return 0xFF05;
-        case 0x0026: return 0xFF06;
-        case 0x0027: return 0x2019;
-        case 0x0028: return 0xFF08;
-        case 0x0029: return 0xFF09;
-        case 0x002A: return 0xFF0A;
-        case 0x002B: return 0xFF0B;
-        case 0x002C: return 0xFF0C;
-        case 0x002D: return 0x2212;
-        case 0x002E: return 0xFF0E;
-        default:
-            return utf16 - 0x002F + 0xFF0F;
-    }
+    /*
+     * rpg185:
+     * Keep ASCII as ASCII.  The project no longer keeps fullwidth alnum glyphs
+     * in the Misaki table, and half-width alnum is enough for numbers, IDs,
+     * money and debug text.  Japanese punctuation typed as UTF-8 fullwidth
+     * characters still renders through the font table.
+     */
+    return utf16;
 }
 
 byte charUFT8toUTF16(uint16_t *pUTF16, const char *pUTF8) {
