@@ -32,7 +32,8 @@ static const BattleEnemyTemplate enemy_table[] = {
     {name_bit,          16u, 4u, 1u, 8u, 0u, BATTLE_ENEMY_SIZE_S},
     {name_beast,        28u, 7u, 3u, 4u, 2u, BATTLE_ENEMY_SIZE_M},
     {name_warmachine,   36u, 9u, 4u, 5u, 3u, BATTLE_ENEMY_SIZE_M},
-    {name_golem,        88u, 12u, 8u, 2u, 4u, BATTLE_ENEMY_SIZE_L}
+    {name_golem,        88u, 12u, 8u, 2u, 4u, BATTLE_ENEMY_SIZE_L},
+    {name_warmachine,   96u, 14u, 9u, 3u, 5u, BATTLE_ENEMY_SIZE_L}
 };
 
 static const BattleEncounterTemplate encounter_table[] = {
@@ -44,7 +45,8 @@ static const BattleEncounterTemplate encounter_table[] = {
     {4u, {0u, 0u, 0u, 0u, 0u, 0u}}, /* Bit S x4 */
     {3u, {2u, 3u, 2u, 0u, 0u, 0u}}, /* M x3 */
     {2u, {2u, 3u, 0u, 0u, 0u, 0u}}, /* M x2 */
-    {1u, {4u, 0u, 0u, 0u, 0u, 0u}}, /* L x1 */
+    {1u, {4u, 0u, 0u, 0u, 0u, 0u}}, /* L golem x1 */
+    {1u, {5u, 0u, 0u, 0u, 0u, 0u}}, /* L warmachine x1 */
     {3u, {0u, 0u, 0u, 0u, 0u, 0u}}, /* Bit S x3 */
     {1u, {3u, 0u, 0u, 0u, 0u, 0u}}  /* M x1 */
 };

@@ -3,10 +3,12 @@
 
 #include <gb/gb.h>
 
-void dialogue_init(void);
-void dialogue_hide(void);
-UINT8 dialogue_is_active(void);
-void dialogue_message(const char *text);
-void dialogue_message_nowait_window(const char *text);
+BANKREF_EXTERN(dialogue_bank)
+
+void dialogue_init(void) BANKED;
+void dialogue_hide(void) BANKED;
+UINT8 dialogue_is_active(void) BANKED;
+void dialogue_message(const char *text) BANKED;
+void dialogue_message_nowait_window(const char *text) BANKED;
 
 #endif

@@ -9,7 +9,7 @@ BANKREF(save_runtime_bank)
 
 #define SAVE_MAGIC0 0x52u /* R */
 #define SAVE_MAGIC1 0x50u /* P */
-#define SAVE_VERSION 1u
+#define SAVE_VERSION 2u
 #define SAVE_SLOT_BYTES 512u
 #define SAVE_HEADER_SIZE 5u
 
@@ -35,12 +35,14 @@ static UINT16 save_checksum_snapshot(const SaveSnapshot *snapshot) BANKED {
 }
 
 static void save_clear_screen(void) BANKED {
+    DISPLAY_OFF;
     HIDE_WIN;
     SHOW_BKG;
+    HIDE_SPRITES;
     move_bkg(0u, 0u);
-    DISPLAY_ON;
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
+    DISPLAY_ON;
 }
 
 static void save_u16_to_dec(UINT16 value, char *out) BANKED {

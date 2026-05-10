@@ -1,6 +1,7 @@
 #include "audio.h"
 #include "deep_eerie_motif_dungeon_bgm.h"
 #include "heavy_metal_celtic_battle_bgm.h"
+#include "boss_hope_despair_7part_finale_soft6_sad7_bgm.h"
 #include "peaceful_balanced_town_bgm.h"
 #include "sunset_ruins_field_bgm.h"
 #include "sunset_strings_adventure_field_bgm.h"
@@ -32,6 +33,8 @@ static void audio_stop_external_bgm_if_needed(void) {
         sunset_ruins_field_bgm_stop();
     } else if (audio_current_track == AUDIO_TRACK_BATTLE) {
         heavy_metal_celtic_battle_bgm_stop();
+    } else if (audio_current_track == AUDIO_TRACK_BOSS_L) {
+        boss_hope_despair_7part_finale_soft6_sad7_bgm_stop();
     }
 }
 
@@ -85,6 +88,11 @@ void audio_play_music(UINT8 track) {
         return;
     }
 
+    if (track == AUDIO_TRACK_BOSS_L) {
+        boss_hope_despair_7part_finale_soft6_sad7_bgm_init();
+        return;
+    }
+
     audio_current_track = AUDIO_TRACK_NONE;
 }
 
@@ -111,6 +119,11 @@ void audio_update(void) {
 
     if (audio_current_track == AUDIO_TRACK_BATTLE) {
         heavy_metal_celtic_battle_bgm_update();
+        return;
+    }
+
+    if (audio_current_track == AUDIO_TRACK_BOSS_L) {
+        boss_hope_despair_7part_finale_soft6_sad7_bgm_update();
         return;
     }
 }

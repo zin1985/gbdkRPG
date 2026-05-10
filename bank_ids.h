@@ -23,12 +23,16 @@
 
 #define ROM_BANK_FUTURE_BATTLE        8u
 #define ROM_BANK_FUTURE_ENEMY_AI      9u
+#define ROM_BANK_AUDIO_BOSS_L_CONCRETE 9u
 #define ROM_BANK_FUTURE_SKILL_MAGIC   10u
 #define ROM_BANK_FUTURE_EVENT_QUEST   11u
 #define ROM_BANK_FUTURE_MENU_UI       12u
 #define ROM_BANK_FUTURE_AUDIO_FIELD   13u
 #define ROM_BANK_FUTURE_AUDIO         14u
 #define ROM_BANK_FUTURE_SAVE_COMPAT   15u
+
+/* rpg175 concrete split: move inventory runtime out of overfull bank 7. */
+#define ROM_BANK_INVENTORY_RUNTIME_CONCRETE 8u
 
 /* rpg164 concrete split: move quest runtime out of overfull bank 7. */
 #define ROM_BANK_QUEST_RUNTIME_CONCRETE 10u

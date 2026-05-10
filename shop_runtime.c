@@ -45,13 +45,14 @@ static void shop_clear(void) BANKED {
      * reset the BG scroll before drawing the shop; otherwise the shop frame
      * shifts depending on the current camera position.
      */
+    DISPLAY_OFF;
     HIDE_WIN;
     SHOW_BKG;
     HIDE_SPRITES;
     move_bkg(0u, 0u);
-    DISPLAY_ON;
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
+    DISPLAY_ON;
 }
 
 static void shop_u16_to_dec(UINT16 value, char *out) BANKED {

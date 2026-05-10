@@ -18,6 +18,14 @@
 #define PARTY_OP_NOTE_ATTACK     4u
 
 
+#define PARTY_WEAPON_NONE  0u
+#define PARTY_WEAPON_SWORD 1u
+#define PARTY_WEAPON_STAFF 2u
+#define PARTY_WEAPON_BOW   3u
+#define PARTY_WEAPON_GLOVE 4u
+#define PARTY_WEAPON_TOOL  5u
+#define PARTY_WEAPON_COUNT 6u
+
 typedef struct PartySaveMember {
     UINT16 max_hp;
     UINT16 hp;
@@ -28,6 +36,16 @@ typedef struct PartySaveMember {
     UINT8 skill_power;
     UINT8 heal_power;
     UINT8 agility;
+    UINT8 weapon_id;
+    UINT8 armor_id;
+    UINT8 accessory_id;
+    UINT8 weapon_mastery[PARTY_WEAPON_COUNT];
+    UINT8 learned_tech_flags;
+    UINT8 learned_magic_flags;
+    UINT8 morale;
+    UINT8 focus;
+    UINT8 adventure_sense;
+    UINT8 fatigue;
 } PartySaveMember;
 
 typedef struct PartySaveState {

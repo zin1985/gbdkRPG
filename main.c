@@ -937,7 +937,6 @@ static void open_main_menu(void) {
     HIDE_SPRITES;
     SHOW_BKG;
     move_bkg(0u, 0u);
-    DISPLAY_ON;
     audio_waitpadup();
 
     defeated = check_event_flag(FLAG_ENEMY_DEFEATED);
@@ -2311,7 +2310,7 @@ static void enter_battle_screen(void) {
                                  player_agility_stat);
     last_growth_type = GROWTH_NONE;
     hide_all_sprites_safe();
-    audio_play_music(AUDIO_TRACK_BATTLE);
+    audio_play_music((battle_enemy_count == 1u && battle_enemy_size_kinds[0] == BATTLE_ENEMY_SIZE_L) ? AUDIO_TRACK_BOSS_L : AUDIO_TRACK_BATTLE);
     battle_start_effect();
     battle_enter_render_once();
     battle_show_message(message_get_buffered(MSG_BATTLE_APPEAR));

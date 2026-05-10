@@ -15,6 +15,7 @@ BANKREF(party_runtime_bank)
 #define PARTY_ACTION_ATTACK 4u
 #endif
 
+#ifndef PARTY_WEAPON_COUNT
 #define PARTY_WEAPON_NONE  0u
 #define PARTY_WEAPON_SWORD 1u
 #define PARTY_WEAPON_STAFF 2u
@@ -22,6 +23,7 @@ BANKREF(party_runtime_bank)
 #define PARTY_WEAPON_GLOVE 4u
 #define PARTY_WEAPON_TOOL  5u
 #define PARTY_WEAPON_COUNT 6u
+#endif
 #define PARTY_MASTERY_MAX  50u
 
 
@@ -1377,6 +1379,21 @@ void party_save_copy_to(PartySaveState *dst) BANKED {
             dst->active[i].skill_power = 0u;
             dst->active[i].heal_power = 0u;
             dst->active[i].agility = 0u;
+            dst->active[i].weapon_id = ITEM_NONE;
+            dst->active[i].armor_id = ITEM_NONE;
+            dst->active[i].accessory_id = ITEM_NONE;
+            dst->active[i].weapon_mastery[0] = 0u;
+            dst->active[i].weapon_mastery[1] = 0u;
+            dst->active[i].weapon_mastery[2] = 0u;
+            dst->active[i].weapon_mastery[3] = 0u;
+            dst->active[i].weapon_mastery[4] = 0u;
+            dst->active[i].weapon_mastery[5] = 0u;
+            dst->active[i].learned_tech_flags = 0u;
+            dst->active[i].learned_magic_flags = 0u;
+            dst->active[i].morale = 0u;
+            dst->active[i].focus = 0u;
+            dst->active[i].adventure_sense = 0u;
+            dst->active[i].fatigue = 0u;
         } else {
             dst->active[i].max_hp = member->max_hp;
             dst->active[i].hp = member->hp;
@@ -1387,6 +1404,21 @@ void party_save_copy_to(PartySaveState *dst) BANKED {
             dst->active[i].skill_power = member->skill_power;
             dst->active[i].heal_power = member->heal_power;
             dst->active[i].agility = member->agility;
+            dst->active[i].weapon_id = member->weapon_id;
+            dst->active[i].armor_id = member->armor_id;
+            dst->active[i].accessory_id = member->accessory_id;
+            dst->active[i].weapon_mastery[0] = member->weapon_mastery[0];
+            dst->active[i].weapon_mastery[1] = member->weapon_mastery[1];
+            dst->active[i].weapon_mastery[2] = member->weapon_mastery[2];
+            dst->active[i].weapon_mastery[3] = member->weapon_mastery[3];
+            dst->active[i].weapon_mastery[4] = member->weapon_mastery[4];
+            dst->active[i].weapon_mastery[5] = member->weapon_mastery[5];
+            dst->active[i].learned_tech_flags = member->learned_tech_flags;
+            dst->active[i].learned_magic_flags = member->learned_magic_flags;
+            dst->active[i].morale = member->morale;
+            dst->active[i].focus = member->focus;
+            dst->active[i].adventure_sense = member->adventure_sense;
+            dst->active[i].fatigue = member->fatigue;
         }
     }
 }
@@ -1409,5 +1441,20 @@ void party_save_copy_from(const PartySaveState *src) BANKED {
         member->skill_power = src->active[i].skill_power;
         member->heal_power = src->active[i].heal_power;
         member->agility = src->active[i].agility;
+        member->weapon_id = src->active[i].weapon_id;
+        member->armor_id = src->active[i].armor_id;
+        member->accessory_id = src->active[i].accessory_id;
+        member->weapon_mastery[0] = src->active[i].weapon_mastery[0];
+        member->weapon_mastery[1] = src->active[i].weapon_mastery[1];
+        member->weapon_mastery[2] = src->active[i].weapon_mastery[2];
+        member->weapon_mastery[3] = src->active[i].weapon_mastery[3];
+        member->weapon_mastery[4] = src->active[i].weapon_mastery[4];
+        member->weapon_mastery[5] = src->active[i].weapon_mastery[5];
+        member->learned_tech_flags = src->active[i].learned_tech_flags;
+        member->learned_magic_flags = src->active[i].learned_magic_flags;
+        member->morale = src->active[i].morale;
+        member->focus = src->active[i].focus;
+        member->adventure_sense = src->active[i].adventure_sense;
+        member->fatigue = src->active[i].fatigue;
     }
 }
