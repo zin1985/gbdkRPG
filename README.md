@@ -977,3 +977,13 @@ rpg109 の残り:
 - UI表示も `party_get_active_hp/mp()` を参照している
 - `party_damage_active()` と `party_battle_op()` が戦闘中HP/MPの実体になっているため、旧単独ゆうしゃ用の `player_battle` ミラー更新は不要
 - 機能を削らずにHOMEコードを小さくする
+
+## rpg186_official_misaki_rpg_kanji
+
+rpg185で簡易追加していたRPG頻出漢字について、JIS X 0208公式PNG版の美咲ゴシック字形を抽出し、`misakiUTF16FontData.h` の該当7バイト字形へ反映しました。
+
+- `main.c` 未変更
+- Bank 0増加なし
+- フォント配置は引き続き Bank 6
+- フォント数とテーブル順序は rpg185 と同じ
+- 元の美咲フォントPNG本体は同梱していません
