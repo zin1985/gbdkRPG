@@ -101,6 +101,8 @@ static void save_debug_wait10(void) BANKED {
     }
 }
 
+static void save_clear_screen(void) BANKED;
+
 static void save_debug_draw_status(UINT8 wrote, UINT8 waited) BANKED {
     UINT8 m0;
     UINT8 m1;

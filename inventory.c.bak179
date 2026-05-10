@@ -118,20 +118,6 @@ void inventory_copy_from(const UINT8 *src) BANKED {
 }
 
 
-
-UINT8 inventory_battle_use_auto(UINT8 active_slot) BANKED {
-    UINT8 item_id;
-    item_id = ITEM_NONE;
-    if (inventory_has(ITEM_HERB, 1u)) item_id = ITEM_HERB;
-    else if (inventory_has(ITEM_POTION, 1u)) item_id = ITEM_POTION;
-    else if (inventory_has(ITEM_MANA_HERB, 1u)) item_id = ITEM_MANA_HERB;
-    else if (inventory_has(ITEM_ANTIDOTE, 1u)) item_id = ITEM_ANTIDOTE;
-    if (item_id == ITEM_NONE) return 0u;
-    if (party_use_field_item_on_active(item_id, active_slot) == 0u) return 1u;
-    inventory_remove(item_id, 1u);
-    return 2u;
-}
-
 static const char *inventory_item_name(UINT8 item_id) BANKED {
     switch (item_id) {
         case ITEM_HERB: return "やくそう";
@@ -152,18 +138,9 @@ static const char *inventory_item_name(UINT8 item_id) BANKED {
         case ITEM_CHARM: return "おまもり";
         case ITEM_FEATHER: return "はね飾り";
         case ITEM_DEBUG_NO_ENCOUNT: return "退魔のすず";
-        case ITEM_DEBUG_ESCAPE: return "はやあしリング";
+        case ITEM_DEBUG_ESCAPE: return "にげあしリング";
         default: return "?";
     }
-}
-
-
-static const char *inventory_item_icon(UINT8 item_id) BANKED {
-    if (item_id >= ITEM_WOOD_SWORD && item_id <= ITEM_TOOL_KIT) return "ぶ";
-    if (item_id >= ITEM_CLOTH_ARMOR && item_id <= ITEM_IRON_ARMOR) return "よ";
-    if (item_id >= ITEM_CHARM && item_id <= ITEM_DEBUG_ESCAPE) return "か";
-    if (item_id == ITEM_CASTLE_KEY) return "か";
-    return "ど";
 }
 
 static void inventory_ui_clear(void) BANKED {
@@ -237,8 +214,7 @@ static void inventory_draw_items_page(UINT8 cursor_item, const char *message) BA
     for (id = 1u; id < INVENTORY_ITEM_MAX && row < 13u; id++) {
         if (g_inventory_counts[id] == 0u) continue;
         jp_put_bkg_text(1u, row, (id == cursor_item) ? ">" : " ");
-        inventory_put_field_text(3u, row, 2u, inventory_item_icon(id));
-        inventory_put_field_text(5u, row, 8u, inventory_item_name(id));
+        inventory_put_field_text(3u, row, 10u, inventory_item_name(id));
         jp_put_bkg_text(14u, row, "x");
         inventory_put_count(16u, row, g_inventory_counts[id]);
         row++;

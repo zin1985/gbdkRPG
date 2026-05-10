@@ -97,37 +97,38 @@ static UINT8 overlay_screen_bg_y(UINT8 camera_py) {
 }
 
 void field_overlay_runtime_show(UINT8 area, UINT8 player_tx, UINT8 player_ty, UINT8 camera_px, UINT8 camera_py) BANKED {
+    UINT8 x;
+    UINT8 y;
     unsigned char map_cells[4];
-    (void)camera_px;
-    (void)camera_py;
 
-    /* rpg179: field overlay is now a wide window: party parameters on the
-     * left and minimap on the right, so it does not stack vertically. */
-    jp_draw_bkg_frame(1u, 1u, 18u, 6u);
-    jp_bkg_clear_area(2u, 2u, 16u, 4u);
+    x = overlay_screen_bg_x(camera_px);
+    y = overlay_screen_bg_y(camera_py);
 
-    jp_put_bkg_text(2u, 2u, "1H");
-    mini_put_u16(4u, 2u, party_get_active_hp(0u));
-    jp_put_bkg_text(7u, 2u, "M");
-    mini_put_u16(8u, 2u, party_get_active_mp(0u));
+    jp_draw_bkg_frame(x, y, 10u, 10u);
+    jp_bkg_clear_area((UINT8)(x + 1u), (UINT8)(y + 1u), 8u, 8u);
 
-    jp_put_bkg_text(2u, 3u, "2H");
-    mini_put_u16(4u, 3u, party_get_active_hp(1u));
-    jp_put_bkg_text(7u, 3u, "M");
-    mini_put_u16(8u, 3u, party_get_active_mp(1u));
+    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 1u), "1H");
+    mini_put_u16((UINT8)(x + 3u), (UINT8)(y + 1u), party_get_active_hp(0u));
+    jp_put_bkg_text((UINT8)(x + 6u), (UINT8)(y + 1u), "M");
+    mini_put_u16((UINT8)(x + 7u), (UINT8)(y + 1u), party_get_active_mp(0u));
 
-    jp_put_bkg_text(2u, 4u, "3H");
-    mini_put_u16(4u, 4u, party_get_active_hp(2u));
-    jp_put_bkg_text(7u, 4u, "M");
-    mini_put_u16(8u, 4u, party_get_active_mp(2u));
+    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 2u), "2H");
+    mini_put_u16((UINT8)(x + 3u), (UINT8)(y + 2u), party_get_active_hp(1u));
+    jp_put_bkg_text((UINT8)(x + 6u), (UINT8)(y + 2u), "M");
+    mini_put_u16((UINT8)(x + 7u), (UINT8)(y + 2u), party_get_active_mp(1u));
 
-    jp_put_bkg_text(12u, 2u, "MAP");
+    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 3u), "3H");
+    mini_put_u16((UINT8)(x + 3u), (UINT8)(y + 3u), party_get_active_hp(2u));
+    jp_put_bkg_text((UINT8)(x + 6u), (UINT8)(y + 3u), "M");
+    mini_put_u16((UINT8)(x + 7u), (UINT8)(y + 3u), party_get_active_mp(2u));
+
+    jp_put_bkg_text((UINT8)(x + 1u), (UINT8)(y + 5u), "MAP");
     build_minimap_tiles(area, player_tx, player_ty);
     set_bkg_data(FIELD_MINIMAP_TILE_BASE, 4u, minimap_tiles);
     map_cells[0] = FIELD_MINIMAP_TILE_BASE;
     map_cells[1] = FIELD_MINIMAP_TILE_BASE + 1u;
     map_cells[2] = FIELD_MINIMAP_TILE_BASE + 2u;
     map_cells[3] = FIELD_MINIMAP_TILE_BASE + 3u;
-    set_bkg_tiles(12u, 3u, 2u, 2u, map_cells);
-    jp_put_bkg_text(15u, 4u, "P");
+    set_bkg_tiles((UINT8)(x + 1u), (UINT8)(y + 6u), 2u, 2u, map_cells);
+    jp_put_bkg_text((UINT8)(x + 4u), (UINT8)(y + 6u), "■=P");
 }

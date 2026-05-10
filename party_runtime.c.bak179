@@ -107,7 +107,7 @@ static const PartyEquipmentDef party_equipment_defs[] = {
     { ITEM_CHARM,         PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 1u, 1u, 0u, 0u, PARTY_ELEM_LIGHT, PARTY_STATUS_SLEEP, "おまもり" },
     { ITEM_FEATHER,       PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 2u, 0u, 0u, 0u, "はね飾り" },
     { ITEM_DEBUG_NO_ENCOUNT, PARTY_EQUIP_SLOT_ACC,  PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, "退魔のすず" },
-    { ITEM_DEBUG_ESCAPE, PARTY_EQUIP_SLOT_ACC,  PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 2u, 0u, 0u, 0u, "はやあしリング" }
+    { ITEM_DEBUG_ESCAPE, PARTY_EQUIP_SLOT_ACC,  PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, "にげあしリング" }
 };
 #define PARTY_EQUIPMENT_DEF_COUNT ((UINT8)(sizeof(party_equipment_defs) / sizeof(party_equipment_defs[0])))
 
@@ -209,12 +209,12 @@ void party_init_roster_defaults(void) BANKED {
 
     party_roster[PARTY_MEMBER_HERO].weapon_id = ITEM_IRON_SWORD;
     party_roster[PARTY_MEMBER_HERO].armor_id = ITEM_LEATHER_ARMOR;
-    party_roster[PARTY_MEMBER_HERO].accessory_id = ITEM_CHARM;
+    party_roster[PARTY_MEMBER_HERO].accessory_id = ITEM_DEBUG_ESCAPE;
     party_roster[PARTY_MEMBER_HERO].weapon_type = PARTY_WEAPON_SWORD;
 
     party_roster[PARTY_MEMBER_PRIEST].weapon_id = ITEM_OAK_STAFF;
     party_roster[PARTY_MEMBER_PRIEST].armor_id = ITEM_CLOTH_ARMOR;
-    party_roster[PARTY_MEMBER_PRIEST].accessory_id = ITEM_DEBUG_ESCAPE;
+    party_roster[PARTY_MEMBER_PRIEST].accessory_id = ITEM_CHARM;
     party_roster[PARTY_MEMBER_PRIEST].weapon_type = PARTY_WEAPON_STAFF;
 
     party_roster[PARTY_MEMBER_MAGE].weapon_id = ITEM_MAGE_STAFF;
@@ -498,11 +498,11 @@ static UINT8 party_equipment_weight(PartyMemberRuntime *member) BANKED {
 
 static const char *party_weapon_type_name(UINT8 weapon_type) BANKED {
     switch (weapon_type) {
-        case PARTY_WEAPON_SWORD: return "けん";
-        case PARTY_WEAPON_STAFF: return "つえ";
-        case PARTY_WEAPON_BOW: return "ゆみ";
-        case PARTY_WEAPON_GLOVE: return "たい";
-        case PARTY_WEAPON_TOOL: return "どうぐ";
+        case PARTY_WEAPON_SWORD: return "剣";
+        case PARTY_WEAPON_STAFF: return "杖";
+        case PARTY_WEAPON_BOW: return "弓";
+        case PARTY_WEAPON_GLOVE: return "体術";
+        case PARTY_WEAPON_TOOL: return "道具";
         default: return "なし";
     }
 }
@@ -1061,18 +1061,18 @@ static void party_draw_status_page(UINT8 active_slot) BANKED {
     party_put_field_text(1u, 2u, 10u, f.name);
     jp_put_bkg_text(1u, 3u, "HP"); party_put_u16(6u, 3u, f.hp); jp_put_bkg_text(9u, 3u, "/"); party_put_u16(11u, 3u, f.max_hp);
     jp_put_bkg_text(1u, 4u, "MP"); party_put_u16(6u, 4u, f.mp); jp_put_bkg_text(9u, 4u, "/"); party_put_u16(11u, 4u, f.max_mp);
-    jp_put_bkg_text(1u, 5u, "ちから"); party_put_u8(12u, 5u, f.attack);
-    jp_put_bkg_text(1u, 6u, "まもり"); party_put_u8(12u, 6u, f.defense);
-    jp_put_bkg_text(1u, 7u, "とくぎ"); party_put_u8(12u, 7u, f.skill_power);
-    jp_put_bkg_text(1u, 8u, "かいふく"); party_put_u8(12u, 8u, f.heal_power);
-    jp_put_bkg_text(1u, 9u, "すばやさ"); party_put_u8(12u, 9u, f.agility);
+    jp_put_bkg_text(1u, 6u, "ちから"); party_put_u8(12u, 6u, f.attack);
+    jp_put_bkg_text(1u, 7u, "まもり"); party_put_u8(12u, 7u, f.defense);
+    jp_put_bkg_text(1u, 8u, "とくぎ"); party_put_u8(12u, 8u, f.skill_power);
+    jp_put_bkg_text(1u, 9u, "かいふく"); party_put_u8(12u, 9u, f.heal_power);
+    jp_put_bkg_text(1u,10u, "すばやさ"); party_put_u8(12u,10u, f.agility);
     if (member != 0) {
-        jp_put_bkg_text(1u,10u, "ぶき"); party_put_field_text(7u,10u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
-        jp_put_bkg_text(1u,11u, "じゅく"); party_put_u8(7u,11u, member->weapon_mastery[party_equipped_weapon_type(member)]);
-        jp_put_bkg_text(10u,11u, "かん"); party_put_u8(14u,11u, member->adventure_sense);
-        jp_put_bkg_text(1u,12u, "せんい"); party_put_u8(7u,12u, member->morale);
-        jp_put_bkg_text(10u,12u, "しゅう"); party_put_u8(16u,12u, member->focus);
-        jp_put_bkg_text(1u,13u, "ひろう"); party_put_u8(7u,13u, member->fatigue);
+        jp_put_bkg_text(1u,11u, "武器"); party_put_field_text(7u,11u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
+        jp_put_bkg_text(1u,12u, "熟練"); party_put_u8(7u,12u, member->weapon_mastery[party_equipped_weapon_type(member)]);
+        jp_put_bkg_text(10u,12u, "勘"); party_put_u8(14u,12u, member->adventure_sense);
+        jp_put_bkg_text(1u,13u, "戦意"); party_put_u8(7u,13u, member->morale);
+        jp_put_bkg_text(10u,13u, "集中"); party_put_u8(16u,13u, member->focus);
+        jp_put_bkg_text(1u,14u, "疲労"); party_put_u8(7u,14u, member->fatigue);
     }
     jp_put_bkg_text(1u,16u, "< > なかま  A/Bもどる");
 }
@@ -1086,7 +1086,7 @@ void party_menu_show_heal_skill_loop(void) BANKED {
     PartyBattleFighter target;
     UINT16 amount;
 
-    caster_slot = 0u;
+    caster_slot = (PARTY_ACTIVE_COUNT > 1u) ? 1u : 0u;
     target_slot = 0u;
     phase = 0u;
     party_ui_clear();
@@ -1094,42 +1094,17 @@ void party_menu_show_heal_skill_loop(void) BANKED {
 
     while (1) {
         if (phase == 0u) {
-            party_get_active_fighter(caster_slot, &caster);
             jp_bkg_clear_area(1u, 1u, 18u, 15u);
-            jp_put_bkg_text(1u, 1u, "だれの とくぎ");
-            jp_put_bkg_text(1u, 3u, ">");
-            party_put_field_text(3u, 3u, 8u, caster.name);
-            jp_put_bkg_text(1u, 5u, "HP"); party_put_u16(5u, 5u, caster.hp); jp_put_bkg_text(8u,5u,"/"); party_put_u16(10u,5u,caster.max_hp);
-            jp_put_bkg_text(1u, 6u, "MP"); party_put_u16(5u, 6u, caster.mp); jp_put_bkg_text(8u,6u,"/"); party_put_u16(10u,6u,caster.max_mp);
-            jp_put_bkg_text(1u,16u, "上下 Aつぎ B戻る");
-            keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
-            audio_waitpadup();
-            if (keys & (J_B | J_START)) break;
-            if (keys & J_UP) {
-                if (caster_slot == 0u) caster_slot = PARTY_ACTIVE_COUNT - 1u;
-                else caster_slot--;
-            } else if (keys & J_DOWN) {
-                caster_slot++;
-                if (caster_slot >= PARTY_ACTIVE_COUNT) caster_slot = 0u;
-            } else if (keys & J_A) {
-                phase = 1u;
-            }
-        } else if (phase == 1u) {
-            party_get_active_fighter(caster_slot, &caster);
-            jp_bkg_clear_area(1u, 1u, 18u, 15u);
-            jp_put_bkg_text(1u, 1u, "とくぎ一覧");
-            jp_put_bkg_text(1u, 3u, ">");
-            jp_put_bkg_text(3u, 3u, "かいふく");
-            jp_put_bkg_text(1u, 5u, "つかう人");
-            party_put_field_text(10u, 5u, 8u, caster.name);
+            jp_put_bkg_text(1u, 1u, "特技一覧");
+            jp_put_bkg_text(1u, 4u, ">");
+            jp_put_bkg_text(3u, 4u, "かいふく");
             jp_put_bkg_text(1u, 7u, "MP4 味方HP回復");
-            jp_put_bkg_text(1u,16u, "A対象 Bだれの");
+            jp_put_bkg_text(1u,16u, "A選択 B戻る");
             keys = audio_waitpad(J_A | J_B | J_START);
             audio_waitpadup();
-            if (keys & J_START) break;
-            if (keys & J_B) phase = 0u;
+            if (keys & (J_B | J_START)) break;
             if (keys & J_A) {
-                phase = 2u;
+                phase = 1u;
                 target_slot = 0u;
             }
         } else {
@@ -1137,7 +1112,7 @@ void party_menu_show_heal_skill_loop(void) BANKED {
             jp_bkg_clear_area(1u, 1u, 18u, 15u);
             jp_put_bkg_text(1u, 1u, "かいふく 対象");
             jp_put_bkg_text(1u, 3u, ">");
-            party_put_field_text(3u, 3u, 8u, target.name);
+            jp_put_bkg_text(3u, 3u, target.name);
             jp_put_bkg_text(1u, 5u, "HP"); party_put_u16(5u, 5u, target.hp); jp_put_bkg_text(8u,5u,"/"); party_put_u16(10u,5u,target.max_hp);
             jp_put_bkg_text(1u, 7u, "MP4 で回復");
             jp_put_bkg_text(1u,16u, "上下 A使用 B一覧");
@@ -1151,7 +1126,7 @@ void party_menu_show_heal_skill_loop(void) BANKED {
                 target_slot++;
                 if (target_slot >= PARTY_ACTIVE_COUNT) target_slot = 0u;
             } else if (keys & J_B) {
-                phase = 1u;
+                phase = 0u;
             } else if (keys & J_START) {
                 break;
             } else if (keys & J_A) {
@@ -1280,10 +1255,10 @@ static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 ch
     jp_put_bkg_text(1u, 5u, (slot_cursor == PARTY_EQUIP_SLOT_WEAPON) ? ">" : " "); jp_put_bkg_text(2u, 5u, "武器"); party_put_field_text(6u, 5u, 9u, party_equipment_name(member->weapon_id));
     jp_put_bkg_text(1u, 6u, (slot_cursor == PARTY_EQUIP_SLOT_ARMOR) ? ">" : " "); jp_put_bkg_text(2u, 6u, "防具"); party_put_field_text(6u, 6u, 9u, party_equipment_name(member->armor_id));
     jp_put_bkg_text(1u, 7u, (slot_cursor == PARTY_EQUIP_SLOT_ACC) ? ">" : " "); jp_put_bkg_text(2u, 7u, "装飾"); party_put_field_text(6u, 7u, 9u, party_equipment_name(member->accessory_id));
-    jp_put_bkg_text(1u, 9u,  "ぶき"); party_put_field_text(8u, 9u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
-    jp_put_bkg_text(1u, 10u, "こうげき+"); party_put_u8(10u,10u, party_equipment_attack(member));
-    jp_put_bkg_text(1u, 11u, "まもり+"); party_put_u8(10u,11u, party_equipment_defense(member));
-    jp_put_bkg_text(1u, 12u, "おもさ");  party_put_u8(8u,12u, party_equipment_weight(member));
+    jp_put_bkg_text(1u, 9u,  "武器種"); party_put_field_text(8u, 9u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
+    jp_put_bkg_text(1u, 10u, "攻撃+"); party_put_u8(8u,10u, party_equipment_attack(member));
+    jp_put_bkg_text(1u, 11u, "防御+"); party_put_u8(8u,11u, party_equipment_defense(member));
+    jp_put_bkg_text(1u, 12u, "重量");  party_put_u8(8u,12u, party_equipment_weight(member));
     party_put_field_text(1u, 16u, 18u, message);
     if (choosing != 0u) party_draw_equip_popup(member, slot_cursor, item_cursor, items, item_count);
 }

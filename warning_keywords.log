@@ -4,5 +4,3 @@ map_data_bank.c:
 font_data_bank.c:
 battle_data_bank.c:
 battle_text.c:29: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
-save_runtime.c:113: warning 112: function 'save_clear_screen' implicit declaration
-save_runtime.c:113: warning 84: 'auto' variable 'save_clear_screen' may be used before initialization

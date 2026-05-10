@@ -43,5 +43,6 @@ UINT16 inventory_get_money(void) BANKED;
 void inventory_add_money(UINT16 amount) BANKED;
 void inventory_set_money(UINT16 amount) BANKED;
 UINT8 inventory_spend_money(UINT16 amount) BANKED;
+UINT8 inventory_battle_use_auto(UINT8 active_slot) BANKED;
 
 #endif

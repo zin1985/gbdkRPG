@@ -47,10 +47,9 @@ static void menu_u16_to_dec(UINT16 value, char *out) {
 
 static void menu_draw_money(void) {
     char buf[8];
-    jp_put_bkg_text(1u, 16u, "おかね");
+    jp_put_bkg_text(1u, 16u, "G");
     menu_u16_to_dec(inventory_get_money(), buf);
-    jp_put_bkg_text(8u, 16u, buf);
-    jp_put_bkg_text(13u, 16u, "G");
+    jp_put_bkg_text(3u, 16u, buf);
 }
 
 static void menu_put_cursor(UINT8 col, UINT8 row, UINT8 visible) {
@@ -67,6 +66,7 @@ static void menu_draw_static(void) {
     jp_put_bkg_text(3u, 6u, "とくぎ");
     jp_put_bkg_text(3u, 7u, "もくてき");
     menu_draw_money();
+    jp_put_bkg_text(1u,17u, "A けってい B もどる");
 }
 
 static void menu_draw_cursor(UINT8 cursor) {
