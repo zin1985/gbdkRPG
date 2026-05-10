@@ -23,8 +23,9 @@ void inventory_clear(void) BANKED {
 void inventory_seed_defaults(void) BANKED {
     inventory_clear();
     inventory_add(ITEM_HERB, 6u);
+    inventory_add(ITEM_POTION, 4u);
     inventory_add(ITEM_MANA_HERB, 2u);
-    inventory_add(ITEM_ANTIDOTE, 1u);
+    inventory_add(ITEM_ANTIDOTE, 2u);
     inventory_add(ITEM_CASTLE_KEY, 1u);
     inventory_add(ITEM_WOOD_SWORD, 1u);
     inventory_add(ITEM_SHORT_BOW, 1u);
@@ -33,6 +34,53 @@ void inventory_seed_defaults(void) BANKED {
     inventory_add(ITEM_CHARM, 1u);
     inventory_add(ITEM_DEBUG_NO_ENCOUNT, 1u);
     inventory_add(ITEM_DEBUG_ESCAPE, 1u);
+
+    /* rpg182: seed enough item kinds to verify 2-column scrolling on real hardware. */
+    inventory_add(ITEM_MEDICINE, 5u);
+    inventory_add(ITEM_HIGH_POTION, 3u);
+    inventory_add(ITEM_ELIXIR, 1u);
+    inventory_add(ITEM_MANA_DROP, 5u);
+    inventory_add(ITEM_MANA_BOTTLE, 3u);
+    inventory_add(ITEM_FULL_HERB, 2u);
+    inventory_add(ITEM_PANACEA, 2u);
+    inventory_add(ITEM_WAKE_HERB, 2u);
+    inventory_add(ITEM_EYE_DROP, 2u);
+    inventory_add(ITEM_SMOKE_BOMB, 3u);
+    inventory_add(ITEM_BARRIER_SEED, 2u);
+    inventory_add(ITEM_POWER_SEED, 2u);
+    inventory_add(ITEM_GUARD_SEED, 2u);
+    inventory_add(ITEM_SPEED_SEED, 2u);
+    inventory_add(ITEM_FOCUS_TEA, 2u);
+    inventory_add(ITEM_MORALE_MEAT, 2u);
+    inventory_add(ITEM_ICE_BOMB, 3u);
+    inventory_add(ITEM_FIRE_BOMB, 3u);
+    inventory_add(ITEM_THUNDER_BOMB, 3u);
+    inventory_add(ITEM_LIGHT_BOTTLE, 2u);
+    inventory_add(ITEM_DARK_BOTTLE, 2u);
+    inventory_add(ITEM_RETURN_FEATHER, 1u);
+    inventory_add(ITEM_TENT, 1u);
+    inventory_add(ITEM_REVIVE_STONE, 1u);
+
+    inventory_add(ITEM_COPPER_SWORD, 1u);
+    inventory_add(ITEM_STEEL_SWORD, 1u);
+    inventory_add(ITEM_SILVER_SWORD, 1u);
+    inventory_add(ITEM_FLAME_SWORD, 1u);
+    inventory_add(ITEM_ICE_SWORD, 1u);
+    inventory_add(ITEM_WILLOW_STAFF, 1u);
+    inventory_add(ITEM_SAGE_STAFF, 1u);
+    inventory_add(ITEM_LONG_BOW, 1u);
+    inventory_add(ITEM_STEEL_BOW, 1u);
+    inventory_add(ITEM_IRON_GLOVES, 1u);
+    inventory_add(ITEM_ALCHEMY_KIT, 1u);
+    inventory_add(ITEM_TRAVEL_CLOTH, 1u);
+    inventory_add(ITEM_MAGE_ROBE, 1u);
+    inventory_add(ITEM_CHAIN_MAIL, 1u);
+    inventory_add(ITEM_STEEL_ARMOR, 1u);
+    inventory_add(ITEM_QUICK_BOOTS, 1u);
+    inventory_add(ITEM_POWER_RING, 1u);
+    inventory_add(ITEM_GUARD_RING, 1u);
+    inventory_add(ITEM_FOCUS_RING, 1u);
+    inventory_add(ITEM_POISON_GUARD, 1u);
     g_inventory_money = 120u;
 }
 
@@ -154,9 +202,89 @@ static const char *inventory_item_name(UINT8 item_id) BANKED {
         case ITEM_FEATHER: return "はね飾り";
         case ITEM_DEBUG_NO_ENCOUNT: return "退魔のすず";
         case ITEM_DEBUG_ESCAPE: return "はやあしリング";
+        case ITEM_MEDICINE: return "きずぐすり";
+        case ITEM_HIGH_POTION: return "上ポーション";
+        case ITEM_ELIXIR: return "エリクサ";
+        case ITEM_MANA_DROP: return "まほう水";
+        case ITEM_MANA_BOTTLE: return "まほうびん";
+        case ITEM_FULL_HERB: return "全快草";
+        case ITEM_PANACEA: return "ばんのう薬";
+        case ITEM_WAKE_HERB: return "めざめ草";
+        case ITEM_EYE_DROP: return "めぐすり";
+        case ITEM_SMOKE_BOMB: return "けむり玉";
+        case ITEM_BARRIER_SEED: return "まもり種";
+        case ITEM_POWER_SEED: return "ちから種";
+        case ITEM_GUARD_SEED: return "かたい種";
+        case ITEM_SPEED_SEED: return "はやさ種";
+        case ITEM_FOCUS_TEA: return "集中茶";
+        case ITEM_MORALE_MEAT: return "戦意肉";
+        case ITEM_ICE_BOMB: return "氷ばくだん";
+        case ITEM_FIRE_BOMB: return "火ばくだん";
+        case ITEM_THUNDER_BOMB: return "雷ばくだん";
+        case ITEM_LIGHT_BOTTLE: return "光のびん";
+        case ITEM_DARK_BOTTLE: return "闇のびん";
+        case ITEM_RETURN_FEATHER: return "帰還羽";
+        case ITEM_TENT: return "テント";
+        case ITEM_REVIVE_STONE: return "命の石";
+        case ITEM_COPPER_SWORD: return "銅のけん";
+        case ITEM_STEEL_SWORD: return "鋼のけん";
+        case ITEM_SILVER_SWORD: return "銀のけん";
+        case ITEM_FLAME_SWORD: return "炎のけん";
+        case ITEM_ICE_SWORD: return "氷のけん";
+        case ITEM_DRAGON_SWORD: return "竜のけん";
+        case ITEM_WILLOW_STAFF: return "柳のつえ";
+        case ITEM_SAGE_STAFF: return "賢者つえ";
+        case ITEM_THUNDER_STAFF: return "雷のつえ";
+        case ITEM_MOON_STAFF: return "月のつえ";
+        case ITEM_SHADOW_STAFF: return "影のつえ";
+        case ITEM_LONG_BOW: return "長いゆみ";
+        case ITEM_STEEL_BOW: return "鋼のゆみ";
+        case ITEM_HUNTER_BOW: return "狩人ゆみ";
+        case ITEM_THUNDER_BOW: return "雷のゆみ";
+        case ITEM_STAR_BOW: return "星のゆみ";
+        case ITEM_IRON_GLOVES: return "鉄手甲";
+        case ITEM_BEAST_CLAWS: return "獣の爪";
+        case ITEM_POWER_KNUCKLE: return "力手甲";
+        case ITEM_MONK_FIST: return "僧の拳";
+        case ITEM_ALCHEMY_KIT: return "錬金具";
+        case ITEM_TRAP_TOOL: return "罠道具";
+        case ITEM_BOMB_TOOL: return "爆弾具";
+        case ITEM_GEAR_TOOL: return "歯車具";
+        case ITEM_TRAVEL_CLOTH: return "旅の服";
+        case ITEM_MAGE_ROBE: return "魔法ローブ";
+        case ITEM_BATTLE_CLOTH: return "戦い服";
+        case ITEM_CHAIN_MAIL: return "鎖かたびら";
+        case ITEM_STEEL_ARMOR: return "鋼よろい";
+        case ITEM_SILVER_ARMOR: return "銀よろい";
+        case ITEM_DRAGON_ARMOR: return "竜よろい";
+        case ITEM_QUICK_BOOTS: return "早足くつ";
+        case ITEM_POWER_RING: return "力の指輪";
+        case ITEM_GUARD_RING: return "守り指輪";
+        case ITEM_FOCUS_RING: return "集中指輪";
+        case ITEM_LUCKY_COIN: return "幸運コイン";
+        case ITEM_DRAGON_SCALE: return "竜のうろこ";
+        case ITEM_SLEEP_GUARD: return "眠り守り";
+        case ITEM_POISON_GUARD: return "毒守り";
+        case ITEM_LIGHT_MEDAL: return "光メダル";
+        case ITEM_DARK_MEDAL: return "闇メダル";
         default: return "?";
     }
 }
+
+static const char *inventory_item_short_name(UINT8 item_id) BANKED {
+    switch (item_id) {
+        case ITEM_HIGH_POTION: return "上ポー";
+        case ITEM_MANA_BOTTLE: return "魔びん";
+        case ITEM_DEBUG_NO_ENCOUNT: return "退魔鈴";
+        case ITEM_DEBUG_ESCAPE: return "早足輪";
+        case ITEM_RETURN_FEATHER: return "帰還羽";
+        case ITEM_REVIVE_STONE: return "命の石";
+        case ITEM_POWER_KNUCKLE: return "力手甲";
+        case ITEM_DRAGON_SCALE: return "竜うろ";
+        default: return inventory_item_name(item_id);
+    }
+}
+
 
 
 
@@ -186,73 +314,143 @@ static void inventory_put_count(UINT8 x, UINT8 y, UINT8 value) BANKED {
     jp_put_bkg_text(x, y, buf);
 }
 
-static UINT8 inventory_next_visible(UINT8 start, UINT8 dir) BANKED {
-    UINT8 i;
-    UINT8 id;
+#define INVENTORY_GRID_ROWS 11u
+#define INVENTORY_GRID_COLS 2u
+#define INVENTORY_GRID_PAGE_COUNT ((UINT8)(INVENTORY_GRID_ROWS * INVENTORY_GRID_COLS))
 
-    id = start;
-    for (i = 0u; i < INVENTORY_ITEM_MAX; i++) {
-        if (dir == 0u) {
-            if (id == 0u) id = INVENTORY_ITEM_MAX - 1u;
-            else id--;
-        } else {
-            id++;
-            if (id >= INVENTORY_ITEM_MAX) id = 1u;
-        }
-        if (id != ITEM_NONE && g_inventory_counts[id] != 0u) return id;
+static UINT8 inventory_visible_count(void) BANKED {
+    UINT8 id;
+    UINT8 count;
+    count = 0u;
+    for (id = 1u; id < INVENTORY_ITEM_MAX; id++) {
+        if (g_inventory_counts[id] != 0u) count++;
+    }
+    return count;
+}
+
+static UINT8 inventory_item_at_visible_index(UINT8 index) BANKED {
+    UINT8 id;
+    UINT8 pos;
+    pos = 0u;
+    for (id = 1u; id < INVENTORY_ITEM_MAX; id++) {
+        if (g_inventory_counts[id] == 0u) continue;
+        if (pos == index) return id;
+        pos++;
     }
     return ITEM_NONE;
 }
 
-static UINT8 inventory_row_for_item(UINT8 item_id) BANKED {
-    UINT8 row;
+static UINT8 inventory_index_for_item(UINT8 item_id) BANKED {
     UINT8 id;
-
-    row = 3u;
-    for (id = 1u; id < INVENTORY_ITEM_MAX && row < 13u; id++) {
+    UINT8 pos;
+    pos = 0u;
+    for (id = 1u; id < INVENTORY_ITEM_MAX; id++) {
         if (g_inventory_counts[id] == 0u) continue;
-        if (id == item_id) return row;
-        row++;
+        if (id == item_id) return pos;
+        pos++;
     }
     return 0u;
 }
 
-static void inventory_draw_items_page(UINT8 cursor_item, const char *message) BANKED {
-    UINT8 row;
-    UINT8 shown;
-    UINT8 id;
+static UINT8 inventory_fix_scroll_top(UINT8 cursor_index, UINT8 scroll_top, UINT8 visible_count) BANKED {
+    UINT8 max_top;
 
+    if (visible_count <= INVENTORY_GRID_PAGE_COUNT) return 0u;
+
+    if (scroll_top & 1u) scroll_top--;
+    if (cursor_index < scroll_top) {
+        scroll_top = (UINT8)(cursor_index & 0xFEu);
+    } else if (cursor_index >= (UINT8)(scroll_top + INVENTORY_GRID_PAGE_COUNT)) {
+        scroll_top = (UINT8)((cursor_index - (INVENTORY_GRID_PAGE_COUNT - 2u)) & 0xFEu);
+    }
+
+    max_top = (UINT8)(visible_count - INVENTORY_GRID_PAGE_COUNT);
+    if (max_top & 1u) max_top++;
+    if (scroll_top > max_top) scroll_top = max_top;
+    return scroll_top;
+}
+
+static void inventory_draw_grid_entry(UINT8 visible_index, UINT8 cursor_index, UINT8 row, UINT8 col) BANKED {
+    UINT8 id;
+    UINT8 x;
+
+    id = inventory_item_at_visible_index(visible_index);
+    x = (col == 0u) ? 1u : 10u;
+    if (id == ITEM_NONE) {
+        jp_bkg_clear_area(x, row, 9u, 1u);
+        return;
+    }
+    jp_put_bkg_text(x, row, (visible_index == cursor_index) ? ">" : " ");
+    ui_put_icon((UINT8)(x + 1u), row, ui_icon_tile_for_item(id));
+    inventory_put_field_text((UINT8)(x + 2u), row, 5u, inventory_item_short_name(id));
+    inventory_put_count((UINT8)(x + 7u), row, g_inventory_counts[id]);
+}
+
+static void inventory_draw_items_page(UINT8 cursor_index, UINT8 scroll_top, const char *message) BANKED {
+    UINT8 row;
+    UINT8 r;
+    UINT8 idx;
+    UINT8 visible_count;
+    char page_buf[4];
+
+    visible_count = inventory_visible_count();
     inventory_ui_clear();
     jp_draw_bkg_frame(0u, 0u, 20u, 15u);
     jp_draw_bkg_frame(0u, 15u, 20u, 3u);
     jp_put_bkg_text(1u, 1u, "もちもの");
 
-    shown = 0u;
-    row = 3u;
-    for (id = 1u; id < INVENTORY_ITEM_MAX && row < 13u; id++) {
-        if (g_inventory_counts[id] == 0u) continue;
-        jp_put_bkg_text(1u, row, (id == cursor_item) ? ">" : " ");
-        ui_put_icon(3u, row, ui_icon_tile_for_item(id));
-        inventory_put_field_text(5u, row, 8u, inventory_item_name(id));
-        jp_put_bkg_text(14u, row, "x");
-        inventory_put_count(16u, row, g_inventory_counts[id]);
-        row++;
-        shown++;
+    if (visible_count == 0u) {
+        jp_put_bkg_text(2u, 6u, "なにもない");
+    } else {
+        row = 3u;
+        idx = scroll_top;
+        for (r = 0u; r < INVENTORY_GRID_ROWS; r++, row++) {
+            inventory_draw_grid_entry(idx, cursor_index, row, 0u);
+            idx++;
+            inventory_draw_grid_entry(idx, cursor_index, row, 1u);
+            idx++;
+        }
+        if (visible_count > INVENTORY_GRID_PAGE_COUNT) {
+            inventory_u8_to_dec((UINT8)(cursor_index + 1u), page_buf);
+            jp_put_bkg_text(14u, 1u, page_buf);
+            jp_put_bkg_text(16u, 1u, "/");
+            inventory_u8_to_dec(visible_count, page_buf);
+            jp_put_bkg_text(17u, 1u, page_buf);
+        }
     }
-    if (shown == 0u) jp_put_bkg_text(2u, 6u, "なにもない");
     if (message != 0) inventory_put_field_text(1u, 16u, 18u, message);
 }
 
-static void inventory_update_cursor(UINT8 old_item, UINT8 new_item) BANKED {
-    UINT8 row;
-    row = inventory_row_for_item(old_item);
-    if (row != 0u) jp_put_bkg_text(1u, row, " ");
-    row = inventory_row_for_item(new_item);
-    if (row != 0u) jp_put_bkg_text(1u, row, ">");
+static UINT8 inventory_is_field_usable(UINT8 item_id) BANKED {
+    switch (item_id) {
+        case ITEM_HERB:
+        case ITEM_POTION:
+        case ITEM_MANA_HERB:
+        case ITEM_ANTIDOTE:
+        case ITEM_MEDICINE:
+        case ITEM_HIGH_POTION:
+        case ITEM_ELIXIR:
+        case ITEM_MANA_DROP:
+        case ITEM_MANA_BOTTLE:
+        case ITEM_FULL_HERB:
+        case ITEM_PANACEA:
+        case ITEM_WAKE_HERB:
+        case ITEM_EYE_DROP:
+        case ITEM_BARRIER_SEED:
+        case ITEM_POWER_SEED:
+        case ITEM_GUARD_SEED:
+        case ITEM_SPEED_SEED:
+        case ITEM_FOCUS_TEA:
+        case ITEM_MORALE_MEAT:
+        case ITEM_TENT:
+        case ITEM_REVIVE_STONE:
+            return 1u;
+        default:
+            return 0u;
+    }
 }
 
 static void inventory_draw_target_popup(UINT8 item_id, UINT8 slot_cursor) BANKED {
-
     UINT8 i;
     PartyBattleFighter f;
 
@@ -267,58 +465,74 @@ static void inventory_draw_target_popup(UINT8 item_id, UINT8 slot_cursor) BANKED
     inventory_put_field_text(12u, 9u, 7u, "A=使う");
 }
 
-static UINT8 inventory_is_field_usable(UINT8 item_id) BANKED {
-    switch (item_id) {
-        case ITEM_HERB:
-        case ITEM_POTION:
-        case ITEM_MANA_HERB:
-        case ITEM_ANTIDOTE:
-            return 1u;
-        default:
-            return 0u;
-    }
-}
-
 void inventory_menu_show_items_loop(void) BANKED {
     UINT8 keys;
-    UINT8 cursor;
-    UINT8 old_cursor;
+    UINT8 cursor_index;
+    UINT8 scroll_top;
     UINT8 target_slot;
     UINT8 result;
+    UINT8 cursor_item;
+    UINT8 visible_count;
     const char *msg;
     UINT8 popup_redraw;
 
-    cursor = inventory_next_visible(ITEM_NONE, 1u);
+    visible_count = inventory_visible_count();
+    cursor_index = 0u;
+    scroll_top = 0u;
     target_slot = 0u;
     msg = "A=つかう B=もどる";
     audio_waitpadup();
-    inventory_draw_items_page(cursor, msg);
+    inventory_draw_items_page(cursor_index, scroll_top, msg);
     while (1) {
-        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
+        visible_count = inventory_visible_count();
+        if (visible_count == 0u) cursor_index = 0u;
+        else if (cursor_index >= visible_count) cursor_index = (UINT8)(visible_count - 1u);
+        scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
+
+        keys = audio_waitpad(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START);
         audio_waitpadup();
         if (keys & J_UP) {
-            old_cursor = cursor;
-            cursor = inventory_next_visible(cursor, 0u);
-            msg = "A=つかう B=もどる";
-            inventory_put_field_text(1u, 16u, 18u, msg);
-            if (old_cursor != cursor) inventory_update_cursor(old_cursor, cursor);
+            if (visible_count != 0u) {
+                if (cursor_index >= 2u) cursor_index = (UINT8)(cursor_index - 2u);
+                else cursor_index = (UINT8)(visible_count - 1u);
+                scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
+                inventory_draw_items_page(cursor_index, scroll_top, msg);
+            }
         } else if (keys & J_DOWN) {
-            old_cursor = cursor;
-            cursor = inventory_next_visible(cursor, 1u);
-            msg = "A=つかう B=もどる";
-            inventory_put_field_text(1u, 16u, 18u, msg);
-            if (old_cursor != cursor) inventory_update_cursor(old_cursor, cursor);
+            if (visible_count != 0u) {
+                cursor_index = (UINT8)(cursor_index + 2u);
+                if (cursor_index >= visible_count) cursor_index = (UINT8)(cursor_index & 1u);
+                if (cursor_index >= visible_count) cursor_index = 0u;
+                scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
+                inventory_draw_items_page(cursor_index, scroll_top, msg);
+            }
+        } else if (keys & J_LEFT) {
+            if (visible_count != 0u) {
+                if (cursor_index & 1u) cursor_index--;
+                else if ((UINT8)(cursor_index + 1u) < visible_count) cursor_index++;
+                scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
+                inventory_draw_items_page(cursor_index, scroll_top, msg);
+            }
+        } else if (keys & J_RIGHT) {
+            if (visible_count != 0u) {
+                if ((cursor_index & 1u) == 0u && (UINT8)(cursor_index + 1u) < visible_count) cursor_index++;
+                else if (cursor_index & 1u) cursor_index--;
+                scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
+                inventory_draw_items_page(cursor_index, scroll_top, msg);
+            }
         } else if (keys & (J_B | J_START)) {
             break;
         } else if (keys & J_A) {
-            if (cursor == ITEM_NONE) continue;
-            if (!inventory_is_field_usable(cursor)) {
+            if (visible_count == 0u) continue;
+            cursor_item = inventory_item_at_visible_index(cursor_index);
+            if (cursor_item == ITEM_NONE) continue;
+            if (!inventory_is_field_usable(cursor_item)) {
                 msg = "そのままでは つかえない";
-                inventory_put_field_text(1u, 16u, 18u, msg);
+                inventory_draw_items_page(cursor_index, scroll_top, msg);
                 continue;
             }
-            inventory_draw_items_page(cursor, "だれに つかう?");
-            inventory_draw_target_popup(cursor, target_slot);
+            inventory_draw_items_page(cursor_index, scroll_top, "だれに つかう?");
+            inventory_draw_target_popup(cursor_item, target_slot);
             while (1) {
                 keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B);
                 audio_waitpadup();
@@ -333,22 +547,25 @@ void inventory_menu_show_items_loop(void) BANKED {
                     popup_redraw = 1u;
                 } else if (keys & J_B) {
                     msg = "A=つかう B=もどる";
-                    inventory_draw_items_page(cursor, msg);
+                    inventory_draw_items_page(cursor_index, scroll_top, msg);
                     break;
                 } else if (keys & J_A) {
-                    result = party_use_field_item_on_active(cursor, target_slot);
+                    result = party_use_field_item_on_active(cursor_item, target_slot);
                     if (result != 0u) {
-                        inventory_remove(cursor, 1u);
-                        if (inventory_get_count(cursor) == 0u) cursor = inventory_next_visible(cursor, 1u);
+                        inventory_remove(cursor_item, 1u);
+                        visible_count = inventory_visible_count();
+                        if (visible_count == 0u) cursor_index = 0u;
+                        else if (cursor_index >= visible_count) cursor_index = (UINT8)(visible_count - 1u);
+                        scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
                         msg = "つかった!";
                     } else {
                         msg = "こうかが ない";
                     }
-                    inventory_draw_items_page(cursor, msg);
+                    inventory_draw_items_page(cursor_index, scroll_top, msg);
                     break;
                 }
                 if (popup_redraw != 0u) {
-                    inventory_draw_target_popup(cursor, target_slot);
+                    inventory_draw_target_popup(cursor_item, target_slot);
                 }
             }
         }

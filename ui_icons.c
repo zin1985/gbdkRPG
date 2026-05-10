@@ -32,32 +32,37 @@ UINT8 ui_icon_tile(UINT8 icon_id) BANKED {
 }
 
 UINT8 ui_icon_tile_for_item(UINT8 item_id) BANKED {
-    switch (item_id) {
-        case ITEM_WOOD_SWORD:
-        case ITEM_IRON_SWORD:
-            return ui_icon_tile(UI_ICON_SWORD);
-        case ITEM_OAK_STAFF:
-        case ITEM_MAGE_STAFF:
-            return ui_icon_tile(UI_ICON_STAFF);
-        case ITEM_SHORT_BOW:
-            return ui_icon_tile(UI_ICON_BOW);
-        case ITEM_GLOVES:
-        case ITEM_TOOL_KIT:
-            return ui_icon_tile(UI_ICON_TOOL_WEAPON);
-        case ITEM_CLOTH_ARMOR:
-            return ui_icon_tile(UI_ICON_CLOTH);
-        case ITEM_LEATHER_ARMOR:
-        case ITEM_IRON_ARMOR:
-            return ui_icon_tile(UI_ICON_ARMOR);
-        case ITEM_CHARM:
-        case ITEM_FEATHER:
-        case ITEM_DEBUG_NO_ENCOUNT:
-        case ITEM_DEBUG_ESCAPE:
-            return ui_icon_tile(UI_ICON_ACCESSORY);
-        default:
-            return ui_icon_tile(UI_ICON_ITEM);
+    if ((item_id >= ITEM_COPPER_SWORD && item_id <= ITEM_DRAGON_SWORD) ||
+        item_id == ITEM_WOOD_SWORD || item_id == ITEM_IRON_SWORD) {
+        return ui_icon_tile(UI_ICON_SWORD);
     }
+    if ((item_id >= ITEM_WILLOW_STAFF && item_id <= ITEM_SHADOW_STAFF) ||
+        item_id == ITEM_OAK_STAFF || item_id == ITEM_MAGE_STAFF) {
+        return ui_icon_tile(UI_ICON_STAFF);
+    }
+    if ((item_id >= ITEM_LONG_BOW && item_id <= ITEM_STAR_BOW) || item_id == ITEM_SHORT_BOW) {
+        return ui_icon_tile(UI_ICON_BOW);
+    }
+    if ((item_id >= ITEM_IRON_GLOVES && item_id <= ITEM_GEAR_TOOL) ||
+        item_id == ITEM_GLOVES || item_id == ITEM_TOOL_KIT) {
+        return ui_icon_tile(UI_ICON_TOOL_WEAPON);
+    }
+    if (item_id == ITEM_CLOTH_ARMOR || item_id == ITEM_TRAVEL_CLOTH ||
+        item_id == ITEM_MAGE_ROBE || item_id == ITEM_BATTLE_CLOTH) {
+        return ui_icon_tile(UI_ICON_CLOTH);
+    }
+    if ((item_id >= ITEM_CHAIN_MAIL && item_id <= ITEM_DRAGON_ARMOR) ||
+        item_id == ITEM_LEATHER_ARMOR || item_id == ITEM_IRON_ARMOR) {
+        return ui_icon_tile(UI_ICON_ARMOR);
+    }
+    if ((item_id >= ITEM_QUICK_BOOTS && item_id <= ITEM_DARK_MEDAL) ||
+        item_id == ITEM_CHARM || item_id == ITEM_FEATHER ||
+        item_id == ITEM_DEBUG_NO_ENCOUNT || item_id == ITEM_DEBUG_ESCAPE) {
+        return ui_icon_tile(UI_ICON_ACCESSORY);
+    }
+    return ui_icon_tile(UI_ICON_ITEM);
 }
+
 
 UINT8 ui_icon_tile_for_weapon_type(UINT8 weapon_type) BANKED {
     switch (weapon_type) {

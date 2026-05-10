@@ -1,4 +1,4 @@
-#pragma bank 7
+#pragma bank 10
 
 #include <gb/gb.h>
 #include "game_flags.h"
