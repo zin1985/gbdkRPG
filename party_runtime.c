@@ -1064,6 +1064,33 @@ static void party_put_u8(UINT8 x, UINT8 y, UINT8 value) BANKED {
 #define PARTY_STATUS_ICON_SPRITE_BASE 32u
 #define PARTY_STATUS_PAGE_COUNT 3u
 #define PARTY_EQUIP_POPUP_ROWS 6u
+#define PARTY_ITEM_EFFECT_NONE 0u
+#define PARTY_ITEM_EFFECT_HP   1u
+#define PARTY_ITEM_EFFECT_MP   2u
+#define PARTY_ITEM_EFFECT_UP   3u
+#define PARTY_ITEM_EFFECT_REV  4u
+
+static UINT8 party_last_item_effect_amount;
+static UINT8 party_last_item_effect_kind;
+
+static UINT8 party_item_random_gain(UINT8 max_gain) BANKED {
+    UINT8 r;
+    r = (UINT8)(DIV_REG ^ LY_REG ^ party_last_item_effect_amount);
+    r = (UINT8)((r % max_gain) + 1u);
+    return r;
+}
+
+static UINT8 party_apply_u8_gain(UINT8 *value, UINT8 max_value, UINT8 max_gain) BANKED {
+    UINT8 gain;
+    if (*value >= max_value) return 0u;
+    gain = party_item_random_gain(max_gain);
+    if ((UINT8)(max_value - *value) < gain) gain = (UINT8)(max_value - *value);
+    *value = (UINT8)(*value + gain);
+    party_last_item_effect_amount = gain;
+    party_last_item_effect_kind = PARTY_ITEM_EFFECT_UP;
+    return 1u;
+}
+
 
 static UINT8 party_wait_menu_keys(UINT8 mask) BANKED {
     static UINT8 last_keys;
@@ -1150,7 +1177,12 @@ static void party_put_u16(UINT8 x, UINT8 y, UINT16 value) BANKED {
 
 UINT8 party_use_field_item_on_active(UINT8 item_id, UINT8 active_slot) BANKED {
     PartyMemberRuntime *member;
+    UINT16 before;
+    UINT16 after;
     UINT16 heal;
+
+    party_last_item_effect_amount = 0u;
+    party_last_item_effect_kind = PARTY_ITEM_EFFECT_NONE;
 
     member = party_get_active_member(active_slot);
     if (member == 0) return 0u;
@@ -1159,28 +1191,50 @@ UINT8 party_use_field_item_on_active(UINT8 item_id, UINT8 active_slot) BANKED {
         case ITEM_HERB:
         case ITEM_MEDICINE:
             if (member->hp >= member->max_hp) return 0u;
-            heal = 30u;
-            member->hp = (UINT16)((member->hp + heal > member->max_hp) ? member->max_hp : (member->hp + heal));
+            before = member->hp;
+            heal = (item_id == ITEM_MEDICINE) ? (UINT16)(28u + party_item_random_gain(12u)) : (UINT16)(18u + party_item_random_gain(12u));
+            after = (UINT16)(member->hp + heal);
+            member->hp = (after > member->max_hp) ? member->max_hp : after;
+            party_last_item_effect_amount = (UINT8)(member->hp - before);
+            party_last_item_effect_kind = PARTY_ITEM_EFFECT_HP;
             return 1u;
         case ITEM_POTION:
         case ITEM_HIGH_POTION:
             if (member->hp >= member->max_hp) return 0u;
-            heal = (item_id == ITEM_HIGH_POTION) ? 90u : 60u;
-            member->hp = (UINT16)((member->hp + heal > member->max_hp) ? member->max_hp : (member->hp + heal));
+            before = member->hp;
+            heal = (item_id == ITEM_HIGH_POTION) ? (UINT16)(75u + party_item_random_gain(30u)) : (UINT16)(48u + party_item_random_gain(20u));
+            after = (UINT16)(member->hp + heal);
+            member->hp = (after > member->max_hp) ? member->max_hp : after;
+            party_last_item_effect_amount = (UINT8)(member->hp - before);
+            party_last_item_effect_kind = PARTY_ITEM_EFFECT_HP;
             return 1u;
         case ITEM_ELIXIR:
         case ITEM_FULL_HERB:
         case ITEM_TENT:
             if (member->hp >= member->max_hp && member->mp >= member->max_mp) return 0u;
+            before = member->hp;
             member->hp = member->max_hp;
-            if (item_id != ITEM_FULL_HERB) member->mp = member->max_mp;
+            party_last_item_effect_amount = (UINT8)(member->hp - before);
+            party_last_item_effect_kind = PARTY_ITEM_EFFECT_HP;
+            if (item_id != ITEM_FULL_HERB) {
+                before = member->mp;
+                member->mp = member->max_mp;
+                if (party_last_item_effect_amount == 0u) {
+                    party_last_item_effect_amount = (UINT8)(member->mp - before);
+                    party_last_item_effect_kind = PARTY_ITEM_EFFECT_MP;
+                }
+            }
             return 1u;
         case ITEM_MANA_HERB:
         case ITEM_MANA_DROP:
         case ITEM_MANA_BOTTLE:
             if (member->mp >= member->max_mp) return 0u;
-            heal = (item_id == ITEM_MANA_BOTTLE) ? 25u : 10u;
-            member->mp = (UINT16)((member->mp + heal > member->max_mp) ? member->max_mp : (member->mp + heal));
+            before = member->mp;
+            heal = (item_id == ITEM_MANA_BOTTLE) ? (UINT16)(20u + party_item_random_gain(10u)) : (UINT16)(8u + party_item_random_gain(6u));
+            after = (UINT16)(member->mp + heal);
+            member->mp = (after > member->max_mp) ? member->max_mp : after;
+            party_last_item_effect_amount = (UINT8)(member->mp - before);
+            party_last_item_effect_kind = PARTY_ITEM_EFFECT_MP;
             return 1u;
         case ITEM_ANTIDOTE:
         case ITEM_POISON_GUARD:
@@ -1202,33 +1256,33 @@ UINT8 party_use_field_item_on_active(UINT8 item_id, UINT8 active_slot) BANKED {
             return 1u;
         case ITEM_BARRIER_SEED:
         case ITEM_GUARD_SEED:
-            if (member->defense >= 99u) return 0u;
-            member->defense++;
-            return 1u;
+            return party_apply_u8_gain(&member->defense, 99u, 3u);
         case ITEM_POWER_SEED:
-            if (member->attack >= 99u) return 0u;
-            member->attack++;
-            return 1u;
+            return party_apply_u8_gain(&member->attack, 99u, 3u);
         case ITEM_SPEED_SEED:
-            if (member->agility >= 99u) return 0u;
-            member->agility++;
-            return 1u;
+            return party_apply_u8_gain(&member->agility, 99u, 3u);
         case ITEM_FOCUS_TEA:
-            if (member->focus >= PARTY_FOCUS_MAX) return 0u;
-            member->focus++;
-            return 1u;
+            return party_apply_u8_gain(&member->focus, PARTY_FOCUS_MAX, 3u);
         case ITEM_MORALE_MEAT:
-            if (member->morale >= PARTY_MORALE_MAX) return 0u;
-            member->morale++;
-            return 1u;
+            return party_apply_u8_gain(&member->morale, PARTY_MORALE_MAX, 3u);
         case ITEM_REVIVE_STONE:
             if (member->hp != 0u) return 0u;
             member->hp = (UINT16)(member->max_hp >> 1u);
             if (member->hp == 0u) member->hp = 1u;
+            party_last_item_effect_amount = (UINT8)(member->hp > 255u ? 255u : member->hp);
+            party_last_item_effect_kind = PARTY_ITEM_EFFECT_REV;
             return 1u;
         default:
             return 0u;
     }
+}
+
+UINT8 party_get_last_item_effect_amount(void) BANKED {
+    return party_last_item_effect_amount;
+}
+
+UINT8 party_get_last_item_effect_kind(void) BANKED {
+    return party_last_item_effect_kind;
 }
 
 
@@ -1532,16 +1586,36 @@ static void party_update_equip_slot_cursor(UINT8 slot_cursor) BANKED {
     jp_put_bkg_text(1u, 7u, (slot_cursor == PARTY_EQUIP_SLOT_ACC) ? ">" : " ");
 }
 
-static void party_update_equip_popup_cursor(UINT8 item_cursor, const UINT8 *items, UINT8 item_count) BANKED {
-    UINT8 i;
-    UINT8 y;
-    (void)items;
-    y = 6u;
-    for (i = 0u; i < 6u; i++, y++) {
-        if (i < item_count) {
-            jp_put_bkg_text(11u, y, (i == item_cursor) ? ">" : " ");
-        }
-    }
+static UINT8 party_equip_page_start(UINT8 item_cursor) BANKED {
+    return (UINT8)((item_cursor / PARTY_EQUIP_POPUP_ROWS) * PARTY_EQUIP_POPUP_ROWS);
+}
+
+static void party_update_equip_popup_cursor(UINT8 old_item_cursor, UINT8 item_cursor) BANKED {
+    UINT8 old_start;
+    UINT8 start;
+    UINT8 old_y;
+    UINT8 new_y;
+
+    old_start = party_equip_page_start(old_item_cursor);
+    start = party_equip_page_start(item_cursor);
+    if (old_start != start) return;
+
+    old_y = (UINT8)(6u + (old_item_cursor - start));
+    new_y = (UINT8)(6u + (item_cursor - start));
+    jp_put_bkg_text(11u, old_y, " ");
+    jp_put_bkg_text(11u, new_y, ">");
+}
+
+static UINT8 party_equip_cursor_down(UINT8 item_cursor, UINT8 item_count) BANKED {
+    if (item_count == 0u) return 0u;
+    if ((UINT8)(item_cursor + 1u) < item_count) return (UINT8)(item_cursor + 1u);
+    return item_cursor;
+}
+
+static UINT8 party_equip_cursor_up(UINT8 item_cursor, UINT8 item_count) BANKED {
+    if (item_count == 0u) return 0u;
+    if (item_cursor > 0u) return (UINT8)(item_cursor - 1u);
+    return item_cursor;
 }
 
 void party_menu_show_equip_loop(void) BANKED {
@@ -1599,14 +1673,24 @@ void party_menu_show_equip_loop(void) BANKED {
         } else {
             if (keys & J_UP) {
                 old_item_cursor = item_cursor;
-                if (item_cursor == 0u) item_cursor = (UINT8)(item_count - 1u);
-                else item_cursor--;
-                if (old_item_cursor != item_cursor) party_draw_equip_popup(member, slot_cursor, item_cursor, item_choices, item_count);
+                item_cursor = party_equip_cursor_up(item_cursor, item_count);
+                if (old_item_cursor != item_cursor) {
+                    if (party_equip_page_start(old_item_cursor) != party_equip_page_start(item_cursor)) {
+                        party_draw_equip_popup(member, slot_cursor, item_cursor, item_choices, item_count);
+                    } else {
+                        party_update_equip_popup_cursor(old_item_cursor, item_cursor);
+                    }
+                }
             } else if (keys & J_DOWN) {
                 old_item_cursor = item_cursor;
-                item_cursor++;
-                if (item_cursor >= item_count) item_cursor = 0u;
-                if (old_item_cursor != item_cursor) party_draw_equip_popup(member, slot_cursor, item_cursor, item_choices, item_count);
+                item_cursor = party_equip_cursor_down(item_cursor, item_count);
+                if (old_item_cursor != item_cursor) {
+                    if (party_equip_page_start(old_item_cursor) != party_equip_page_start(item_cursor)) {
+                        party_draw_equip_popup(member, slot_cursor, item_cursor, item_choices, item_count);
+                    } else {
+                        party_update_equip_popup_cursor(old_item_cursor, item_cursor);
+                    }
+                }
             } else if (keys & J_B) {
                 choosing = 0u;
                 message = "A=えらぶ B=もどる";

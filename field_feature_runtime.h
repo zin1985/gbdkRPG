@@ -20,6 +20,7 @@
 #define MAP_EVENT_SHOP_EQUIP 14u
 #define MAP_EVENT_SAVE_POINT 15u
 #define MAP_EVENT_POT 16u
+#define MAP_EVENT_TOWN_VILLAGER 17u
 
 #define AREA_FIELD 0u
 #define AREA_TOWN 1u

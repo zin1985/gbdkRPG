@@ -34,7 +34,7 @@
 
 
 /* rpg194 concrete split: move actor runtime out of overfull bank 7. */
-#define ROM_BANK_ACTOR_RUNTIME_CONCRETE 8u
+#define ROM_BANK_ACTOR_RUNTIME_CONCRETE 1u
 
 /* rpg175 concrete split: move inventory runtime out of overfull bank 7. */
 #define ROM_BANK_INVENTORY_RUNTIME_CONCRETE 11u

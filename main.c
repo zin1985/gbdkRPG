@@ -703,8 +703,25 @@ static void draw_object_map(void) {
                     bl = MAP_TILE_WALL_BL;
                     br = MAP_TILE_WALL_BR;
                 }
-            } else if (kind == 2u || kind == 5u) {
+            } else if (kind == 2u) {
                 if (current_area == AREA_PORT) {
+                    tl = MAP_TILE_DUNGEON_PIT_TL;
+                    tr = MAP_TILE_DUNGEON_PIT_TR;
+                    bl = MAP_TILE_DUNGEON_PIT_BL;
+                    br = MAP_TILE_DUNGEON_PIT_BR;
+                } else if (current_area_is_dangerous()) {
+                    tl = MAP_TILE_DUNGEON_PIT_TL;
+                    tr = MAP_TILE_DUNGEON_PIT_TR;
+                    bl = MAP_TILE_DUNGEON_PIT_BL;
+                    br = MAP_TILE_DUNGEON_PIT_BR;
+                } else {
+                    tl = MAP_TILE_CAP_TL;
+                    tr = MAP_TILE_CAP_TR;
+                    bl = MAP_TILE_CAP_BL;
+                    br = MAP_TILE_CAP_BR;
+                }
+            } else if (kind == 5u) {
+                if (current_area == AREA_TOWN) {
                     tl = MAP_TILE_DUNGEON_PIT_TL;
                     tr = MAP_TILE_DUNGEON_PIT_TR;
                     bl = MAP_TILE_DUNGEON_PIT_BL;
@@ -771,6 +788,7 @@ static void draw_object_map(void) {
         map_load_port_overlay_tiles(MAP_TILE_DUNGEON_PIT_TL, MAP_TILE_CHEST_TL);
         map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
     } else if (current_area == AREA_TOWN) {
+        map_load_town_sign_overlay_tiles(MAP_TILE_CHEST_TL, MAP_TILE_DUNGEON_PIT_TL);
         map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
     }
     set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
@@ -1158,6 +1176,8 @@ static void inspect_map_event(UINT8 event_id) {
         activate_heal_spring();
     } else if (event_id == MAP_EVENT_SAVE_POINT) {
         open_save_point_menu();
+    } else if (event_id == MAP_EVENT_TOWN_VILLAGER) {
+        message_show(MSG_TOWN_VILLAGER);
     } else if (shop_runtime_handle_event(event_id)) {
         restore_field_vram_state();
     }

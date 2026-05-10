@@ -88,6 +88,7 @@ extern const unsigned char battle_enemy_tiles[48u * 16u];
 
 void map_load_port_overlay_tiles(UINT8 sea_first_tile, UINT8 bridge_first_tile) BANKED;
 void map_load_pot_overlay_tiles(UINT8 pot_first_tile) BANKED;
+void map_load_town_sign_overlay_tiles(UINT8 item_first_tile, UINT8 sword_first_tile) BANKED;
 void battle_enemy_bg_load_tiles(void) BANKED;
 void battle_enemy_bg_load_tiles_for_formation(UINT8 count, UINT8 *sprite_kinds, const UINT8 *size_kinds) BANKED;
 void battle_enemy_bg_draw_all(UINT8 count, const UINT8 *sprite_kinds, const UINT8 *alive_flags) BANKED;

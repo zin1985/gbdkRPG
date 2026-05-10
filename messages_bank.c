@@ -229,6 +229,11 @@ const char msg_pot_found_bank[] =
     "つぼの なかから\n"
     "やくそうを みつけた！";
 
+
+const char msg_town_villager_bank[] =
+    "このまちは ちいさいが\n"
+    "いい どうぐが そろうよ。";
+
 const char * const message_table[MSG_COUNT] = {
     msg_common_npc_bank,
     msg_test_short_bank,
@@ -283,5 +288,6 @@ const char * const message_table[MSG_COUNT] = {
     msg_ruins_npc_scholar_bank,
     msg_ruins_npc_spirit_bank,
     msg_heal_spring_bank,
-    msg_pot_found_bank
+    msg_pot_found_bank,
+    msg_town_villager_bank
 };

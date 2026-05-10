@@ -63,7 +63,8 @@
 #define MSG_RUINS_NPC_SPIRIT    51u
 #define MSG_HEAL_SPRING     52u
 #define MSG_POT_FOUND       53u
-#define MSG_COUNT       54u
+#define MSG_TOWN_VILLAGER  54u
+#define MSG_COUNT       55u
 
 void message_show(UINT8 id) NONBANKED;
 const char *message_get_buffered(UINT8 id) NONBANKED;

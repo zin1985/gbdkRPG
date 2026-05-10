@@ -15,13 +15,16 @@ UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED {
         if (tx == 8u && ty == 8u) return MAP_EVENT_HEAL_SPRING;
     } else if (area == AREA_TOWN) {
         if (tx == 2u && ty == 14u) return MAP_EVENT_FIELD_EXIT;
-        /* rpg179: shop talk triggers from the counter tile plus the front and
-         * side blocks around the clerk. */
-        if ((ty == 5u && (tx == 3u || tx == 4u || tx == 5u)) || (tx == 4u && ty == 6u)) return MAP_EVENT_SHOP_INN;
-        if ((ty == 5u && (tx == 7u || tx == 8u || tx == 9u)) || (tx == 8u && ty == 6u)) return MAP_EVENT_SHOP_ITEM;
-        if ((ty == 5u && (tx == 13u || tx == 14u)) || (tx == 14u && ty == 6u)) return MAP_EVENT_SHOP_EQUIP;
+        /* rpg196: upper row shops.
+         * Shops are placed on the blocked 7 tiles at y=2.  The actual talk
+         * triggers are the front/left/right counter blocks at y=3 so the
+         * player can talk through the counter without stepping into the shop.
+         */
+        if (ty == 3u && (tx == 3u || tx == 4u || tx == 5u)) return MAP_EVENT_SHOP_INN;
+        if (ty == 3u && (tx == 7u || tx == 8u || tx == 9u)) return MAP_EVENT_SHOP_ITEM;
+        if (ty == 3u && (tx == 11u || tx == 12u || tx == 13u)) return MAP_EVENT_SHOP_EQUIP;
         if (tx == 8u && ty == 8u) return MAP_EVENT_SAVE_POINT;
-        if (tx == 5u && ty == 8u) return MAP_EVENT_POT;
+        if (tx == 5u && ty == 8u) return MAP_EVENT_TOWN_VILLAGER;
         if (tx == 11u && ty == 8u) return MAP_EVENT_CHEST;
     } else if (area == AREA_PORT) {
         if (tx == 2u && ty == 14u) return MAP_EVENT_PORT_EXIT;

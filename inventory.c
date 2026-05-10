@@ -15,6 +15,7 @@ static UINT16 g_inventory_money;
  * Keep the list in WRAM and refresh it only when counts change. */
 static UINT8 g_inventory_visible_ids[INVENTORY_ITEM_MAX];
 static UINT8 g_inventory_visible_count_cached;
+static char inventory_item_effect_message[16];
 
 #define INVENTORY_GRID_ROWS 11u
 #define INVENTORY_GRID_COLS 2u
@@ -30,6 +31,9 @@ static void inventory_draw_page_counter(UINT8 cursor_index, UINT8 visible_count)
 static UINT8 inventory_cursor_down(UINT8 cursor_index, UINT8 *page_top, UINT8 visible_count) BANKED;
 static UINT8 inventory_cursor_up(UINT8 cursor_index, UINT8 *page_top, UINT8 visible_count) BANKED;
 static UINT8 inventory_wait_menu_keys(UINT8 mask) BANKED;
+static const char *inventory_make_item_result_message(UINT8 item_id) BANKED;
+static UINT8 inventory_effect_is_growth(UINT8 item_id) BANKED;
+static void inventory_draw_target_popup(UINT8 item_id, UINT8 slot_cursor) BANKED;
 
 void inventory_clear(void) BANKED {
     UINT8 i;
@@ -253,13 +257,18 @@ UINT8 inventory_battle_select_use(UINT8 active_slot) BANKED {
     UINT8 old_page;
     UINT8 item_id;
     UINT8 result;
+    UINT8 target_slot;
+    UINT8 popup_redraw;
+    const char *msg;
 
     ui_icons_load();
     inventory_rebuild_battle_visible_cache();
     visible_count = inventory_visible_count();
     cursor_index = 0u;
     page_top = 0u;
-    inventory_draw_items_page(cursor_index, page_top, "A=使う B=戻る");
+    target_slot = active_slot;
+    msg = "A=使う B=戻る";
+    inventory_draw_items_page(cursor_index, page_top, msg);
 
     while (1) {
         visible_count = inventory_visible_count();
@@ -284,17 +293,41 @@ UINT8 inventory_battle_select_use(UINT8 active_slot) BANKED {
             if (((cursor_index & 1u) == 0u) && ((UINT8)(cursor_index + 1u) < visible_count) && ((UINT8)(cursor_index + 1u) < (UINT8)(page_top + INVENTORY_GRID_PAGE_COUNT))) cursor_index++;
         } else if (keys & J_A) {
             item_id = inventory_item_at_visible_index(cursor_index);
-            result = party_use_field_item_on_active(item_id, active_slot);
-            if (result != 0u) {
-                inventory_remove(item_id, 1u);
-                return 2u;
+            inventory_draw_items_page(cursor_index, page_top, "だれに つかう?");
+            inventory_draw_target_popup(item_id, target_slot);
+            while (1) {
+                keys = inventory_wait_menu_keys(J_UP | J_DOWN | J_A | J_B);
+                popup_redraw = 0u;
+                if (keys & J_UP) {
+                    if (target_slot == 0u) target_slot = PARTY_ACTIVE_COUNT - 1u;
+                    else target_slot--;
+                    popup_redraw = 1u;
+                } else if (keys & J_DOWN) {
+                    target_slot++;
+                    if (target_slot >= PARTY_ACTIVE_COUNT) target_slot = 0u;
+                    popup_redraw = 1u;
+                } else if (keys & J_B) {
+                    msg = "A=使う B=戻る";
+                    inventory_draw_items_page(cursor_index, page_top, msg);
+                    break;
+                } else if (keys & J_A) {
+                    result = party_use_field_item_on_active(item_id, target_slot);
+                    if (result != 0u) {
+                        inventory_remove(item_id, 1u);
+                        msg = inventory_make_item_result_message(item_id);
+                        return 2u;
+                    }
+                    msg = "こうかが ない";
+                    inventory_draw_items_page(cursor_index, page_top, msg);
+                    break;
+                }
+                if (popup_redraw != 0u) inventory_draw_target_popup(item_id, target_slot);
             }
-            inventory_draw_items_page(cursor_index, page_top, "こうかが ない");
             continue;
         }
 
         if (old_cursor != cursor_index || old_page != page_top) {
-            if (old_page != page_top) inventory_draw_items_page(cursor_index, page_top, "A=使う B=戻る");
+            if (old_page != page_top) inventory_draw_items_page(cursor_index, page_top, msg);
             else {
                 inventory_draw_cursor_only(old_cursor, page_top, 0u);
                 inventory_draw_cursor_only(cursor_index, page_top, 1u);
@@ -662,19 +695,63 @@ static UINT8 inventory_is_field_usable(UINT8 item_id) BANKED {
     }
 }
 
+static UINT8 inventory_effect_is_growth(UINT8 item_id) BANKED {
+    switch (item_id) {
+        case ITEM_BARRIER_SEED:
+        case ITEM_GUARD_SEED:
+        case ITEM_POWER_SEED:
+        case ITEM_SPEED_SEED:
+        case ITEM_FOCUS_TEA:
+        case ITEM_MORALE_MEAT:
+            return 1u;
+        default:
+            return 0u;
+    }
+}
+
+static const char *inventory_make_item_result_message(UINT8 item_id) BANKED {
+    UINT8 amount;
+    UINT8 kind;
+    char num[4];
+
+    amount = party_get_last_item_effect_amount();
+    kind = party_get_last_item_effect_kind();
+
+    if (amount != 0u) {
+        inventory_u8_to_dec(amount, num);
+        inventory_item_effect_message[0] = num[0];
+        inventory_item_effect_message[1] = num[1] ? num[1] : ' ';
+        inventory_item_effect_message[2] = num[1] ? (num[2] ? num[2] : ' ') : ' ';
+        inventory_item_effect_message[3] = '\0';
+        if (inventory_effect_is_growth(item_id)) {
+            inventory_item_effect_message[1] = '\0';
+            if (num[1]) {
+                inventory_item_effect_message[0] = num[0];
+                inventory_item_effect_message[1] = num[1];
+                inventory_item_effect_message[2] = num[2];
+                inventory_item_effect_message[3] = '\0';
+            }
+            inventory_put_field_text(1u, 16u, 18u, inventory_item_effect_message);
+            return "あがった";
+        }
+        (void)kind;
+        inventory_put_field_text(1u, 16u, 18u, inventory_item_effect_message);
+        return "かいふく";
+    }
+    return "つかった!";
+}
+
 static void inventory_draw_target_popup(UINT8 item_id, UINT8 slot_cursor) BANKED {
     UINT8 i;
-    PartyBattleFighter f;
 
-    jp_draw_bkg_frame(11u, 2u, 9u, 9u);
-    ui_put_icon(12u, 3u, ui_icon_tile_for_item(item_id));
-    inventory_put_field_text(13u, 3u, 6u, inventory_item_name(item_id));
+    jp_draw_bkg_frame(10u, 2u, 10u, 9u);
+    ui_put_icon(11u, 3u, ui_icon_tile_for_item(item_id));
+    inventory_put_field_text(12u, 3u, 7u, inventory_item_name(item_id));
     for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
-        party_get_active_fighter(i, &f);
-        jp_put_bkg_text(12u, (UINT8)(5u + i), (i == slot_cursor) ? ">" : " ");
-        inventory_put_field_text(13u, (UINT8)(5u + i), 5u, f.name);
+        jp_put_bkg_text(11u, (UINT8)(5u + i), (i == slot_cursor) ? ">" : " ");
+        inventory_put_field_text(12u, (UINT8)(5u + i), 7u, party_get_active_name(i));
     }
-    inventory_put_field_text(12u, 9u, 7u, "A=使う");
+    inventory_put_field_text(11u, 9u, 8u, "A=使う");
 }
 
 void inventory_menu_show_items_loop(void) BANKED {
@@ -755,7 +832,7 @@ void inventory_menu_show_items_loop(void) BANKED {
                         if (visible_count == 0u) cursor_index = 0u;
                         else if (cursor_index >= visible_count) cursor_index = (UINT8)(visible_count - 1u);
                         page_top = inventory_clamp_page_top(page_top, visible_count);
-                        msg = "つかった!";
+                        msg = inventory_make_item_result_message(cursor_item);
                     } else {
                         msg = "こうかが ない";
                     }
