@@ -18,6 +18,7 @@ battle_text.c:29: warning 110: conditional flow changed by optimizer: so said EV
 game_flags.c:
 quest.c:
 inventory.c:
+ui_icons.c:
 party_runtime.c:
 actor_runtime.c:
 menu_runtime.c:

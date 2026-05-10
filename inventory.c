@@ -5,6 +5,7 @@
 #include "jpfont.h"
 #include "audio.h"
 #include "party_runtime.h"
+#include "ui_icons.h"
 
 
 static UINT8 g_inventory_counts[INVENTORY_ITEM_MAX];
@@ -158,15 +159,9 @@ static const char *inventory_item_name(UINT8 item_id) BANKED {
 }
 
 
-static const char *inventory_item_icon(UINT8 item_id) BANKED {
-    if (item_id >= ITEM_WOOD_SWORD && item_id <= ITEM_TOOL_KIT) return "ぶ";
-    if (item_id >= ITEM_CLOTH_ARMOR && item_id <= ITEM_IRON_ARMOR) return "よ";
-    if (item_id >= ITEM_CHARM && item_id <= ITEM_DEBUG_ESCAPE) return "か";
-    if (item_id == ITEM_CASTLE_KEY) return "か";
-    return "ど";
-}
 
 static void inventory_ui_clear(void) BANKED {
+    ui_icons_load();
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
 }
@@ -237,7 +232,7 @@ static void inventory_draw_items_page(UINT8 cursor_item, const char *message) BA
     for (id = 1u; id < INVENTORY_ITEM_MAX && row < 13u; id++) {
         if (g_inventory_counts[id] == 0u) continue;
         jp_put_bkg_text(1u, row, (id == cursor_item) ? ">" : " ");
-        inventory_put_field_text(3u, row, 2u, inventory_item_icon(id));
+        ui_put_icon(3u, row, ui_icon_tile_for_item(id));
         inventory_put_field_text(5u, row, 8u, inventory_item_name(id));
         jp_put_bkg_text(14u, row, "x");
         inventory_put_count(16u, row, g_inventory_counts[id]);
@@ -262,7 +257,8 @@ static void inventory_draw_target_popup(UINT8 item_id, UINT8 slot_cursor) BANKED
     PartyBattleFighter f;
 
     jp_draw_bkg_frame(11u, 2u, 9u, 9u);
-    inventory_put_field_text(12u, 3u, 7u, inventory_item_name(item_id));
+    ui_put_icon(12u, 3u, ui_icon_tile_for_item(item_id));
+    inventory_put_field_text(13u, 3u, 6u, inventory_item_name(item_id));
     for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
         party_get_active_fighter(i, &f);
         jp_put_bkg_text(12u, (UINT8)(5u + i), (i == slot_cursor) ? ">" : " ");

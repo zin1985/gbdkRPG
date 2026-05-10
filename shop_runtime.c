@@ -8,6 +8,7 @@
 #include "party_runtime.h"
 #include "field_feature_runtime.h"
 #include "messages.h"
+#include "ui_icons.h"
 
 BANKREF(shop_runtime_bank)
 
@@ -40,6 +41,7 @@ static const UINT8 equip_shop_prices[SHOP_ITEM_COUNT] = {
 };
 
 static void shop_clear(void) BANKED {
+    ui_icons_load();
     /* rpg172:
      * Shop UI is a screen-fixed BG window.  Field camera uses move_bkg(), so
      * reset the BG scroll before drawing the shop; otherwise the shop frame
@@ -119,7 +121,8 @@ static void shop_draw_list(UINT8 kind, UINT8 cursor) BANKED {
     shop_draw_money(2u);
 
     for (i = 0u; i < SHOP_ITEM_COUNT; i++) {
-        jp_put_bkg_text(2u, (UINT8)(4u + i), shop_item_name(ids[i]));
+        ui_put_icon(2u, (UINT8)(4u + i), ui_icon_tile_for_item(ids[i]));
+        jp_put_bkg_text(4u, (UINT8)(4u + i), shop_item_name(ids[i]));
         shop_u16_to_dec(prices[i], buf);
         jp_put_bkg_text(14u, (UINT8)(4u + i), buf);
         jp_put_bkg_text(17u, (UINT8)(4u + i), "G");

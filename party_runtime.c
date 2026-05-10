@@ -5,6 +5,7 @@
 #include "inventory.h"
 #include "jpfont.h"
 #include "audio.h"
+#include "ui_icons.h"
 
 BANKREF(party_runtime_bank)
 
@@ -957,6 +958,7 @@ UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id)
 
 
 static void party_ui_clear(void) BANKED {
+    ui_icons_load();
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
 }
@@ -1067,7 +1069,7 @@ static void party_draw_status_page(UINT8 active_slot) BANKED {
     jp_put_bkg_text(1u, 8u, "かいふく"); party_put_u8(12u, 8u, f.heal_power);
     jp_put_bkg_text(1u, 9u, "すばやさ"); party_put_u8(12u, 9u, f.agility);
     if (member != 0) {
-        jp_put_bkg_text(1u,10u, "ぶき"); party_put_field_text(7u,10u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
+        jp_put_bkg_text(1u,10u, "ぶき"); ui_put_icon(6u,10u, ui_icon_tile_for_weapon_type(party_equipped_weapon_type(member))); party_put_field_text(8u,10u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
         jp_put_bkg_text(1u,11u, "じゅく"); party_put_u8(7u,11u, member->weapon_mastery[party_equipped_weapon_type(member)]);
         jp_put_bkg_text(10u,11u, "かん"); party_put_u8(14u,11u, member->adventure_sense);
         jp_put_bkg_text(1u,12u, "せんい"); party_put_u8(7u,12u, member->morale);
@@ -1255,7 +1257,8 @@ static void party_draw_equip_popup(PartyMemberRuntime *member, UINT8 slot_cursor
     for (i = 0u; i < 6u; i++, y++) {
         if (i < item_count) {
             jp_put_bkg_text(11u, y, (i == item_cursor) ? ">" : " ");
-            party_put_field_text(12u, y, 7u, party_equipment_name(items[i]));
+            ui_put_icon(12u, y, ui_icon_tile_for_item(items[i]));
+            party_put_field_text(13u, y, 6u, party_equipment_name(items[i]));
         } else {
             party_put_field_text(11u, y, 8u, "");
         }
@@ -1277,10 +1280,10 @@ static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 ch
         return;
     }
     party_put_field_text(1u, 3u, 10u, member->name);
-    jp_put_bkg_text(1u, 5u, (slot_cursor == PARTY_EQUIP_SLOT_WEAPON) ? ">" : " "); jp_put_bkg_text(2u, 5u, "武器"); party_put_field_text(6u, 5u, 9u, party_equipment_name(member->weapon_id));
-    jp_put_bkg_text(1u, 6u, (slot_cursor == PARTY_EQUIP_SLOT_ARMOR) ? ">" : " "); jp_put_bkg_text(2u, 6u, "防具"); party_put_field_text(6u, 6u, 9u, party_equipment_name(member->armor_id));
-    jp_put_bkg_text(1u, 7u, (slot_cursor == PARTY_EQUIP_SLOT_ACC) ? ">" : " "); jp_put_bkg_text(2u, 7u, "装飾"); party_put_field_text(6u, 7u, 9u, party_equipment_name(member->accessory_id));
-    jp_put_bkg_text(1u, 9u,  "ぶき"); party_put_field_text(8u, 9u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
+    jp_put_bkg_text(1u, 5u, (slot_cursor == PARTY_EQUIP_SLOT_WEAPON) ? ">" : " "); jp_put_bkg_text(2u, 5u, "武器"); ui_put_icon(6u, 5u, ui_icon_tile_for_item(member->weapon_id)); party_put_field_text(8u, 5u, 8u, party_equipment_name(member->weapon_id));
+    jp_put_bkg_text(1u, 6u, (slot_cursor == PARTY_EQUIP_SLOT_ARMOR) ? ">" : " "); jp_put_bkg_text(2u, 6u, "防具"); ui_put_icon(6u, 6u, ui_icon_tile_for_item(member->armor_id)); party_put_field_text(8u, 6u, 8u, party_equipment_name(member->armor_id));
+    jp_put_bkg_text(1u, 7u, (slot_cursor == PARTY_EQUIP_SLOT_ACC) ? ">" : " "); jp_put_bkg_text(2u, 7u, "装飾"); ui_put_icon(6u, 7u, ui_icon_tile_for_item(member->accessory_id)); party_put_field_text(8u, 7u, 8u, party_equipment_name(member->accessory_id));
+    jp_put_bkg_text(1u, 9u,  "ぶき"); ui_put_icon(6u, 9u, ui_icon_tile_for_weapon_type(party_equipped_weapon_type(member))); party_put_field_text(8u, 9u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
     jp_put_bkg_text(1u, 10u, "こうげき+"); party_put_u8(10u,10u, party_equipment_attack(member));
     jp_put_bkg_text(1u, 11u, "まもり+"); party_put_u8(10u,11u, party_equipment_defense(member));
     jp_put_bkg_text(1u, 12u, "おもさ");  party_put_u8(8u,12u, party_equipment_weight(member));
