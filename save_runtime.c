@@ -15,6 +15,155 @@ BANKREF(save_runtime_bank)
 
 static UINT8 save_cursor;
 
+
+#define SAVE_DEBUG_BASE 0x1F00u
+#define SAVE_DEBUG_MAGIC0 0x44u /* D */
+#define SAVE_DEBUG_MAGIC1 0x42u /* B */
+#define SAVE_DEBUG_PATTERN 0xA5u
+
+static UINT8 *save_debug_sram_ptr(UINT16 offset) BANKED {
+    return (UINT8 *)(0xA000u + SAVE_DEBUG_BASE + offset);
+}
+
+static char save_hex_digit(UINT8 v) BANKED {
+    v &= 0x0Fu;
+    return (char)((v < 10u) ? ('0' + v) : ('A' + (v - 10u)));
+}
+
+static void save_u8_to_hex(UINT8 value, char *out) BANKED {
+    out[0] = save_hex_digit((UINT8)(value >> 4u));
+    out[1] = save_hex_digit(value);
+    out[2] = '\0';
+}
+
+static UINT8 save_debug_calc_checksum(UINT8 seq) BANKED {
+    UINT8 sum;
+    UINT8 i;
+    sum = (UINT8)(SAVE_DEBUG_MAGIC0 + SAVE_DEBUG_MAGIC1 + seq);
+    for (i = 0u; i < 12u; i++) {
+        sum = (UINT8)(sum + (UINT8)(SAVE_DEBUG_PATTERN ^ i ^ seq));
+    }
+    return (UINT8)(sum ^ 0xFFu);
+}
+
+static UINT8 save_debug_pattern_ok(UINT8 seq) BANKED {
+    UINT8 i;
+    UINT8 ok;
+    ok = 1u;
+    ENABLE_RAM;
+    SWITCH_RAM(0u);
+    for (i = 0u; i < 12u; i++) {
+        if (*save_debug_sram_ptr((UINT16)(4u + i)) != (UINT8)(SAVE_DEBUG_PATTERN ^ i ^ seq)) ok = 0u;
+    }
+    DISABLE_RAM;
+    return ok;
+}
+
+static void save_debug_read(UINT8 *m0, UINT8 *m1, UINT8 *seq, UINT8 *chk) BANKED {
+    ENABLE_RAM;
+    SWITCH_RAM(0u);
+    *m0 = *save_debug_sram_ptr(0u);
+    *m1 = *save_debug_sram_ptr(1u);
+    *seq = *save_debug_sram_ptr(2u);
+    *chk = *save_debug_sram_ptr(3u);
+    DISABLE_RAM;
+}
+
+static UINT8 save_debug_write_pattern(void) BANKED {
+    UINT8 m0;
+    UINT8 m1;
+    UINT8 seq;
+    UINT8 chk;
+    UINT8 i;
+
+    save_debug_read(&m0, &m1, &seq, &chk);
+    if (m0 != SAVE_DEBUG_MAGIC0 || m1 != SAVE_DEBUG_MAGIC1) seq = 0u;
+    seq++;
+    chk = save_debug_calc_checksum(seq);
+
+    ENABLE_RAM;
+    SWITCH_RAM(0u);
+    *save_debug_sram_ptr(0u) = SAVE_DEBUG_MAGIC0;
+    *save_debug_sram_ptr(1u) = SAVE_DEBUG_MAGIC1;
+    *save_debug_sram_ptr(2u) = seq;
+    *save_debug_sram_ptr(3u) = chk;
+    for (i = 0u; i < 12u; i++) {
+        *save_debug_sram_ptr((UINT16)(4u + i)) = (UINT8)(SAVE_DEBUG_PATTERN ^ i ^ seq);
+    }
+    DISABLE_RAM;
+    return seq;
+}
+
+static void save_debug_wait10(void) BANKED {
+    UINT16 i;
+    for (i = 0u; i < 600u; i++) {
+        wait_vbl_done();
+    }
+}
+
+static void save_debug_draw_status(UINT8 wrote, UINT8 waited) BANKED {
+    UINT8 m0;
+    UINT8 m1;
+    UINT8 seq;
+    UINT8 chk;
+    UINT8 calc;
+    UINT8 pat_ok;
+    char hex[3];
+
+    save_clear_screen();
+    save_debug_read(&m0, &m1, &seq, &chk);
+    calc = save_debug_calc_checksum(seq);
+    pat_ok = save_debug_pattern_ok(seq);
+
+    jp_put_bkg_text(1u, 1u, "SRAM DEBUG");
+    jp_put_bkg_text(1u, 3u, "MAGIC");
+    save_u8_to_hex(m0, hex); jp_put_bkg_text(8u, 3u, hex);
+    save_u8_to_hex(m1, hex); jp_put_bkg_text(11u, 3u, hex);
+    jp_put_bkg_text(1u, 4u, "SEQ");
+    save_u8_to_hex(seq, hex); jp_put_bkg_text(8u, 4u, hex);
+    jp_put_bkg_text(1u, 5u, "CHK");
+    save_u8_to_hex(chk, hex); jp_put_bkg_text(8u, 5u, hex);
+    jp_put_bkg_text(11u, 5u, (chk == calc) ? "OK" : "NG");
+    jp_put_bkg_text(1u, 6u, "PAT");
+    jp_put_bkg_text(8u, 6u, pat_ok ? "OK" : "NG");
+
+    if (m0 == SAVE_DEBUG_MAGIC0 && m1 == SAVE_DEBUG_MAGIC1 && chk == calc && pat_ok) {
+        jp_put_bkg_text(1u, 8u, "SRAM DATA OK");
+    } else {
+        jp_put_bkg_text(1u, 8u, "SRAM DATA LOST");
+    }
+
+    if (wrote) jp_put_bkg_text(1u, 10u, "WRITE DONE");
+    if (waited) jp_put_bkg_text(1u, 11u, "10SEC CHECK DONE");
+
+    jp_put_bkg_text(1u, 13u, "A WRITE TEST");
+    jp_put_bkg_text(1u, 14u, "START WAIT10");
+    jp_put_bkg_text(1u, 15u, "SEL REFRESH");
+    jp_put_bkg_text(1u, 16u, "B BACK");
+}
+
+static void save_runtime_sram_debug_screen(void) BANKED {
+    UINT8 keys;
+    save_debug_draw_status(0u, 0u);
+    while (1) {
+        keys = audio_waitpad(J_A | J_B | J_START | J_SELECT);
+        audio_waitpadup();
+        if (keys & J_B) {
+            return;
+        } else if (keys & J_A) {
+            save_debug_write_pattern();
+            save_debug_draw_status(1u, 0u);
+        } else if (keys & J_START) {
+            jp_put_bkg_text(1u, 11u, "WAITING 10SEC...");
+            save_debug_wait10();
+            save_debug_draw_status(0u, 1u);
+        } else if (keys & J_SELECT) {
+            save_debug_draw_status(0u, 0u);
+        }
+    }
+}
+
+
 static UINT8 *save_sram_ptr(UINT8 slot, UINT16 offset) BANKED {
     return (UINT8 *)(0xA000u + ((UINT16)slot * SAVE_SLOT_BYTES) + offset);
 }
@@ -246,10 +395,18 @@ UINT8 save_runtime_title_load(SaveSnapshot *out) BANKED {
     save_draw_cursor(8u, 2u);
 
     while (1) {
-        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_START);
+        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_START | J_SELECT);
         audio_waitpadup();
         if (keys & (J_UP | J_DOWN)) {
             save_cursor ^= 1u;
+            save_draw_cursor(8u, 2u);
+        } else if (keys & J_SELECT) {
+            save_runtime_sram_debug_screen();
+            save_clear_screen();
+            jp_put_bkg_text(5u, 3u, "GBDK RPG");
+            jp_put_bkg_text(4u, 8u, "はじめから");
+            jp_put_bkg_text(4u, 10u, "つづきから");
+            jp_put_bkg_text(1u, 16u, "A けってい");
             save_draw_cursor(8u, 2u);
         } else if (keys & (J_A | J_START)) {
             if (save_cursor == 0u) return SAVE_TITLE_NEW;

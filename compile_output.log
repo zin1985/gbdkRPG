@@ -23,6 +23,8 @@ actor_runtime.c:
 menu_runtime.c:
 shop_runtime.c:
 save_runtime.c:
+save_runtime.c:113: warning 112: function 'save_clear_screen' implicit declaration
+save_runtime.c:113: warning 84: 'auto' variable 'save_clear_screen' may be used before initialization
 save_bridge_runtime.c:
 revive_runtime.c:
 battle_skill_runtime.c:
