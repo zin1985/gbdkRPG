@@ -10,6 +10,11 @@
 
 static UINT8 g_inventory_counts[INVENTORY_ITEM_MAX];
 static UINT16 g_inventory_money;
+/* rpg184: cached visible item list.  The previous menu scanned the whole
+ * inventory every time the cursor moved, then redrew the full window.
+ * Keep the list in WRAM and refresh it only when counts change. */
+static UINT8 g_inventory_visible_ids[INVENTORY_ITEM_MAX];
+static UINT8 g_inventory_visible_count_cached;
 
 void inventory_clear(void) BANKED {
     UINT8 i;
@@ -289,7 +294,6 @@ static const char *inventory_item_short_name(UINT8 item_id) BANKED {
 
 
 static void inventory_ui_clear(void) BANKED {
-    ui_icons_load();
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
 }
@@ -318,56 +322,38 @@ static void inventory_put_count(UINT8 x, UINT8 y, UINT8 value) BANKED {
 #define INVENTORY_GRID_COLS 2u
 #define INVENTORY_GRID_PAGE_COUNT ((UINT8)(INVENTORY_GRID_ROWS * INVENTORY_GRID_COLS))
 
-static UINT8 inventory_visible_count(void) BANKED {
+static void inventory_rebuild_visible_cache(void) BANKED {
     UINT8 id;
     UINT8 count;
+
     count = 0u;
     for (id = 1u; id < INVENTORY_ITEM_MAX; id++) {
-        if (g_inventory_counts[id] != 0u) count++;
+        if (g_inventory_counts[id] == 0u) continue;
+        g_inventory_visible_ids[count] = id;
+        count++;
     }
-    return count;
+    g_inventory_visible_count_cached = count;
+}
+
+static UINT8 inventory_visible_count(void) BANKED {
+    return g_inventory_visible_count_cached;
 }
 
 static UINT8 inventory_item_at_visible_index(UINT8 index) BANKED {
-    UINT8 id;
-    UINT8 pos;
-    pos = 0u;
-    for (id = 1u; id < INVENTORY_ITEM_MAX; id++) {
-        if (g_inventory_counts[id] == 0u) continue;
-        if (pos == index) return id;
-        pos++;
-    }
-    return ITEM_NONE;
+    if (index >= g_inventory_visible_count_cached) return ITEM_NONE;
+    return g_inventory_visible_ids[index];
 }
 
-static UINT8 inventory_index_for_item(UINT8 item_id) BANKED {
-    UINT8 id;
-    UINT8 pos;
-    pos = 0u;
-    for (id = 1u; id < INVENTORY_ITEM_MAX; id++) {
-        if (g_inventory_counts[id] == 0u) continue;
-        if (id == item_id) return pos;
-        pos++;
-    }
-    return 0u;
-}
-
-static UINT8 inventory_fix_scroll_top(UINT8 cursor_index, UINT8 scroll_top, UINT8 visible_count) BANKED {
+static UINT8 inventory_clamp_page_top(UINT8 page_top, UINT8 visible_count) BANKED {
     UINT8 max_top;
 
     if (visible_count <= INVENTORY_GRID_PAGE_COUNT) return 0u;
-
-    if (scroll_top & 1u) scroll_top--;
-    if (cursor_index < scroll_top) {
-        scroll_top = (UINT8)(cursor_index & 0xFEu);
-    } else if (cursor_index >= (UINT8)(scroll_top + INVENTORY_GRID_PAGE_COUNT)) {
-        scroll_top = (UINT8)((cursor_index - (INVENTORY_GRID_PAGE_COUNT - 2u)) & 0xFEu);
-    }
-
-    max_top = (UINT8)(visible_count - INVENTORY_GRID_PAGE_COUNT);
-    if (max_top & 1u) max_top++;
-    if (scroll_top > max_top) scroll_top = max_top;
-    return scroll_top;
+    max_top = (UINT8)(visible_count - 1u);
+    max_top = (UINT8)(max_top / INVENTORY_GRID_PAGE_COUNT);
+    max_top = (UINT8)(max_top * INVENTORY_GRID_PAGE_COUNT);
+    if (page_top > max_top) page_top = max_top;
+    page_top = (UINT8)((page_top / INVENTORY_GRID_PAGE_COUNT) * INVENTORY_GRID_PAGE_COUNT);
+    return page_top;
 }
 
 static void inventory_draw_grid_entry(UINT8 visible_index, UINT8 cursor_index, UINT8 row, UINT8 col) BANKED {
@@ -386,14 +372,41 @@ static void inventory_draw_grid_entry(UINT8 visible_index, UINT8 cursor_index, U
     inventory_put_count((UINT8)(x + 7u), row, g_inventory_counts[id]);
 }
 
-static void inventory_draw_items_page(UINT8 cursor_index, UINT8 scroll_top, const char *message) BANKED {
+static void inventory_draw_cursor_only(UINT8 visible_index, UINT8 page_top, UINT8 enabled) BANKED {
+    UINT8 offset;
+    UINT8 x;
+    UINT8 y;
+
+    if (visible_index < page_top) return;
+    offset = (UINT8)(visible_index - page_top);
+    if (offset >= INVENTORY_GRID_PAGE_COUNT) return;
+    x = (offset & 1u) ? 10u : 1u;
+    y = (UINT8)(3u + (offset >> 1));
+    jp_put_bkg_text(x, y, enabled ? ">" : " ");
+}
+
+static void inventory_draw_page_counter(UINT8 cursor_index, UINT8 visible_count) BANKED {
+    char page_buf[4];
+
+    if (visible_count > INVENTORY_GRID_PAGE_COUNT) {
+        inventory_u8_to_dec((UINT8)(cursor_index + 1u), page_buf);
+        jp_put_bkg_text(14u, 1u, page_buf);
+        jp_put_bkg_text(16u, 1u, "/");
+        inventory_u8_to_dec(visible_count, page_buf);
+        jp_put_bkg_text(17u, 1u, page_buf);
+    } else {
+        jp_bkg_clear_area(14u, 1u, 5u, 1u);
+    }
+}
+
+static void inventory_draw_items_page(UINT8 cursor_index, UINT8 page_top, const char *message) BANKED {
     UINT8 row;
     UINT8 r;
     UINT8 idx;
     UINT8 visible_count;
-    char page_buf[4];
 
     visible_count = inventory_visible_count();
+    page_top = inventory_clamp_page_top(page_top, visible_count);
     inventory_ui_clear();
     jp_draw_bkg_frame(0u, 0u, 20u, 15u);
     jp_draw_bkg_frame(0u, 15u, 20u, 3u);
@@ -403,22 +416,58 @@ static void inventory_draw_items_page(UINT8 cursor_index, UINT8 scroll_top, cons
         jp_put_bkg_text(2u, 6u, "なにもない");
     } else {
         row = 3u;
-        idx = scroll_top;
+        idx = page_top;
         for (r = 0u; r < INVENTORY_GRID_ROWS; r++, row++) {
             inventory_draw_grid_entry(idx, cursor_index, row, 0u);
             idx++;
             inventory_draw_grid_entry(idx, cursor_index, row, 1u);
             idx++;
         }
-        if (visible_count > INVENTORY_GRID_PAGE_COUNT) {
-            inventory_u8_to_dec((UINT8)(cursor_index + 1u), page_buf);
-            jp_put_bkg_text(14u, 1u, page_buf);
-            jp_put_bkg_text(16u, 1u, "/");
-            inventory_u8_to_dec(visible_count, page_buf);
-            jp_put_bkg_text(17u, 1u, page_buf);
-        }
+        inventory_draw_page_counter(cursor_index, visible_count);
     }
     if (message != 0) inventory_put_field_text(1u, 16u, 18u, message);
+}
+
+static UINT8 inventory_cursor_down(UINT8 cursor_index, UINT8 *page_top, UINT8 visible_count) BANKED {
+    UINT8 offset;
+    UINT8 col;
+    UINT8 next_page;
+    UINT8 next;
+
+    if (visible_count == 0u) return 0u;
+    offset = (UINT8)(cursor_index - *page_top);
+    col = (UINT8)(cursor_index & 1u);
+    if ((offset < (INVENTORY_GRID_PAGE_COUNT - 2u)) && ((UINT8)(cursor_index + 2u) < visible_count)) {
+        return (UINT8)(cursor_index + 2u);
+    }
+    next_page = (UINT8)(*page_top + INVENTORY_GRID_PAGE_COUNT);
+    if (next_page < visible_count) {
+        *page_top = next_page;
+        next = (UINT8)(next_page + col);
+        if (next >= visible_count) next = (UINT8)(visible_count - 1u);
+        return next;
+    }
+    return cursor_index;
+}
+
+static UINT8 inventory_cursor_up(UINT8 cursor_index, UINT8 *page_top, UINT8 visible_count) BANKED {
+    UINT8 offset;
+    UINT8 col;
+    UINT8 prev_page;
+    UINT8 next;
+
+    if (visible_count == 0u) return 0u;
+    offset = (UINT8)(cursor_index - *page_top);
+    col = (UINT8)(cursor_index & 1u);
+    if (offset >= 2u) return (UINT8)(cursor_index - 2u);
+    if (*page_top >= INVENTORY_GRID_PAGE_COUNT) {
+        prev_page = (UINT8)(*page_top - INVENTORY_GRID_PAGE_COUNT);
+        *page_top = prev_page;
+        next = (UINT8)(prev_page + ((INVENTORY_GRID_ROWS - 1u) * 2u) + col);
+        if (next >= visible_count) next = (UINT8)(visible_count - 1u);
+        return next;
+    }
+    return cursor_index;
 }
 
 static UINT8 inventory_is_field_usable(UINT8 item_id) BANKED {
@@ -468,58 +517,45 @@ static void inventory_draw_target_popup(UINT8 item_id, UINT8 slot_cursor) BANKED
 void inventory_menu_show_items_loop(void) BANKED {
     UINT8 keys;
     UINT8 cursor_index;
-    UINT8 scroll_top;
+    UINT8 page_top;
     UINT8 target_slot;
     UINT8 result;
     UINT8 cursor_item;
     UINT8 visible_count;
     const char *msg;
     UINT8 popup_redraw;
+    UINT8 old_cursor;
+    UINT8 old_page;
+    UINT8 redraw_full;
 
+    ui_icons_load();
+    inventory_rebuild_visible_cache();
     visible_count = inventory_visible_count();
     cursor_index = 0u;
-    scroll_top = 0u;
+    page_top = 0u;
     target_slot = 0u;
     msg = "A=つかう B=もどる";
     audio_waitpadup();
-    inventory_draw_items_page(cursor_index, scroll_top, msg);
+    inventory_draw_items_page(cursor_index, page_top, msg);
     while (1) {
         visible_count = inventory_visible_count();
         if (visible_count == 0u) cursor_index = 0u;
         else if (cursor_index >= visible_count) cursor_index = (UINT8)(visible_count - 1u);
-        scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
+        page_top = inventory_clamp_page_top(page_top, visible_count);
 
         keys = audio_waitpad(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START);
         audio_waitpadup();
+        redraw_full = 0u;
+        old_cursor = cursor_index;
+        old_page = page_top;
         if (keys & J_UP) {
-            if (visible_count != 0u) {
-                if (cursor_index >= 2u) cursor_index = (UINT8)(cursor_index - 2u);
-                else cursor_index = (UINT8)(visible_count - 1u);
-                scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
-                inventory_draw_items_page(cursor_index, scroll_top, msg);
-            }
+            cursor_index = inventory_cursor_up(cursor_index, &page_top, visible_count);
         } else if (keys & J_DOWN) {
-            if (visible_count != 0u) {
-                cursor_index = (UINT8)(cursor_index + 2u);
-                if (cursor_index >= visible_count) cursor_index = (UINT8)(cursor_index & 1u);
-                if (cursor_index >= visible_count) cursor_index = 0u;
-                scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
-                inventory_draw_items_page(cursor_index, scroll_top, msg);
-            }
+            cursor_index = inventory_cursor_down(cursor_index, &page_top, visible_count);
         } else if (keys & J_LEFT) {
-            if (visible_count != 0u) {
-                if (cursor_index & 1u) cursor_index--;
-                else if ((UINT8)(cursor_index + 1u) < visible_count) cursor_index++;
-                scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
-                inventory_draw_items_page(cursor_index, scroll_top, msg);
-            }
+            if ((visible_count != 0u) && (cursor_index & 1u) && (cursor_index > page_top)) cursor_index--;
         } else if (keys & J_RIGHT) {
-            if (visible_count != 0u) {
-                if ((cursor_index & 1u) == 0u && (UINT8)(cursor_index + 1u) < visible_count) cursor_index++;
-                else if (cursor_index & 1u) cursor_index--;
-                scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
-                inventory_draw_items_page(cursor_index, scroll_top, msg);
-            }
+            if ((visible_count != 0u) && ((cursor_index & 1u) == 0u) && ((UINT8)(cursor_index + 1u) < visible_count) && ((UINT8)(cursor_index + 1u) < (UINT8)(page_top + INVENTORY_GRID_PAGE_COUNT))) cursor_index++;
         } else if (keys & (J_B | J_START)) {
             break;
         } else if (keys & J_A) {
@@ -528,10 +564,10 @@ void inventory_menu_show_items_loop(void) BANKED {
             if (cursor_item == ITEM_NONE) continue;
             if (!inventory_is_field_usable(cursor_item)) {
                 msg = "そのままでは つかえない";
-                inventory_draw_items_page(cursor_index, scroll_top, msg);
+                inventory_draw_items_page(cursor_index, page_top, msg);
                 continue;
             }
-            inventory_draw_items_page(cursor_index, scroll_top, "だれに つかう?");
+            inventory_draw_items_page(cursor_index, page_top, "だれに つかう?");
             inventory_draw_target_popup(cursor_item, target_slot);
             while (1) {
                 keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B);
@@ -547,21 +583,22 @@ void inventory_menu_show_items_loop(void) BANKED {
                     popup_redraw = 1u;
                 } else if (keys & J_B) {
                     msg = "A=つかう B=もどる";
-                    inventory_draw_items_page(cursor_index, scroll_top, msg);
+                    inventory_draw_items_page(cursor_index, page_top, msg);
                     break;
                 } else if (keys & J_A) {
                     result = party_use_field_item_on_active(cursor_item, target_slot);
                     if (result != 0u) {
                         inventory_remove(cursor_item, 1u);
+                        inventory_rebuild_visible_cache();
                         visible_count = inventory_visible_count();
                         if (visible_count == 0u) cursor_index = 0u;
                         else if (cursor_index >= visible_count) cursor_index = (UINT8)(visible_count - 1u);
-                        scroll_top = inventory_fix_scroll_top(cursor_index, scroll_top, visible_count);
+                        page_top = inventory_clamp_page_top(page_top, visible_count);
                         msg = "つかった!";
                     } else {
                         msg = "こうかが ない";
                     }
-                    inventory_draw_items_page(cursor_index, scroll_top, msg);
+                    inventory_draw_items_page(cursor_index, page_top, msg);
                     break;
                 }
                 if (popup_redraw != 0u) {
@@ -569,5 +606,19 @@ void inventory_menu_show_items_loop(void) BANKED {
                 }
             }
         }
+
+        if ((keys & (J_UP | J_DOWN | J_LEFT | J_RIGHT)) && (old_cursor != cursor_index || old_page != page_top)) {
+            if (old_page != page_top) {
+                redraw_full = 1u;
+            }
+            if (redraw_full != 0u) {
+                inventory_draw_items_page(cursor_index, page_top, msg);
+            } else {
+                inventory_draw_cursor_only(old_cursor, page_top, 0u);
+                inventory_draw_cursor_only(cursor_index, page_top, 1u);
+                inventory_draw_page_counter(cursor_index, visible_count);
+            }
+        }
     }
 }
+
