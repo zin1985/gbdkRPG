@@ -1101,6 +1101,13 @@ static UINT8 party_wait_menu_keys(UINT8 mask) BANKED {
     }
 }
 
+static void party_hide_all_oam_sprites(void) BANKED {
+    UINT8 i;
+    for (i = 0u; i < 40u; i++) {
+        move_sprite(i, 0u, 0u);
+    }
+}
+
 static void party_status_hide_sprite(void) BANKED {
     move_sprite(PARTY_STATUS_ICON_SPRITE_BASE + 0u, 0u, 0u);
     move_sprite(PARTY_STATUS_ICON_SPRITE_BASE + 1u, 0u, 0u);
@@ -1232,6 +1239,7 @@ static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
     party_get_active_fighter(active_slot, &f);
     member = party_get_active_member(active_slot);
 
+    party_hide_all_oam_sprites();
     party_ui_clear();
     jp_draw_bkg_frame(0u, 0u, 20u, 15u);
     jp_draw_bkg_frame(0u, 15u, 20u, 3u);
@@ -1410,7 +1418,8 @@ void party_menu_show_status_loop(void) BANKED {
             break;
         }
     }
-    party_status_hide_sprite();
+    party_hide_all_oam_sprites();
+    HIDE_SPRITES;
 }
 
 static UINT8 party_member_slot_item(PartyMemberRuntime *member, UINT8 slot) BANKED {

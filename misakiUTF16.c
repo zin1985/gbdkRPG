@@ -70,11 +70,21 @@ uint16_t utf16_HantoZen(uint16_t utf16) {
     utf16 = hkana2kana(utf16);
 
     /*
-     * rpg188:
-     * Keep ASCII as ASCII for GBDK/default-style debug text.
-     * Fullwidth alphanumeric glyphs are restored in the Misaki table, so text
-     * written as fullwidth characters remains readable in Japanese UI labels.
+     * rpg195:
+     * UI readability pass.
+     * Convert ASCII numbers/letters to fullwidth glyphs before looking them up
+     * in the Misaki table.  This makes menu labels such as A/B/HP/MP and all
+     * numeric values visually match the Japanese UI again.
      */
+    if (utf16 >= (uint16_t)'0' && utf16 <= (uint16_t)'9') {
+        return (uint16_t)(0xFF10u + (utf16 - (uint16_t)'0'));
+    }
+    if (utf16 >= (uint16_t)'A' && utf16 <= (uint16_t)'Z') {
+        return (uint16_t)(0xFF21u + (utf16 - (uint16_t)'A'));
+    }
+    if (utf16 >= (uint16_t)'a' && utf16 <= (uint16_t)'z') {
+        return (uint16_t)(0xFF41u + (utf16 - (uint16_t)'a'));
+    }
     return utf16;
 }
 

@@ -2225,9 +2225,10 @@ static void player_battle_item(void) {
     UINT8 result;
 
     battle_hide_command_cursor_obj();
+    hide_all_sprites_safe();
+    HIDE_SPRITES;
     result = inventory_battle_select_use(battle_party_turn_slot);
 
-    
     battle_enter_render_once();
 
     if (result != 2u) {
