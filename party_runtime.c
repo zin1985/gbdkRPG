@@ -104,7 +104,8 @@ static const PartyEquipmentDef party_equipment_defs[] = {
     { ITEM_IRON_ARMOR,    PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 4u, 0u, 0u, 0u, 5u, 0u, 0u, "鉄よろい" },
     { ITEM_CHARM,         PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 1u, 1u, 0u, 0u, PARTY_ELEM_LIGHT, PARTY_STATUS_SLEEP, "おまもり" },
     { ITEM_FEATHER,       PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 2u, 0u, 0u, 0u, "はね飾り" },
-    { ITEM_DEBUG_NO_ENCOUNT, PARTY_EQUIP_SLOT_ACC,  PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, "退魔のすず" }
+    { ITEM_DEBUG_NO_ENCOUNT, PARTY_EQUIP_SLOT_ACC,  PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, "退魔のすず" },
+    { ITEM_DEBUG_ESCAPE, PARTY_EQUIP_SLOT_ACC,  PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, "にげあしリング" }
 };
 #define PARTY_EQUIPMENT_DEF_COUNT ((UINT8)(sizeof(party_equipment_defs) / sizeof(party_equipment_defs[0])))
 
@@ -206,7 +207,7 @@ void party_init_roster_defaults(void) BANKED {
 
     party_roster[PARTY_MEMBER_HERO].weapon_id = ITEM_IRON_SWORD;
     party_roster[PARTY_MEMBER_HERO].armor_id = ITEM_LEATHER_ARMOR;
-    party_roster[PARTY_MEMBER_HERO].accessory_id = ITEM_FEATHER;
+    party_roster[PARTY_MEMBER_HERO].accessory_id = ITEM_DEBUG_ESCAPE;
     party_roster[PARTY_MEMBER_HERO].weapon_type = PARTY_WEAPON_SWORD;
 
     party_roster[PARTY_MEMBER_PRIEST].weapon_id = ITEM_OAK_STAFF;
@@ -371,6 +372,19 @@ UINT8 party_debug_no_encounter_accessory_equipped(void) BANKED {
     for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
         member = party_get_active_member(i);
         if (member != 0 && member->accessory_id == ITEM_DEBUG_NO_ENCOUNT) {
+            return 1u;
+        }
+    }
+    return 0u;
+}
+
+UINT8 party_debug_escape_accessory_equipped(void) BANKED {
+    UINT8 i;
+    PartyMemberRuntime *member;
+
+    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
+        member = party_get_active_member(i);
+        if (member != 0 && member->accessory_id == ITEM_DEBUG_ESCAPE) {
             return 1u;
         }
     }
@@ -1342,5 +1356,58 @@ void party_menu_show_equip_loop(void) BANKED {
         if (redraw_page != 0u) {
             party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, item_choices, item_count, message);
         }
+    }
+}
+
+void party_save_copy_to(PartySaveState *dst) BANKED {
+    UINT8 i;
+    PartyMemberRuntime *member;
+
+    if (dst == 0) return;
+
+    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
+        member = party_get_active_member(i);
+        if (member == 0) {
+            dst->active[i].max_hp = 0u;
+            dst->active[i].hp = 0u;
+            dst->active[i].max_mp = 0u;
+            dst->active[i].mp = 0u;
+            dst->active[i].attack = 0u;
+            dst->active[i].defense = 0u;
+            dst->active[i].skill_power = 0u;
+            dst->active[i].heal_power = 0u;
+            dst->active[i].agility = 0u;
+        } else {
+            dst->active[i].max_hp = member->max_hp;
+            dst->active[i].hp = member->hp;
+            dst->active[i].max_mp = member->max_mp;
+            dst->active[i].mp = member->mp;
+            dst->active[i].attack = member->attack;
+            dst->active[i].defense = member->defense;
+            dst->active[i].skill_power = member->skill_power;
+            dst->active[i].heal_power = member->heal_power;
+            dst->active[i].agility = member->agility;
+        }
+    }
+}
+
+void party_save_copy_from(const PartySaveState *src) BANKED {
+    UINT8 i;
+    PartyMemberRuntime *member;
+
+    if (src == 0) return;
+
+    for (i = 0u; i < PARTY_ACTIVE_COUNT; i++) {
+        member = party_get_active_member(i);
+        if (member == 0) continue;
+        member->max_hp = src->active[i].max_hp;
+        member->hp = src->active[i].hp;
+        member->max_mp = src->active[i].max_mp;
+        member->mp = src->active[i].mp;
+        member->attack = src->active[i].attack;
+        member->defense = src->active[i].defense;
+        member->skill_power = src->active[i].skill_power;
+        member->heal_power = src->active[i].heal_power;
+        member->agility = src->active[i].agility;
     }
 }

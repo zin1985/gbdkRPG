@@ -15,6 +15,12 @@ UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED {
         if (tx == 8u && ty == 8u) return MAP_EVENT_HEAL_SPRING;
     } else if (area == AREA_TOWN) {
         if (tx == 2u && ty == 14u) return MAP_EVENT_FIELD_EXIT;
+        if (tx == 4u && ty == 5u) return MAP_EVENT_SHOP_INN;
+        if (tx == 8u && ty == 5u) return MAP_EVENT_SHOP_ITEM;
+        if (tx == 14u && ty == 5u) return MAP_EVENT_SHOP_EQUIP;
+        if (tx == 8u && ty == 8u) return MAP_EVENT_SAVE_POINT;
+        if (tx == 5u && ty == 8u) return MAP_EVENT_POT;
+        if (tx == 11u && ty == 8u) return MAP_EVENT_CHEST;
     } else if (area == AREA_PORT) {
         if (tx == 2u && ty == 14u) return MAP_EVENT_PORT_EXIT;
     } else if (area == AREA_DUNGEON) {
@@ -37,5 +43,7 @@ UINT8 field_feature_encounter_rate(UINT8 area, UINT8 field_rate) BANKED {
 }
 
 UINT8 field_feature_chest_flag(UINT8 area) BANKED {
-    return (area == AREA_RUINS) ? FLAG_RUINS_CHEST : FLAG_DUNGEON_CHEST;
+    if (area == AREA_RUINS) return FLAG_RUINS_CHEST;
+    if (area == AREA_TOWN) return FLAG_TOWN_CHEST;
+    return FLAG_DUNGEON_CHEST;
 }

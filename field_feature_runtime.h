@@ -15,6 +15,11 @@
 #define MAP_EVENT_CHEST 9u
 #define MAP_EVENT_RUIN_LORE 10u
 #define MAP_EVENT_HEAL_SPRING 11u
+#define MAP_EVENT_SHOP_INN 12u
+#define MAP_EVENT_SHOP_ITEM 13u
+#define MAP_EVENT_SHOP_EQUIP 14u
+#define MAP_EVENT_SAVE_POINT 15u
+#define MAP_EVENT_POT 16u
 
 #define AREA_FIELD 0u
 #define AREA_TOWN 1u
@@ -24,6 +29,8 @@
 
 #define FLAG_DUNGEON_CHEST 20u
 #define FLAG_RUINS_CHEST 21u
+#define FLAG_TOWN_CHEST 22u
+#define FLAG_TOWN_POT 23u
 
 UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED;
 UINT8 field_feature_encounter_rate(UINT8 area, UINT8 field_rate) BANKED;

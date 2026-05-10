@@ -8,6 +8,7 @@
 
 
 static UINT8 g_inventory_counts[INVENTORY_ITEM_MAX];
+static UINT16 g_inventory_money;
 
 void inventory_clear(void) BANKED {
     UINT8 i;
@@ -15,6 +16,7 @@ void inventory_clear(void) BANKED {
     for (i = 0u; i < INVENTORY_ITEM_MAX; i++) {
         g_inventory_counts[i] = 0u;
     }
+    g_inventory_money = 0u;
 }
 
 void inventory_seed_defaults(void) BANKED {
@@ -29,6 +31,30 @@ void inventory_seed_defaults(void) BANKED {
     inventory_add(ITEM_CLOTH_ARMOR, 1u);
     inventory_add(ITEM_CHARM, 1u);
     inventory_add(ITEM_DEBUG_NO_ENCOUNT, 1u);
+    inventory_add(ITEM_DEBUG_ESCAPE, 1u);
+    g_inventory_money = 120u;
+}
+
+UINT16 inventory_get_money(void) BANKED {
+    return g_inventory_money;
+}
+
+void inventory_add_money(UINT16 amount) BANKED {
+    if ((UINT16)(9999u - g_inventory_money) < amount) {
+        g_inventory_money = 9999u;
+    } else {
+        g_inventory_money = (UINT16)(g_inventory_money + amount);
+    }
+}
+
+void inventory_set_money(UINT16 amount) BANKED {
+    g_inventory_money = (amount > 9999u) ? 9999u : amount;
+}
+
+UINT8 inventory_spend_money(UINT16 amount) BANKED {
+    if (g_inventory_money < amount) return 0u;
+    g_inventory_money = (UINT16)(g_inventory_money - amount);
+    return 1u;
 }
 
 UINT8 inventory_get_count(UINT8 item_id) BANKED {
@@ -112,6 +138,7 @@ static const char *inventory_item_name(UINT8 item_id) BANKED {
         case ITEM_CHARM: return "おまもり";
         case ITEM_FEATHER: return "はね飾り";
         case ITEM_DEBUG_NO_ENCOUNT: return "退魔のすず";
+        case ITEM_DEBUG_ESCAPE: return "にげあしリング";
         default: return "?";
     }
 }

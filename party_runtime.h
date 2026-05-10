@@ -17,6 +17,23 @@
 #define PARTY_OP_HEAL_ACTIVE    3u
 #define PARTY_OP_NOTE_ATTACK     4u
 
+
+typedef struct PartySaveMember {
+    UINT16 max_hp;
+    UINT16 hp;
+    UINT16 max_mp;
+    UINT16 mp;
+    UINT8 attack;
+    UINT8 defense;
+    UINT8 skill_power;
+    UINT8 heal_power;
+    UINT8 agility;
+} PartySaveMember;
+
+typedef struct PartySaveState {
+    PartySaveMember active[PARTY_ACTIVE_COUNT];
+} PartySaveState;
+
 typedef struct PartyBattleFighter {
     const char *name;
     UINT16 max_hp;
@@ -64,5 +81,8 @@ void party_menu_show_status_loop(void) BANKED;
 void party_menu_show_equip_loop(void) BANKED;
 UINT8 party_use_field_item_on_active(UINT8 item_id, UINT8 active_slot) BANKED;
 UINT8 party_debug_no_encounter_accessory_equipped(void) BANKED;
+UINT8 party_debug_escape_accessory_equipped(void) BANKED;
+void party_save_copy_to(PartySaveState *dst) BANKED;
+void party_save_copy_from(const PartySaveState *src) BANKED;
 
 #endif

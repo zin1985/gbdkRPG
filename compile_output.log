@@ -21,6 +21,10 @@ inventory.c:
 party_runtime.c:
 actor_runtime.c:
 menu_runtime.c:
+shop_runtime.c:
+save_runtime.c:
+save_bridge_runtime.c:
+revive_runtime.c:
 battle_skill_runtime.c:
 battle_growth_runtime.c:
 field_overlay_runtime.c:

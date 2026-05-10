@@ -81,10 +81,10 @@ static const uint8_t sunset_bass_seq[SUNSET_FIELD_LEN] = {
 };
 
 
-static uint16_t sunset_pos = 0u;
-static uint8_t sunset_tick = 0u;
-static uint8_t sunset_playing = 0u;
-static uint8_t sunset_ch3_loaded = 0u;
+static uint16_t sunset_pos;
+static uint8_t sunset_tick;
+static uint8_t sunset_playing;
+static uint8_t sunset_ch3_loaded;
 
 static void load_sunset_wave(void) {
     static const uint8_t wave_data[16] = {

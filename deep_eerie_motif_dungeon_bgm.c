@@ -68,11 +68,11 @@ static const uint8_t deep_dungeon_bass_seq[DEEP_EERIE_DUNGEON_LEN] = {
 };
 
 
-static uint16_t deep_pos = 0u;
-static uint8_t deep_tick = 0u;
-static uint8_t deep_playing = 0u;
-static uint8_t deep_ch3_loaded = 0u;
-static uint8_t last_lead_note = 255u;
+static uint16_t deep_pos;
+static uint8_t deep_tick;
+static uint8_t deep_playing;
+static uint8_t deep_ch3_loaded;
+static uint8_t last_lead_note;
 
 static void load_deep_wave(void) {
     static const uint8_t wave_data[16] = {

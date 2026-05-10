@@ -30,6 +30,9 @@
 #define ROM_BANK_FUTURE_AUDIO         14u
 #define ROM_BANK_FUTURE_SAVE_COMPAT   15u
 
+/* rpg164 concrete split: move quest runtime out of overfull bank 7. */
+#define ROM_BANK_QUEST_RUNTIME_CONCRETE 10u
+
 /* rpg144 concrete audio usage aliases */
 #define ROM_BANK_AUDIO_DEEP_DUNGEON_CONCRETE 11u
 #define ROM_BANK_AUDIO_TOWN_CONCRETE       12u

@@ -137,17 +137,19 @@ void actor_runtime_apply_area_npcs(UINT8 area) BANKED {
     actor_runtime_setup_enemy_template();
 
     if (area == AREA_TOWN) {
-        actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 3u, 2u, 1u, MSG_COMMON_NPC);
-        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 10u, 8u, 0u, MSG_TEST_SHORT);
+        /* rpg162: three wall-side shopkeepers.  All NPCs are solid. */
+        actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 4u, 5u, 1u, MSG_COMMON_NPC);
+        actor_runtime_setup_npc(&actors[1], ENEMY0_SPRITE_BASE_RT, 8u, 5u, 1u, MSG_COMMON_NPC);
+        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 14u, 5u, 1u, MSG_COMMON_NPC);
     } else if (area == AREA_PORT) {
         actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 3u, 12u, 1u, MSG_COMMON_NPC);
-        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 12u, 5u, 0u, MSG_TEST_SHORT);
+        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 12u, 5u, 1u, MSG_TEST_SHORT);
     } else if (area == AREA_DUNGEON) {
         actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 4u, 5u, 1u, MSG_DUNGEON_NPC_GUIDE);
-        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 10u, 11u, 0u, MSG_DUNGEON_NPC_WOUNDED);
+        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 10u, 11u, 1u, MSG_DUNGEON_NPC_WOUNDED);
     } else if (area == AREA_RUINS) {
         actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 2u, 4u, 1u, MSG_RUINS_NPC_SCHOLAR);
-        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 10u, 12u, 0u, MSG_RUINS_NPC_SPIRIT);
+        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 10u, 12u, 1u, MSG_RUINS_NPC_SPIRIT);
     } else {
         actor_runtime_hide_npc(&actors[0], NPC0_SPRITE_BASE_RT);
         actor_runtime_hide_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT);

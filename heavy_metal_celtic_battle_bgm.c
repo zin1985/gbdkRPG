@@ -85,10 +85,10 @@ static const uint8_t metal_bass_seq[METAL_CELTIC_BATTLE_LEN] = {
 };
 
 
-static uint16_t metal_pos = 0u;
-static uint8_t metal_tick = 0u;
-static uint8_t metal_playing = 0u;
-static uint8_t metal_ch3_loaded = 0u;
+static uint16_t metal_pos;
+static uint8_t metal_tick;
+static uint8_t metal_playing;
+static uint8_t metal_ch3_loaded;
 
 static void load_metal_wave(void) {
     static const uint8_t wave_data[16] = {

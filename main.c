@@ -18,6 +18,10 @@
 #include "battle_skill_runtime.h"
 #include "battle_growth_runtime.h"
 #include "field_overlay_runtime.h"
+#include "shop_runtime.h"
+#include "save_runtime.h"
+#include "save_bridge_runtime.h"
+#include "revive_runtime.h"
 
 /*
  * ============================================================================
@@ -505,18 +509,19 @@ static BattleState battle_state;
 static UINT8 menu_index;
 static UINT8 rand_seed;
 static UINT8 encounter_grace_steps;
-static UINT8 event_flags[EVENT_FLAG_COUNT];
+UINT8 event_flags[EVENT_FLAG_COUNT];
 UINT8 last_growth_type;
 GrowthResult last_growth;
 UINT8 battle_enemy_rank;
 static PlayerSkillSet player_skills;
+static SaveSnapshot save_snapshot_work;
 /* Japanese UTF-8 battle messages can exceed 48 bytes.
  * Keeping this too small can corrupt nearby globals such as current_enemy_index,
  * which made the NPC disappear after defeating the enemy.
  */
 static UINT8 prev_keys;
 static UINT8 current_enemy_index;
-static UINT8 current_area;
+UINT8 current_area;
 static UINT8 camera_tx;
 static UINT8 camera_ty;
 static UINT8 camera_px;
@@ -538,8 +543,8 @@ static UINT8 battle_screen_ready;
 static UINT8 battle_party_turn_slot;
 static UINT8 battle_selected_skill;
 static UINT8 battle_guard_flags;
-static UINT16 map_idle_frames;
-static UINT8 map_overlay_visible;
+UINT16 map_idle_frames;
+UINT8 map_overlay_visible;
 #define enemy_battle (enemy_battles[battle_target_index])
 UINT16 player_max_hp_stat;
 UINT16 player_max_mp_stat;
@@ -548,28 +553,27 @@ UINT8 player_defense_stat;
 UINT8 player_skill_power_stat;
 UINT8 player_heal_power_stat;
 UINT8 player_agility_stat;
-static UINT8 player_tx;
-static UINT8 player_ty;
-static UINT8 spawn_player_tx;
-static UINT8 spawn_player_ty;
-static UINT8 player_px;
-static UINT8 player_py;
-static UINT8 player_target_tx;
-static UINT8 player_target_ty;
-static UINT8 player_target_px;
-static UINT8 player_target_py;
-static Direction player_dir;
+UINT8 player_tx;
+UINT8 player_ty;
+UINT8 spawn_player_tx;
+UINT8 spawn_player_ty;
+UINT8 player_px;
+UINT8 player_py;
+UINT8 player_target_tx;
+UINT8 player_target_ty;
+UINT8 player_target_px;
+UINT8 player_target_py;
+UINT8 player_dir;
 static UINT8 walk_frame;
-static UINT8 player_moving;
+UINT8 player_moving;
 static INT8 player_vx;
 static INT8 player_vy;
-static UINT8 move_pixels_remaining;
+UINT8 move_pixels_remaining;
 static UINT8 walk_anim_counter;
 
 UINT8 random_u8(void);
 static void init_event_flags(void);
 static void set_event_flag(UINT8 id);
-static void clear_event_flag(UINT8 id);
 static UINT8 check_event_flag(UINT8 id);
 static UINT8 actor_px(UINT8 tx);
 static UINT8 actor_py(UINT8 ty);
@@ -581,12 +585,12 @@ static UINT8 camera_tile_from_px(UINT8 px);
 static UINT8 step_toward_u8(UINT8 current, UINT8 target, UINT8 step);
 static void update_camera_target_for_player(void);
 static void apply_camera_scroll(void);
-static void snap_camera_to_player(void);
+void snap_camera_to_player(void);
 static UINT8 update_camera_for_player(void);
-static UINT8 wait_choice_ab(void);
 static void revive_enemy_actor(void);
 static void prompt_enemy_revive_choice(void);
 static void open_main_menu(void);
+static void open_save_point_menu(void);
 static void u16_to_dec3(UINT16 value, char *out);
 static void put_u16(UINT8 col, UINT8 row, UINT16 value);
 static void draw_object_map(void);
@@ -777,13 +781,15 @@ static void set_event_flag(UINT8 id) {
     if (id < EVENT_FLAG_COUNT) event_flags[id] = 1u;
 }
 
-static void clear_event_flag(UINT8 id) {
-    if (id < EVENT_FLAG_COUNT) event_flags[id] = 0u;
-}
-
 static UINT8 check_event_flag(UINT8 id) {
     if (id < EVENT_FLAG_COUNT) return event_flags[id];
     return 0u;
+}
+
+static void open_save_point_menu(void) {
+    save_bridge_build_snapshot(&save_snapshot_work);
+    save_runtime_save_select(&save_snapshot_work);
+    restore_field_vram_state();
 }
 static UINT8 actor_px(UINT8 tx) { return (UINT8)(tx * TILE16_PX); }
 static UINT8 actor_py(UINT8 ty) { return (UINT8)(ty * TILE16_PX); }
@@ -838,7 +844,7 @@ static void apply_camera_scroll(void) {
     move_bkg(camera_px, camera_py);
 }
 
-static void snap_camera_to_player(void) {
+void snap_camera_to_player(void) {
     update_camera_target_for_player();
     camera_px = camera_target_px;
     camera_py = camera_target_py;
@@ -866,24 +872,13 @@ static UINT8 update_camera_for_player(void) {
     return (UINT8)((old_px != camera_px) || (old_py != camera_py));
 }
 
-static UINT8 wait_choice_ab(void) {
-    UINT8 keys;
-    audio_waitpadup();
-    while (1) {
-        keys = joypad();
-        if (keys & J_A) { audio_waitpadup(); return 1u; }
-        if (keys & J_B) { audio_waitpadup(); return 0u; }
-        audio_wait_vbl();
-    }
-}
-
 static void revive_enemy_actor(void) {
     actors[ENEMY_ACTOR_INDEX].active = 1u;
     actors[ENEMY_ACTOR_INDEX].solid = 1u;
     actors[ENEMY_ACTOR_INDEX].stats.hp = actors[ENEMY_ACTOR_INDEX].stats.max_hp;
     actors[ENEMY_ACTOR_INDEX].dir = DIR_DOWN;
     actors[ENEMY_ACTOR_INDEX].walk_frame = 0u;
-    clear_event_flag(FLAG_ENEMY_DEFEATED);
+    event_flags[FLAG_ENEMY_DEFEATED] = 0u;
 }
 
 static void prompt_enemy_revive_choice(void) {
@@ -893,7 +888,7 @@ static void prompt_enemy_revive_choice(void) {
     }
 
     dialogue_message_nowait_window(message_get_buffered(MSG_PROMPT_REVIVE));
-    if (wait_choice_ab()) {
+    if (revive_runtime_wait_choice_ab()) {
         dialogue_hide();
         revive_enemy_actor();
         draw_all_actors();
@@ -1046,6 +1041,16 @@ static void draw_object_map(void) {
                 bl = MAP_TILE_TOWN_BL;
                 br = MAP_TILE_TOWN_BR;
             } else if (kind == 4u) {
+                tl = MAP_TILE_CHEST_TL;
+                tr = MAP_TILE_CHEST_TR;
+                bl = MAP_TILE_CHEST_BL;
+                br = MAP_TILE_CHEST_BR;
+            } else if (kind == 6u) {
+                tl = MAP_TILE_DUNGEON_PIT_TL;
+                tr = MAP_TILE_DUNGEON_PIT_TR;
+                bl = MAP_TILE_DUNGEON_PIT_BL;
+                br = MAP_TILE_DUNGEON_PIT_BR;
+            } else if (kind == 7u) {
                 tl = MAP_TILE_CHEST_TL;
                 tr = MAP_TILE_CHEST_TR;
                 bl = MAP_TILE_CHEST_BL;
@@ -1508,6 +1513,10 @@ static void inspect_map_event(UINT8 event_id) {
         message_show(MSG_RUIN_LORE);
     } else if (event_id == MAP_EVENT_HEAL_SPRING) {
         activate_heal_spring();
+    } else if (event_id == MAP_EVENT_SAVE_POINT) {
+        open_save_point_menu();
+    } else if (shop_runtime_handle_event(event_id)) {
+        restore_field_vram_state();
     }
 }
 
@@ -1525,6 +1534,11 @@ static void try_interact(void) {
     if (index >= 0) {
         actors[(UINT8)index].dir = opposite_dir(player_dir);
         draw_all_actors();
+        event_id = map_event_at_tile(actors[(UINT8)index].tx, actors[(UINT8)index].ty);
+        if (event_id != MAP_EVENT_NONE) {
+            inspect_map_event(event_id);
+            return;
+        }
         if (current_area_is_town_like() && check_event_flag(FLAG_ENEMY_DEFEATED)) {
             message_show(MSG_ENEMY_DEFEATED_REVIVE);
             prompt_enemy_revive_choice();
@@ -2006,30 +2020,18 @@ static void draw_battle_menu(void) {
     battle_put_bkg_text(16u, 15u, "にげる");
 }
 
-static void battle_command_cursor_bg_pos(UINT8 index, UINT8 *col, UINT8 *row) {
-    switch (index) {
-        case CMD_ATTACK: *col = 10u; *row = 14u; break;
-        case CMD_SKILL:  *col = 15u; *row = 14u; break;
-        case CMD_DEFEND: *col = 10u; *row = 15u; break;
-        case CMD_RUN:    *col = 15u; *row = 15u; break;
-        default:         *col = 10u; *row = 14u; break;
-    }
-}
-
-static void battle_clear_command_cursor_bg(void) {
-    battle_put_bkg_text(10u, 14u, " ");
-    battle_put_bkg_text(15u, 14u, " ");
-    battle_put_bkg_text(10u, 15u, " ");
-    battle_put_bkg_text(15u, 15u, " ");
-}
-
 static void battle_move_command_cursor_obj(void) {
     UINT8 col;
     UINT8 row;
 
     battle_hide_command_cursor_obj();
-    battle_clear_command_cursor_bg();
-    battle_command_cursor_bg_pos(menu_index, &col, &row);
+    battle_put_bkg_text(10u, 14u, " ");
+    battle_put_bkg_text(15u, 14u, " ");
+    battle_put_bkg_text(10u, 15u, " ");
+    battle_put_bkg_text(15u, 15u, " ");
+
+    col = (menu_index == CMD_SKILL || menu_index == CMD_RUN) ? 15u : 10u;
+    row = (menu_index == CMD_DEFEND || menu_index == CMD_RUN) ? 15u : 14u;
     battle_put_bkg_text(col, row, ">");
 }
 
@@ -2393,6 +2395,8 @@ static void battle_prepare_enemy_rank(void) {
 static void return_to_map_after_battle(UINT8 won) {
     game_mode = MODE_MAP;
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
+    /* rpg162: battle redraws BG; force the idle HP/MP overlay to be rebuilt later. */
+    map_overlay_visible = 0u;
 
     if (won) {
         battle_growth_apply();
@@ -2627,6 +2631,12 @@ static void player_run(void) {
     Fighter actor;
 
     battle_load_current_actor(&actor);
+
+    if (party_debug_escape_accessory_equipped()) {
+        battle_show_message(message_get_buffered(MSG_BATTLE_ESCAPE_OK));
+        battle_state = BSTATE_ESCAPE;
+        return;
+    }
 
     chance_i = (INT16)40 + (INT16)actor.agility - (INT16)enemy_battle.agility;
     if (chance_i < 5) chance = 5u;
@@ -2890,15 +2900,21 @@ static void init_game(void) {
 }
 
 void main(void) {
+    UINT8 title_result;
+
     BGP_REG = 0xE4u;
     OBP0_REG = 0xE4u;
     OBP1_REG = 0xE4u;
 
     audio_init();
     dialogue_init();
+    title_result = save_runtime_title_load(&save_snapshot_work);
     init_game();
+    if (title_result == SAVE_TITLE_CONTINUE) {
+        save_bridge_apply_snapshot(&save_snapshot_work);
+    }
     load_map_mode();
-    audio_play_music(AUDIO_TRACK_FIELD);
+    audio_play_music(current_area_music_track());
 
     while (1) {
         switch (game_mode) {
