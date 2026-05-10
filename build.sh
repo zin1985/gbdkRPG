@@ -3,7 +3,7 @@ set -eu
 
 export PATH="/opt/gbdk/bin:$PATH"
 
-OUT="rpg171_bgm_bss_bank0_init_trim.gb"
+OUT="rpg173_melodic_rock_battle_bgm_bank0_trim.gb"
 MAP="${OUT%.gb}.map"
 SRC="main.c audio.c sprites.c dialogue.c jpfont.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c party_runtime.c actor_runtime.c menu_runtime.c shop_runtime.c save_runtime.c save_bridge_runtime.c revive_runtime.c battle_skill_runtime.c battle_growth_runtime.c field_overlay_runtime.c field_feature_runtime.c heavy_metal_celtic_battle_bgm.c sunset_ruins_field_bgm.c sunset_strings_adventure_field_bgm.c peaceful_balanced_town_bgm.c deep_eerie_motif_dungeon_bgm.c"
 LOG="build.log"
@@ -26,10 +26,10 @@ else
     echo "" | tee -a "$LOG"
 fi
 
-echo "Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo16 -o ${OUT} ${SRC}" | tee -a "$LOG"
+echo "Command: lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x1B -Wl-yo16 -Wl-ya1 -o ${OUT} ${SRC}" | tee -a "$LOG"
 echo "" | tee -a "$LOG"
 
-if lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x19 -Wl-yo16 -o "$OUT" $SRC > "$COMPILE_LOG" 2>&1; then
+if lcc -msm83:gb -Wl-m -Wl-j -Wl-yt0x1B -Wl-yo16 -Wl-ya1 -o "$OUT" $SRC > "$COMPILE_LOG" 2>&1; then
     cat "$COMPILE_LOG" | tee -a "$LOG"
     echo "" | tee -a "$LOG"
     echo "[OK] Build finished: ${OUT}" | tee -a "$LOG"

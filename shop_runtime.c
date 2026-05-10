@@ -40,6 +40,16 @@ static const UINT8 equip_shop_prices[SHOP_ITEM_COUNT] = {
 };
 
 static void shop_clear(void) BANKED {
+    /* rpg172:
+     * Shop UI is a screen-fixed BG window.  Field camera uses move_bkg(), so
+     * reset the BG scroll before drawing the shop; otherwise the shop frame
+     * shifts depending on the current camera position.
+     */
+    HIDE_WIN;
+    SHOW_BKG;
+    HIDE_SPRITES;
+    move_bkg(0u, 0u);
+    DISPLAY_ON;
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
 }

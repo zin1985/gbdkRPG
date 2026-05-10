@@ -14,15 +14,13 @@
  * - TOWN    : peaceful_balanced_town_bgm             bank 12
  * - DUNGEON : deep_eerie_motif_dungeon_bgm       bank 11
  * - RUINS   : sunset_ruins_field_bgm             bank 14
- * - BATTLE  : heavy_metal_celtic_battle_bgm         bank 15
+ * - BATTLE  : melodic_rock strings finale via heavy_metal_celtic_battle_bgm API bank 15
  *
  * audio.c intentionally remains small: it only switches tracks and calls the
  * active BANKED player once per frame.
  */
 
 static UINT8 audio_current_track;
-static UINT8 audio_started;
-
 static void audio_stop_external_bgm_if_needed(void) {
     if (audio_current_track == AUDIO_TRACK_FIELD) {
         sunset_strings_adventure_field_bgm_stop();
@@ -44,7 +42,6 @@ void audio_init(void) {
     NR50_REG = 0x66u;
 
     audio_current_track = AUDIO_TRACK_NONE;
-    audio_started = 1u;
 }
 
 void audio_stop_music(void) {
@@ -58,7 +55,6 @@ void audio_stop_music(void) {
 }
 
 void audio_play_music(UINT8 track) {
-    if (!audio_started) audio_init();
     if (audio_current_track == track) return;
 
     audio_stop_external_bgm_if_needed();

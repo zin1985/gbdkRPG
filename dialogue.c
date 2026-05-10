@@ -49,12 +49,12 @@ static UINT8 dialogue_render_page(const char *text, const char **next_ptr) {
 
 void dialogue_init(void) {
     jp_init();
-    dialogue_active = 0u;
 }
 
 void dialogue_hide(void) {
     dialogue_active = 0u;
     jp_window_hide();
+    SHOW_SPRITES;
 }
 
 UINT8 dialogue_is_active(void) {
@@ -63,6 +63,7 @@ UINT8 dialogue_is_active(void) {
 
 void dialogue_message_nowait_window(const char *text) {
     const char *next_ptr;
+    HIDE_SPRITES;
     dialogue_active = 1u;
     dialogue_render_page(text, &next_ptr);
 }
@@ -70,6 +71,7 @@ void dialogue_message_nowait_window(const char *text) {
 void dialogue_message(const char *text) {
     const char *p = text;
     UINT8 done = 0u;
+    HIDE_SPRITES;
     dialogue_active = 1u;
 
     while (!done) {
