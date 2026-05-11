@@ -20,9 +20,9 @@ UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED {
          * triggers are the front/left/right counter blocks at y=3 so the
          * player can talk through the counter without stepping into the shop.
          */
-        if (ty == 3u && (tx == 3u || tx == 4u || tx == 5u)) return MAP_EVENT_SHOP_INN;
-        if (ty == 3u && (tx == 7u || tx == 8u || tx == 9u)) return MAP_EVENT_SHOP_ITEM;
-        if (ty == 3u && (tx == 11u || tx == 12u || tx == 13u)) return MAP_EVENT_SHOP_EQUIP;
+        if ((tx == 4u && ty == 2u) || (ty == 3u && (tx == 3u || tx == 4u || tx == 5u))) return MAP_EVENT_SHOP_INN;
+        if ((tx == 8u && ty == 2u) || (ty == 3u && (tx == 7u || tx == 8u || tx == 9u))) return MAP_EVENT_SHOP_ITEM;
+        if ((tx == 12u && ty == 2u) || (ty == 3u && (tx == 11u || tx == 12u || tx == 13u))) return MAP_EVENT_SHOP_EQUIP;
         if (tx == 8u && ty == 8u) return MAP_EVENT_SAVE_POINT;
         if (tx == 5u && ty == 8u) return MAP_EVENT_TOWN_VILLAGER;
         if (tx == 11u && ty == 8u) return MAP_EVENT_CHEST;

@@ -1027,3 +1027,36 @@ rpg188/rpg183系で `inventory.c` と `ui_icons.c` がともに Bank 8 を使用
 - `main.c`: 未変更
 - Bank 0増加なし
 
+
+
+## rpg199追記: Bank重なり・Overflowの事前チェック方針
+
+コンパイル前だけで最終的なBank重なり・Overflowを完全確定することはできない。  
+ただし、`#pragma bank` 配置、`bank_ids.h`、危険Bank使用、Cソースサイズ合計、前回mapを使った参考チェックは可能。
+
+追加ファイル:
+
+- `tools/prebank_static_check.py`
+- `docs/design/11_bank_precheck_policy.md`
+- `CHECK_rpg199_bank_precheck_handover.md`
+
+推奨手順:
+
+```bash
+python3 tools/prebank_static_check.py --strict
+./build.sh
+/opt/gbdk/bin/romusage rpgXXX.map -a -g -B
+/opt/gbdk/bin/romusage rpgXXX.map -q -E
+```
+
+以下が出た場合、GBファイルが生成されても失敗扱いにする。
+
+```text
+Write from one bank spans into the next
+Multiple write
+Possible overflow
+Overflow by
+Area _CODE_N extends past end of memory region
+```
+
+特にBank 8は過去に `0x20000` 起点のMultiple writeが出ているため、当面は新規配置先として避ける。

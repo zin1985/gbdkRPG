@@ -137,10 +137,14 @@ void actor_runtime_apply_area_npcs(UINT8 area) BANKED {
     actor_runtime_setup_enemy_template();
 
     if (area == AREA_TOWN) {
-        /* rpg162: three wall-side shopkeepers.  All NPCs are solid. */
-        actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 4u, 5u, 1u, MSG_COMMON_NPC);
-        actor_runtime_setup_npc(&actors[1], ENEMY0_SPRITE_BASE_RT, 8u, 5u, 1u, MSG_COMMON_NPC);
-        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 14u, 5u, 1u, MSG_COMMON_NPC);
+        /* rpg200: upper-row shop clerks use the normal villager/NPC sprite.
+         * They stand inside the shop blocks at y=2.  The event table also
+         * maps both the clerk tile and the front/side counter tiles to the
+         * matching shop, so talking through the counter still works.
+         */
+        actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 4u, 2u, 1u, MSG_COMMON_NPC);
+        actor_runtime_setup_npc(&actors[1], ENEMY0_SPRITE_BASE_RT, 8u, 2u, 1u, MSG_COMMON_NPC);
+        actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 12u, 2u, 1u, MSG_COMMON_NPC);
     } else if (area == AREA_PORT) {
         actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 3u, 12u, 1u, MSG_COMMON_NPC);
         actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 12u, 5u, 1u, MSG_TEST_SHORT);
