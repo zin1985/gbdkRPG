@@ -757,6 +757,11 @@ static void draw_object_map(void) {
                 tr = MAP_TILE_FOREST_TR;
                 bl = MAP_TILE_FOREST_BL;
                 br = MAP_TILE_FOREST_BR;
+            } else if (kind == 8u) {
+                tl = MAP_TILE_DUNGEON_WALL_TL;
+                tr = MAP_TILE_DUNGEON_WALL_TR;
+                bl = MAP_TILE_DUNGEON_WALL_BL;
+                br = MAP_TILE_DUNGEON_WALL_BR;
             } else {
                 tl = MAP_TILE_FLOOR;
                 tr = MAP_TILE_FLOOR;
@@ -789,6 +794,7 @@ static void draw_object_map(void) {
         map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
     } else if (current_area == AREA_TOWN) {
         map_load_town_sign_overlay_tiles(MAP_TILE_CHEST_TL, MAP_TILE_DUNGEON_PIT_TL);
+        map_load_town_inn_sign_overlay_tiles(MAP_TILE_DUNGEON_WALL_TL);
         map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
     }
     set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
