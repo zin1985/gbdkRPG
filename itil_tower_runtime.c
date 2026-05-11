@@ -41,6 +41,7 @@ static void itil_clear_ui(void) BANKED {
 static void itil_wait_a(void) BANKED {
     audio_waitpad(J_A | J_B | J_START);
     audio_waitpadup();
+    SHOW_SPRITES;
 }
 
 void itil_tower_start(void) BANKED {
@@ -68,7 +69,7 @@ void itil_tower_show_floor_banner(void) BANKED {
     char buf[4];
     itil_clear_ui();
     jp_draw_bkg_frame(3u, 6u, 14u, 5u);
-    jp_put_bkg_text(5u, 7u, "ITILの塔");
+    jp_put_bkg_text(5u, 7u, "アイティルの塔");
     itil_u8_to_dec3(itil_tower_get_floor(), buf);
     jp_put_bkg_text(7u, 9u, buf);
     jp_put_bkg_text(10u, 9u, "階");
@@ -114,7 +115,7 @@ UINT8 itil_tower_ask_question(void) BANKED {
     while (1) {
         itil_clear_ui();
         jp_draw_bkg_frame(0u, 0u, 20u, 18u);
-        jp_put_bkg_text(1u, 1u, "ITIL問題");
+        jp_put_bkg_text(1u, 1u, "アイティル問題");
         itil_quiz_draw(idx, cursor);
         jp_put_bkg_text(1u,16u, "上下 Aで回答");
 
@@ -155,9 +156,9 @@ UINT8 itil_tower_grant_reward(UINT8 random_value) BANKED {
 void itil_tower_show_reward(UINT8 item_id) BANKED {
     itil_clear_ui();
     jp_draw_bkg_frame(1u, 5u, 18u, 7u);
-    jp_put_bkg_text(4u, 6u, "ITILの塔 制覇");
-    if (item_id == ITEM_ITIL_SWORD) jp_put_bkg_text(3u, 8u, "ITILの剣を入手");
-    else if (item_id == ITEM_ITIL_ARMOR) jp_put_bkg_text(3u, 8u, "ITILの鎧を入手");
-    else jp_put_bkg_text(3u, 8u, "ITILの紋章を入手");
+    jp_put_bkg_text(4u, 6u, "アイティルの塔 制覇");
+    if (item_id == ITEM_ITIL_SWORD) jp_put_bkg_text(3u, 8u, "アイティルの剣を入手");
+    else if (item_id == ITEM_ITIL_ARMOR) jp_put_bkg_text(3u, 8u, "アイティルの鎧を入手");
+    else jp_put_bkg_text(3u, 8u, "アイティルの紋章を入手");
     itil_wait_a();
 }
