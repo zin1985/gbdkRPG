@@ -148,6 +148,9 @@ void actor_runtime_apply_area_npcs(UINT8 area) BANKED {
     } else if (area == AREA_PORT) {
         actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 3u, 12u, 1u, MSG_COMMON_NPC);
         actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 12u, 5u, 1u, MSG_TEST_SHORT);
+    } else if (area == AREA_TOWER) {
+        actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 8u, 8u, 1u, MSG_COMMON_NPC);
+        actor_runtime_hide_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT);
     } else if (area == AREA_DUNGEON) {
         actor_runtime_setup_npc(&actors[0], NPC0_SPRITE_BASE_RT, 4u, 5u, 1u, MSG_DUNGEON_NPC_GUIDE);
         actor_runtime_setup_npc(&actors[2], TEST_ACTOR_SPRITE_BASE_RT, 10u, 11u, 1u, MSG_DUNGEON_NPC_WOUNDED);

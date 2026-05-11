@@ -21,12 +21,16 @@
 #define MAP_EVENT_SAVE_POINT 15u
 #define MAP_EVENT_POT 16u
 #define MAP_EVENT_TOWN_VILLAGER 17u
+#define MAP_EVENT_ITIL_TOWER 18u
+#define MAP_EVENT_ITIL_TOWER_NEXT 19u
+#define MAP_EVENT_ITIL_TOWER_NPC 20u
 
 #define AREA_FIELD 0u
 #define AREA_TOWN 1u
 #define AREA_PORT 2u
 #define AREA_DUNGEON 3u
 #define AREA_RUINS 4u
+#define AREA_TOWER 5u
 
 #define FLAG_DUNGEON_CHEST 20u
 #define FLAG_RUINS_CHEST 21u
@@ -36,5 +40,10 @@
 UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED;
 UINT8 field_feature_encounter_rate(UINT8 area, UINT8 field_rate) BANKED;
 UINT8 field_feature_chest_flag(UINT8 area) BANKED;
+
+UINT8 field_feature_random_encounter_should_start_runtime(UINT8 area, UINT8 can_check, UINT8 tx, UINT8 ty, UINT8 *grace_steps, UINT8 *rand_seed_ptr, UINT8 field_rate) BANKED;
+
+UINT8 field_feature_music_track(UINT8 area) BANKED;
+void field_feature_activate_heal_spring_runtime(void) BANKED;
 
 #endif

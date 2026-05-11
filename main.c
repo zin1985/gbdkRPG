@@ -22,6 +22,8 @@
 #include "save_runtime.h"
 #include "save_bridge_runtime.h"
 #include "revive_runtime.h"
+#include "itil_tower_runtime.h"
+#include "map_event_runtime.h"
 
 BANKREF_EXTERN(sprite_data_bank)
 
@@ -349,8 +351,6 @@ static UINT8 actor_px(UINT8 tx);
 static UINT8 actor_py(UINT8 ty);
 static INT16 screen_x_from_world(UINT8 px);
 static INT16 screen_y_from_world(UINT8 py);
-static UINT8 camera_max_px_x(void);
-static UINT8 camera_max_px_y(void);
 static UINT8 camera_tile_from_px(UINT8 px);
 static UINT8 step_toward_u8(UINT8 current, UINT8 target, UINT8 step);
 static void update_camera_target_for_player(void);
@@ -360,7 +360,6 @@ static UINT8 update_camera_for_player(void);
 static void revive_enemy_actor(void);
 static void prompt_enemy_revive_choice(void);
 static void open_main_menu(void);
-static void open_save_point_menu(void);
 static void u16_to_dec3(UINT16 value, char *out);
 static void put_u16(UINT8 col, UINT8 row, UINT16 value);
 static void draw_object_map(void);
@@ -375,7 +374,6 @@ static UINT8 actor_visible_in_current_area(const Actor *actor);
 static void draw_all_actors(void);
 static void load_actor_sprite_data_safe(UINT8 tile_base, const unsigned char *tiles);
 static void init_map_sprites(void);
-static void reload_field_bg_tiles(void);
 static void restore_field_vram_state(void);
 static void load_map_mode(void);
 static UINT8 map16_is_blocked(UINT8 tx, UINT8 ty);
@@ -383,20 +381,18 @@ static UINT8 actor_at_tile(UINT8 tx, UINT8 ty, UINT8 *enemy_index);
 static Direction opposite_dir(Direction dir);
 static INT8 find_talkable_actor(void);
 #define map_event_at_tile(tx, ty) field_feature_map_event(current_area, (tx), (ty))
+#define CAMERA_MAX_PX_X ((UINT8)((MAP16_W * TILE16_PX > SCREEN_PX_W) ? (MAP16_W * TILE16_PX - SCREEN_PX_W) : 0u))
+#define CAMERA_MAX_PX_Y ((UINT8)((MAP16_H * TILE16_PX > SCREEN_PX_H) ? (MAP16_H * TILE16_PX - SCREEN_PX_H) : 0u))
 static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir);
-static void enter_town_marker(void);
-static void leave_town_marker(void);
-static void enter_port_marker(void);
-static void leave_port_marker(void);
-static void enter_dungeon_marker(void);
-static void leave_dungeon_marker(void);
-static void enter_ruins_marker(void);
-static void leave_ruins_marker(void);
-static UINT8 apply_map_event_transition(UINT8 event_id);
+void enter_town_marker(void);
+void leave_town_marker(void);
+void enter_port_marker(void);
+void leave_port_marker(void);
+void enter_dungeon_marker(void);
+void leave_dungeon_marker(void);
+void enter_ruins_marker(void);
+void leave_ruins_marker(void);
 static void check_step_event(void);
-static UINT8 current_area_is_dangerous(void);
-static UINT8 current_area_is_town_like(void);
-static UINT8 current_area_music_track(void);
 static void inspect_map_event(UINT8 event_id);
 static void try_interact(void);
 
@@ -408,8 +404,6 @@ static UINT16 calc_skill_damage(const Fighter *attacker, const Fighter *defender
 static UINT16 calc_heal_amount(const Fighter *actor, const SkillDef *skill);
 static const SkillDef *skill_get_def(UINT8 skill_id);
 UINT8 player_get_skill_slot(UINT8 slot);
-static void init_player_skills(void);
-static void player_use_skill(UINT8 skill_id);
 static void draw_battle_frame(void);
 static void battle_clear_bg_full(void);
 static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
@@ -417,8 +411,6 @@ static void draw_battle_enemy_names(void);
 static void draw_party_status_box(void);
 static void draw_battle_message_area(void);
 static void battle_prepare_first_command_ui(void);
-static void battle_reposition_party_icons_only(void);
-static void battle_reposition_enemy_sprites_only(void);
 static void hide_battle_enemy_sprites(void);
 static void battle_enter_render_once(void);
 static void battle_update_dirty(void);
@@ -433,17 +425,10 @@ static void battle_target_input(void);
 static void battle_flash_enemy_sprite(UINT8 enemy_index);
 static void battle_refresh_enemy_sprites_compact(UINT8 hide_first);
 
-static void battle_reposition_enemy_sprites_only(void) {
-    battle_refresh_enemy_sprites_compact(0u);
-}
 
 static void battle_reset_bg_origin(void);
 static void battle_hide_window_and_reset_scroll(void);
 static void hide_all_sprites_safe(void);
-static void load_battle_party_icon_sprite_data(void);
-static void show_battle_party_icons(void);
-static void show_battle_enemy_sprites(void);
-static void load_battle_enemy_sprite_data(void);
 static void battle_copy_enemy_from_data(UINT8 slot);
 static UINT8 battle_select_first_alive(void);
 static UINT8 battle_ensure_selected_alive(void);
@@ -451,22 +436,17 @@ static void draw_battle_menu(void);
 static void update_battle_menu_cursor(UINT8 old_index, UINT8 new_index);
 static void update_battle_status(void);
 static void init_battle_from_enemy(UINT8 enemy_index);
-static void enter_battle(UINT8 enemy_index);
 static UINT8 field_random_encounter_should_start(void);
 static void battle_start_effect(void);
 static void enter_battle_screen(void);
 static void init_random_battle_from_field(void);
-static void enter_random_battle(void);
 static void battle_prepare_enemy_rank(void);
 static void return_to_map_after_battle(UINT8 won);
 static void battle_load_current_actor(Fighter *out);
 static UINT8 battle_select_next_party_turn(void);
 static void battle_finish_party_action(void);
-static UINT8 battle_current_consume_mp(UINT16 cost);
 static void battle_heal_actor_slot(UINT8 target_slot, UINT16 amount);
 static void player_attack(void);
-static void player_skill(void);
-static void player_defend(void);
 static void player_run(void);
 static void battle_skill_input(void);
 static void battle_ally_target_input(void);
@@ -502,26 +482,13 @@ static UINT8 check_event_flag(UINT8 id) {
     return 0u;
 }
 
-static void open_save_point_menu(void) {
-    save_bridge_build_snapshot(&save_snapshot_work);
-    save_runtime_save_select(&save_snapshot_work);
-    restore_field_vram_state();
-}
 static UINT8 actor_px(UINT8 tx) { return (UINT8)(tx * TILE16_PX); }
 static UINT8 actor_py(UINT8 ty) { return (UINT8)(ty * TILE16_PX); }
 
 static INT16 screen_x_from_world(UINT8 px) { return (INT16)((INT16)px - (INT16)camera_px); }
 static INT16 screen_y_from_world(UINT8 py) { return (INT16)((INT16)py - (INT16)camera_py); }
 
-static UINT8 camera_max_px_x(void) {
-    return (UINT8)((MAP16_W * TILE16_PX > SCREEN_PX_W) ?
-                   (MAP16_W * TILE16_PX - SCREEN_PX_W) : 0u);
-}
 
-static UINT8 camera_max_px_y(void) {
-    return (UINT8)((MAP16_H * TILE16_PX > SCREEN_PX_H) ?
-                   (MAP16_H * TILE16_PX - SCREEN_PX_H) : 0u);
-}
 
 static UINT8 camera_tile_from_px(UINT8 px) { return (UINT8)(px / TILE16_PX); }
 
@@ -545,8 +512,8 @@ static void update_camera_target_for_player(void) {
     desired_x = (player_px > CAMERA_CENTER_X) ? (UINT8)(player_px - CAMERA_CENTER_X) : 0u;
     desired_y = (player_py > CAMERA_CENTER_Y) ? (UINT8)(player_py - CAMERA_CENTER_Y) : 0u;
 
-    if (desired_x > camera_max_px_x()) desired_x = camera_max_px_x();
-    if (desired_y > camera_max_px_y()) desired_y = camera_max_px_y();
+    if (desired_x > CAMERA_MAX_PX_X) desired_x = CAMERA_MAX_PX_X;
+    if (desired_y > CAMERA_MAX_PX_Y) desired_y = CAMERA_MAX_PX_Y;
 
     camera_target_px = desired_x;
     camera_target_py = desired_y;
@@ -653,7 +620,7 @@ static void open_main_menu(void) {
 
     hide_battle_enemy_sprites();
     restore_field_vram_state();
-    audio_play_music(current_area_music_track());
+    audio_play_music(field_feature_music_track(current_area));
 }
 
 static void draw_object_map(void) {
@@ -669,8 +636,11 @@ static void draw_object_map(void) {
     UINT8 tr;
     UINT8 bl;
     UINT8 br;
+    UINT8 area_dangerous;
     UINT16 bg_i;
     UINT16 top_left_i;
+
+    area_dangerous = (UINT8)(current_area == AREA_DUNGEON || current_area == AREA_RUINS || current_area == AREA_TOWER);
 
     
     for (y = 0u; y < BG_DRAW_H; y++) {
@@ -692,7 +662,7 @@ static void draw_object_map(void) {
             sy = (UINT8)(y * 2u);
 
             if (kind == 1u) {
-                if (current_area_is_dangerous()) {
+                if (area_dangerous) {
                     tl = MAP_TILE_DUNGEON_WALL_TL;
                     tr = MAP_TILE_DUNGEON_WALL_TR;
                     bl = MAP_TILE_DUNGEON_WALL_BL;
@@ -709,7 +679,7 @@ static void draw_object_map(void) {
                     tr = MAP_TILE_DUNGEON_PIT_TR;
                     bl = MAP_TILE_DUNGEON_PIT_BL;
                     br = MAP_TILE_DUNGEON_PIT_BR;
-                } else if (current_area_is_dangerous()) {
+                } else if (area_dangerous) {
                     tl = MAP_TILE_DUNGEON_PIT_TL;
                     tr = MAP_TILE_DUNGEON_PIT_TR;
                     bl = MAP_TILE_DUNGEON_PIT_BL;
@@ -726,7 +696,7 @@ static void draw_object_map(void) {
                     tr = MAP_TILE_DUNGEON_PIT_TR;
                     bl = MAP_TILE_DUNGEON_PIT_BL;
                     br = MAP_TILE_DUNGEON_PIT_BR;
-                } else if (current_area_is_dangerous()) {
+                } else if (area_dangerous) {
                     tl = MAP_TILE_DUNGEON_PIT_TL;
                     tr = MAP_TILE_DUNGEON_PIT_TR;
                     bl = MAP_TILE_DUNGEON_PIT_BL;
@@ -859,7 +829,7 @@ static UINT8 actor_visible_in_current_area(const Actor *actor) {
         return 0u;
     }
 
-    if (current_area_is_town_like() || current_area_is_dangerous()) {
+    if (current_area == AREA_TOWN || current_area == AREA_PORT || current_area == AREA_DUNGEON || current_area == AREA_RUINS || current_area == AREA_TOWER) {
         return (UINT8)(actor->kind == ACTOR_KIND_NPC);
     }
 
@@ -901,10 +871,6 @@ static void init_map_sprites(void) {
     draw_all_actors();
 }
 
-static void reload_field_bg_tiles(void) {
-    draw_object_map();
-    apply_camera_scroll();
-}
 
 static void restore_field_vram_state(void) {
     DISPLAY_OFF;
@@ -916,7 +882,8 @@ static void restore_field_vram_state(void) {
     hide_all_sprites_safe();
 
     
-    reload_field_bg_tiles();
+    draw_object_map();
+    apply_camera_scroll();
     jp_init();
     init_map_sprites();
 
@@ -996,21 +963,6 @@ static INT8 find_talkable_actor(void) {
     return -1;
 }
 
-static UINT8 current_area_is_dangerous(void) {
-    return (UINT8)(current_area == AREA_DUNGEON || current_area == AREA_RUINS);
-}
-
-static UINT8 current_area_is_town_like(void) {
-    return (UINT8)(current_area == AREA_TOWN || current_area == AREA_PORT);
-}
-
-static UINT8 current_area_music_track(void) {
-    if (current_area_is_town_like()) return AUDIO_TRACK_TOWN;
-    if (current_area == AREA_DUNGEON) return AUDIO_TRACK_DUNGEON;
-    if (current_area == AREA_RUINS) return AUDIO_TRACK_RUINS;
-    return AUDIO_TRACK_FIELD;
-}
-
 static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
     player_moving = 0u;
     move_pixels_remaining = 0u;
@@ -1047,109 +999,102 @@ static void change_area_marker(UINT8 before_msg, UINT8 area, UINT8 music, UINT8 
     draw_all_actors();
 }
 
-static void enter_town_marker(void) {
+void enter_town_marker(void) {
     change_area_marker(MSG_ENTER_TOWN, AREA_TOWN, AUDIO_TRACK_TOWN, 2u, 13u, DIR_DOWN, MSG_ARRIVE_TOWN);
 }
 
-static void leave_town_marker(void) {
+void leave_town_marker(void) {
     change_area_marker(MSG_BACK_FIELD, AREA_FIELD, AUDIO_TRACK_FIELD, 13u, 2u, DIR_RIGHT, MSG_LEFT_FIELD);
 }
 
-static void enter_port_marker(void) {
+void enter_port_marker(void) {
     change_area_marker(MSG_ENTER_PORT, AREA_PORT, AUDIO_TRACK_TOWN, 2u, 13u, DIR_DOWN, MSG_ARRIVE_PORT);
 }
 
-static void leave_port_marker(void) {
+void leave_port_marker(void) {
     change_area_marker(MSG_BACK_FIELD, AREA_FIELD, AUDIO_TRACK_FIELD, 13u, 14u, DIR_RIGHT, MSG_LEFT_FIELD);
 }
 
-static void enter_dungeon_marker(void) {
+void enter_dungeon_marker(void) {
     change_area_marker(MSG_ENTER_DUNGEON, AREA_DUNGEON, AUDIO_TRACK_DUNGEON, 2u, 13u, DIR_DOWN, MSG_ARRIVE_DUNGEON);
     quest_start(QUEST_LOST_KEY);
 }
 
-static void leave_dungeon_marker(void) {
+void leave_dungeon_marker(void) {
     change_area_marker(MSG_DUNGEON_EXIT, AREA_FIELD, AUDIO_TRACK_FIELD, 2u, 14u, DIR_RIGHT, MSG_NONE_LOCAL);
 }
 
-static void enter_ruins_marker(void) {
+void enter_ruins_marker(void) {
     change_area_marker(MSG_ENTER_RUINS, AREA_RUINS, AUDIO_TRACK_RUINS, 13u, 13u, DIR_UP, MSG_ARRIVE_RUINS);
     quest_advance(QUEST_LOST_KEY);
 }
 
-static void leave_ruins_marker(void) {
+void leave_ruins_marker(void) {
     change_area_marker(MSG_DUNGEON_EXIT, AREA_FIELD, AUDIO_TRACK_FIELD, 2u, 2u, DIR_RIGHT, MSG_NONE_LOCAL);
 }
 
-static UINT8 apply_map_event_transition(UINT8 event_id) {
-    if (event_id == MAP_EVENT_TOWN) {
-        enter_town_marker();
-        return 1u;
-    } else if (event_id == MAP_EVENT_PORT_TOWN) {
-        enter_port_marker();
-        return 1u;
-    } else if (event_id == MAP_EVENT_DUNGEON) {
-        enter_dungeon_marker();
-        return 1u;
-    } else if (event_id == MAP_EVENT_RUINS) {
-        enter_ruins_marker();
-        return 1u;
-    } else if (event_id == MAP_EVENT_FIELD_EXIT) {
-        leave_town_marker();
-        return 1u;
-    } else if (event_id == MAP_EVENT_PORT_EXIT) {
-        leave_port_marker();
-        return 1u;
-    } else if (event_id == MAP_EVENT_DUNGEON_EXIT) {
-        leave_dungeon_marker();
-        return 1u;
-    } else if (event_id == MAP_EVENT_RUINS_EXIT) {
-        leave_ruins_marker();
-        return 1u;
-    }
-    return 0u;
-}
-
-static UINT8 field_random_encounter_should_start(void) {
-    UINT8 roll;
-
-    if (current_area != AREA_FIELD && current_area != AREA_DUNGEON && current_area != AREA_RUINS) return 0u;
-    if (game_mode != MODE_MAP) return 0u;
-    if (dialogue_is_active()) return 0u;
-    if (player_moving) return 0u;
-
-    
-    if (map_event_at_tile(player_tx, player_ty) != MAP_EVENT_NONE) return 0u;
-
-    if (encounter_grace_steps > 0u) {
-        encounter_grace_steps--;
-        return 0u;
-    }
-
-    
-    rand_seed ^= DIV_REG;
-    roll = random_u8();
-
-    return (UINT8)(roll < field_feature_encounter_rate(current_area, RANDOM_ENCOUNTER_RATE));
-}
-
-static void activate_heal_spring(void) {
-    party_heal_all_active();
-    message_show(MSG_HEAL_SPRING);
+void enter_itil_tower_marker(void) {
+    itil_tower_start();
+    change_area_marker(MSG_NONE_LOCAL, AREA_TOWER, AUDIO_TRACK_DUNGEON, 2u, 13u, DIR_UP, MSG_NONE_LOCAL);
+    itil_tower_show_floor_banner();
+    draw_object_map();
+    apply_camera_scroll();
     draw_all_actors();
 }
+
+void leave_itil_tower_marker(void) {
+    change_area_marker(MSG_DUNGEON_EXIT, AREA_FIELD, AUDIO_TRACK_FIELD, 8u, 14u, DIR_DOWN, MSG_NONE_LOCAL);
+}
+
+void advance_itil_tower_marker(void) {
+    UINT8 reward;
+    if (!itil_tower_can_advance()) {
+        itil_tower_show_need_answer();
+        draw_object_map();
+        apply_camera_scroll();
+        draw_all_actors();
+        return;
+    }
+    if (itil_tower_get_floor() >= 100u) {
+        reward = itil_tower_grant_reward(random_u8());
+        itil_tower_show_reward(reward);
+        leave_itil_tower_marker();
+        return;
+    }
+    itil_tower_next_floor();
+    warp_player_to_tile(2u, 13u, DIR_UP);
+    itil_tower_show_floor_banner();
+    draw_object_map();
+    apply_camera_scroll();
+    draw_all_actors();
+}
+
+
+static UINT8 field_random_encounter_should_start(void) {
+    return field_feature_random_encounter_should_start_runtime(
+        current_area,
+        (UINT8)(game_mode == MODE_MAP && !dialogue_is_active() && !player_moving),
+        player_tx,
+        player_ty,
+        &encounter_grace_steps,
+        &rand_seed,
+        RANDOM_ENCOUNTER_RATE
+    );
+}
+
 
 static void check_step_event(void) {
     UINT8 event_id;
     event_id = map_event_at_tile(player_tx, player_ty);
-    if (apply_map_event_transition(event_id)) return;
+    if (map_event_runtime_apply_transition(event_id, current_area)) return;
     if (event_id == MAP_EVENT_HEAL_SPRING) {
-        activate_heal_spring();
+        field_feature_activate_heal_spring_runtime();
+        draw_all_actors();
         return;
     }
     if (event_id != MAP_EVENT_NONE) return;
 
-    if (current_area_is_dangerous() && current_object16_at(player_tx, player_ty) == 5u) {
+    if ((current_area == AREA_DUNGEON || current_area == AREA_RUINS || current_area == AREA_TOWER) && current_object16_at(player_tx, player_ty) == 5u) {
         party_damage_active(0u, 2u);
         message_show(MSG_TRAP_DAMAGE);
         draw_all_actors();
@@ -1157,12 +1102,15 @@ static void check_step_event(void) {
     }
 
     if (field_random_encounter_should_start()) {
-        enter_random_battle();
+        game_mode = MODE_BATTLE;
+        player_moving = 0u;
+        init_random_battle_from_field();
+        enter_battle_screen();
     }
 }
 
 static void inspect_map_event(UINT8 event_id) {
-    if (apply_map_event_transition(event_id)) {
+    if (map_event_runtime_apply_transition(event_id, current_area)) {
         return;
     } else if (event_id == MAP_EVENT_CHEST) {
         UINT8 flag_id;
@@ -1179,11 +1127,23 @@ static void inspect_map_event(UINT8 event_id) {
     } else if (event_id == MAP_EVENT_RUIN_LORE) {
         message_show(MSG_RUIN_LORE);
     } else if (event_id == MAP_EVENT_HEAL_SPRING) {
-        activate_heal_spring();
+        field_feature_activate_heal_spring_runtime();
+        draw_all_actors();
     } else if (event_id == MAP_EVENT_SAVE_POINT) {
-        open_save_point_menu();
+        save_bridge_build_snapshot(&save_snapshot_work);
+        save_runtime_save_select(&save_snapshot_work);
+        restore_field_vram_state();
     } else if (event_id == MAP_EVENT_TOWN_VILLAGER) {
         message_show(MSG_TOWN_VILLAGER);
+    } else if (event_id == MAP_EVENT_ITIL_TOWER_NPC) {
+        if (!itil_tower_ask_question()) {
+            itil_tower_show_wrong_exit();
+            leave_itil_tower_marker();
+        } else {
+            draw_object_map();
+            apply_camera_scroll();
+            draw_all_actors();
+        }
     } else if (shop_runtime_handle_event(event_id)) {
         restore_field_vram_state();
     }
@@ -1203,7 +1163,7 @@ static void try_interact(void) {
             inspect_map_event(event_id);
             return;
         }
-        if (current_area_is_town_like() && check_event_flag(FLAG_ENEMY_DEFEATED)) {
+        if ((current_area == AREA_TOWN || current_area == AREA_PORT) && check_event_flag(FLAG_ENEMY_DEFEATED)) {
             message_show(MSG_ENEMY_DEFEATED_REVIVE);
             prompt_enemy_revive_choice();
         } else {
@@ -1262,7 +1222,12 @@ static void start_move(Direction dir) {
     enemy_index = 0xFFu;
     if (map16_is_blocked(next_tx, next_ty)) { draw_all_actors(); return; }
     if (actor_at_tile(next_tx, next_ty, &enemy_index)) {
-        if (enemy_index != 0xFFu) enter_battle(enemy_index);
+        if (enemy_index != 0xFFu) {
+            game_mode = MODE_BATTLE;
+            player_moving = 0u;
+            init_battle_from_enemy(enemy_index);
+            enter_battle_screen();
+        }
         else draw_all_actors();
         return;
     }
@@ -1434,12 +1399,6 @@ UINT8 player_get_skill_slot(UINT8 slot) {
     return player_skills.slots[slot];
 }
 
-static void init_player_skills(void) {
-    player_skills.slots[0] = SKILL_POWER_STRIKE;
-    player_skills.slots[1] = SKILL_HEAL_SIMPLE;
-    player_skills.slots[2] = SKILL_FIRE;
-    player_skills.slots[3] = SKILL_GUARD_BREAK;
-}
 
 static void battle_clear_bg_full(void) {
     static UINT8 bg[BG_DRAW_W * BG_DRAW_H];
@@ -1555,10 +1514,6 @@ static void hide_all_sprites_safe(void) {
     }
 }
 
-static void load_battle_party_icon_sprite_data(void) {
-    
-    set_banked_sprite_data(BATTLE_PARTY_ICON_TILE_BASE, 12u, battle_party_display_tiles, BANK(sprite_data_bank));
-}
 
 static void show_party_icon_16(UINT8 sprite_base, UINT8 tile_base, UINT8 x, UINT8 y) {
     
@@ -1576,19 +1531,8 @@ static void battle_place_party_icons(void) {
     show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u), 136u, 16u);
 }
 
-static void show_battle_party_icons(void) {
-    load_battle_party_icon_sprite_data();
-    battle_place_party_icons();
-}
 
-static void battle_reposition_party_icons_only(void) {
-    battle_place_party_icons();
-}
 
-static void load_battle_enemy_sprite_data(void) {
-    
-    battle_enemy_bg_load_tiles_for_formation(battle_enemy_count, battle_enemy_sprite_kinds, battle_enemy_size_kinds);
-}
 
 static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
     UINT8 alive_flags[BATTLE_MAX_ENEMY_COUNT];
@@ -1606,9 +1550,6 @@ static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
     battle_enemy_bg_draw_all_sized(battle_enemy_count, battle_enemy_sprite_kinds, battle_enemy_size_kinds, alive_flags);
 }
 
-static void show_battle_enemy_sprites(void) {
-    battle_refresh_enemy_sprites_compact(1u);
-}
 
 static void battle_copy_enemy_from_data(UINT8 slot) {
     enemy_battles[slot].name = battle_enemy_data_slots[slot].name;
@@ -1793,13 +1734,13 @@ static void battle_update_dirty(void) {
 
     if (flags & (UINT8)(BATTLE_DIRTY_PARTY_HP | BATTLE_DIRTY_PARTY_MP)) {
         draw_party_status_box();
-        battle_reposition_party_icons_only();
+        battle_place_party_icons();
     }
     if (flags & BATTLE_DIRTY_ENEMY_OAM) {
         if (battle_message_text == 0 || battle_message_text[0] == '\0') {
             draw_battle_enemy_names();
         }
-        show_battle_enemy_sprites();
+        battle_refresh_enemy_sprites_compact(1u);
     }
     if (flags & BATTLE_DIRTY_MESSAGE) {
         draw_battle_message_area();
@@ -1825,8 +1766,8 @@ static void battle_prepare_first_command_ui(void) {
     battle_message_text = "";
     draw_battle_message_area();
 
-    battle_reposition_party_icons_only();
-    battle_reposition_enemy_sprites_only();
+    battle_place_party_icons();
+    battle_refresh_enemy_sprites_compact(0u);
     battle_move_command_cursor_obj();
 }
 
@@ -1856,14 +1797,14 @@ static void battle_enter_render_once(void) {
     battle_hide_window_and_reset_scroll();
     SPRITES_8x16;
     jp_init();
-    load_battle_enemy_sprite_data();
-    load_battle_party_icon_sprite_data();
+    battle_enemy_bg_load_tiles_for_formation(battle_enemy_count, battle_enemy_sprite_kinds, battle_enemy_size_kinds);
+    set_banked_sprite_data(BATTLE_PARTY_ICON_TILE_BASE, 12u, battle_party_display_tiles, BANK(sprite_data_bank));
     set_banked_sprite_data(BATTLE_CURSOR_TILE, 2u, battle_cursor_tiles, BANK(sprite_data_bank));
     set_sprite_tile(BATTLE_CURSOR_SPRITE, BATTLE_CURSOR_TILE);
 
     draw_battle_frame();
-    show_battle_party_icons();
-    show_battle_enemy_sprites();
+    battle_place_party_icons();
+    battle_refresh_enemy_sprites_compact(1u);
     battle_move_command_cursor_obj();
     battle_hide_window_and_reset_scroll();
 
@@ -1951,12 +1892,6 @@ static void enter_battle_screen(void) {
     battle_first_player_refresh_pending = 1u;
 }
 
-static void enter_battle(UINT8 enemy_index) {
-    game_mode = MODE_BATTLE;
-    player_moving = 0u;
-    init_battle_from_enemy(enemy_index);
-    enter_battle_screen();
-}
 
 static void init_random_battle_from_field(void) {
     UINT8 i;
@@ -1992,12 +1927,6 @@ static void init_random_battle_from_field(void) {
     battle_state = BSTATE_PLAYER;
 }
 
-static void enter_random_battle(void) {
-    game_mode = MODE_BATTLE;
-    player_moving = 0u;
-    init_random_battle_from_field();
-    enter_battle_screen();
-}
 
 static void battle_prepare_enemy_rank(void) {
     UINT8 i;
@@ -2041,7 +1970,7 @@ static void return_to_map_after_battle(UINT8 won) {
         }
     }
     restore_field_vram_state();
-    audio_play_music(current_area_music_track());
+    audio_play_music(field_feature_music_track(current_area));
 }
 
 static void battle_load_current_actor(Fighter *out) {
@@ -2123,21 +2052,8 @@ static void battle_finish_party_action(void) {
     }
 }
 
-static void battle_start_skill_select(void) {
-    battle_hide_command_cursor_obj();
-    battle_skill_runtime_start(battle_party_turn_slot);
-    battle_state = BSTATE_SKILL;
-}
 
-static void battle_start_ally_target_select(UINT8 skill_id) {
-    battle_hide_command_cursor_obj();
-    battle_skill_runtime_start_ally(skill_id);
-    battle_state = BSTATE_ALLY_TARGET;
-}
 
-static UINT8 battle_current_consume_mp(UINT16 cost) {
-    return (UINT8)party_battle_op(PARTY_OP_TRY_CONSUME_MP, battle_party_turn_slot, cost);
-}
 
 static void battle_heal_actor_slot(UINT8 target_slot, UINT16 amount) {
     UINT16 hp;
@@ -2200,7 +2116,7 @@ static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
             return;
         }
 
-        if (!battle_current_consume_mp((UINT16)skill->mp_cost)) {
+        if (!((UINT8)party_battle_op(PARTY_OP_TRY_CONSUME_MP, battle_party_turn_slot, (UINT16)skill->mp_cost))) {
             battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
             battle_state = BSTATE_PLAYER;
             update_battle_status();
@@ -2221,7 +2137,7 @@ static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
         return;
     }
 
-    if (!battle_current_consume_mp((UINT16)skill->mp_cost)) {
+    if (!((UINT8)party_battle_op(PARTY_OP_TRY_CONSUME_MP, battle_party_turn_slot, (UINT16)skill->mp_cost))) {
         battle_show_message(message_get_buffered(MSG_BATTLE_LOW_MP));
         battle_state = BSTATE_PLAYER;
         update_battle_status();
@@ -2239,13 +2155,7 @@ static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
     battle_finish_party_action();
 }
 
-static void player_use_skill(UINT8 skill_id) {
-    player_use_skill_on_target(skill_id, battle_party_turn_slot);
-}
 
-static void player_skill(void) {
-    player_use_skill(battle_selected_skill);
-}
 
 static void player_battle_item(void) {
     UINT8 result;
@@ -2269,11 +2179,6 @@ static void player_battle_item(void) {
     battle_finish_party_action();
 }
 
-static void player_defend(void) {
-    battle_guard_flags |= (UINT8)(1u << battle_party_turn_slot);
-    battle_show_message("ぼうぎょ!");
-    battle_finish_party_action();
-}
 
 static void player_run(void) {
     INT16 chance_i;
@@ -2414,10 +2319,14 @@ static void battle_input(void) {
                 battle_start_target_select(CMD_ATTACK);
                 break;
             case CMD_SKILL:
-                battle_start_skill_select();
+                battle_hide_command_cursor_obj();
+                battle_skill_runtime_start(battle_party_turn_slot);
+                battle_state = BSTATE_SKILL;
                 break;
             case CMD_DEFEND:
-                player_defend();
+                battle_guard_flags |= (UINT8)(1u << battle_party_turn_slot);
+                battle_show_message("ぼうぎょ!");
+                battle_finish_party_action();
                 break;
             case CMD_ITEM:
                 player_battle_item();
@@ -2449,7 +2358,9 @@ static void battle_skill_input(void) {
         battle_selected_skill = skill_id;
         battle_start_target_select(CMD_SKILL);
     } else if (ev == BATTLE_SKILL_EVENT_ALLY_SKILL) {
-        battle_start_ally_target_select(skill_id);
+        battle_hide_command_cursor_obj();
+        battle_skill_runtime_start_ally(skill_id);
+        battle_state = BSTATE_ALLY_TARGET;
     }
 }
 
@@ -2495,7 +2406,7 @@ static void battle_target_input(void) {
     } else if (keys & J_A) {
         audio_waitpadup();
         if (battle_pending_action == CMD_SKILL) {
-            player_skill();
+            player_use_skill_on_target(battle_selected_skill, battle_party_turn_slot);
         } else {
             player_attack();
         }
@@ -2544,7 +2455,10 @@ static void init_game(void) {
     player_skill_power_stat = 8u;
     player_heal_power_stat = 10u;
     player_agility_stat = 8u;
-    init_player_skills();
+    player_skills.slots[0] = SKILL_POWER_STRIKE;
+    player_skills.slots[1] = SKILL_HEAL_SIMPLE;
+    player_skills.slots[2] = SKILL_FIRE;
+    player_skills.slots[3] = SKILL_GUARD_BREAK;
     player_moving = 0u;
     player_vx = 0;
     player_vy = 0;
@@ -2573,7 +2487,7 @@ void main(void) {
         save_bridge_apply_snapshot(&save_snapshot_work);
     }
     load_map_mode();
-    audio_play_music(current_area_music_track());
+    audio_play_music(field_feature_music_track(current_area));
 
     while (1) {
         switch (game_mode) {

@@ -4,3 +4,4 @@ map_data_bank.c:
 font_data_bank.c:
 battle_data_bank.c:
 battle_text.c:29: warning 110: conditional flow changed by optimizer: so said EVELYN the modified DOG
+itil_quiz_bank.c:

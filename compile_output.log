@@ -26,6 +26,9 @@ shop_runtime.c:
 save_runtime.c:
 save_bridge_runtime.c:
 revive_runtime.c:
+itil_tower_runtime.c:
+itil_quiz_bank.c:
+map_event_runtime.c:
 battle_skill_runtime.c:
 battle_growth_runtime.c:
 field_overlay_runtime.c:

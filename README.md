@@ -1060,3 +1060,154 @@ Area _CODE_N extends past end of memory region
 ```
 
 特にBank 8は過去に `0x20000` 起点のMultiple writeが出ているため、当面は新規配置先として避ける。
+
+
+# rpg202_itil_tower_quiz
+
+## 追加内容
+- 100階ある「ITILの塔」を追加。
+- フィールド下部中央 `(8,14)` から塔へ入る。
+- 入場時に中央UIで `ITILの塔◯階` を表示。
+- 各階に3択ITIL問題NPCを配置。
+  - NPC位置: `(8,8)`
+  - 正解すると右出口へ進める。
+  - 不正解なら即退場。
+- 各階の右出口を実装。
+  - 右出口位置: `(14,2)`
+  - 100階未満: 次の階へ進む。
+  - 100階: ランダム報酬を獲得して退場。
+- ランダム報酬を追加。
+  - `ITILの剣`: 攻撃力 +100
+  - `ITILの鎧`: 防御力 +100
+  - `ITILの紋章`: とくぎ +100
+
+## 実装方針
+- Bank 0を大きく増やさないため、問題UI・階層状態・報酬付与は `itil_tower_runtime.c` に分離。
+- `itil_tower_runtime.c` は Bank 10。
+- 100問をベタ持ちせず、12問を階層ごとにローテーションする方式。
+- マップは既存ダンジョンマップを塔エリアでも流用し、専用大規模マップ配列は追加しない。
+- `MAP_GFX_TILE_COUNT` は増やしていない。
+
+## 追加/変更ファイル
+- `itil_tower_runtime.c`
+- `itil_tower_runtime.h`
+- `main.c`
+- `field_feature_runtime.c/h`
+- `map_data.h`
+- `map_data_runtime.c`
+- `map_data_bank.c`
+- `actor_runtime.c`
+- `inventory.h/c`
+- `party_runtime.c`
+- `ui_icons.c`
+- `save_bridge_runtime.c`
+- `build.sh`
+- `bank_ids.h`
+
+## 注意
+- この環境ではGBDK実ビルド未実行。
+- Bank 10にクイズ処理を追加したため、ビルド後は `romusage` でBank 10 overflowを確認すること。
+- Bank 8は引き続き新規配置先として使わない。
+
+## rpg203追記: ITILの塔 100問化
+
+- 既存の12問ローテーションを廃止。
+- 1階から100階まで、それぞれ別のITIL問題を出すように変更。
+- `itil_tower_runtime.c` を Bank 16 へ移動。
+- ROMバンク数を `-Wl-yo32` に拡張。
+- Bank 0 には問題文・選択肢を置かない。
+- 問題一覧は `docs/future/ITIL_TOWER_100_QUESTIONS.md` に格納。
+
+
+## rpg204追記: Bank0イベント遷移分離
+
+rpg202/rpg203系で `Possible overflow from Bank 0 into Bank 1` が出たため、`apply_map_event_transition()` の本体をBank 17の `map_event_runtime.c` へ分離。  
+`main.c` 側は薄いラッパーだけにし、Bank 0の容量を削減する。  
+ITILの塔100問化と `-Wl-yo32` は維持。
+
+
+## rpg205追記: Bank0ランダム遭遇判定分離
+
+rpg204でも `Possible overflow from Bank 0 into Bank 1` が残ったため、`field_random_encounter_should_start()` の本体ロジックを `field_feature_runtime.c` へ分離。  
+`main.c` 側は薄いラッパーにし、Bank 0を追加削減する。
+
+
+## rpg206追記: Bank0音楽トラック判定分離
+
+rpg205でも `Possible overflow from Bank 0 into Bank 1` が約0x30 bytes残ったため、
+`current_area_music_track()` を `field_feature_runtime.c` の `field_feature_music_track(area)` へ分離。
+Bank 0には音楽トラック判定本体を置かない。
+
+
+## rpg207追記: Bank0エリア判定関数削除
+
+rpg206でも `Possible overflow from Bank 0 into Bank 1` が約0x2A bytes残ったため、
+`current_area_is_dangerous()` と `current_area_is_town_like()` を削除。  
+`draw_object_map()` では `area_dangerous` を1回だけ計算して使い回す。
+
+
+## rpg208追記: Bank0小ラッパー削除
+
+rpg207でも `Possible overflow from Bank 0 into Bank 1` が約0x22 bytes残ったため、
+`battle_reposition_party_icons_only()` / `player_skill()` / `player_use_skill()` / `reload_field_bg_tiles()` を削除し、直接呼び出しへ置換。
+
+
+## rpg209追記: Bank0遷移ラッパー削除
+
+rpg208でも `Possible overflow from Bank 0 into Bank 1` が約0x16 bytes残ったため、
+`apply_map_event_transition()` の薄いラッパーを削除し、
+呼び出し元から `map_event_runtime_apply_transition(event_id, current_area)` を直接呼ぶように変更。
+
+
+## rpg210追記: Bank0単発ラッパー削除
+
+rpg209でも `Possible overflow from Bank 0 into Bank 1` が約0x1C bytes残ったため、
+`enter_random_battle()` と `open_save_point_menu()` を削除し、単発呼び出し元へ直接展開した。
+
+
+## rpg211追記: Bank0 enter_battle単発ラッパー削除
+
+rpg210でも `Possible overflow from Bank 0 into Bank 1` が約0x18 bytes残ったため、
+`enter_battle(enemy_index)` を削除し、呼び出し元へ直接展開した。
+
+
+## rpg213追記: ITIL問題文Bank18分離
+
+ITILの塔100問の問題文テーブルを `itil_tower_runtime.c` から分離し、`itil_quiz_bank.c` Bank18へ移動。  
+`itil_tower_runtime.c` はBank16で塔の状態管理とUI制御を担当し、問題文・選択肢・正解判定はBank18の `itil_quiz_draw()` / `itil_quiz_is_correct()` / `itil_quiz_count()` 経由で扱う。  
+なお、Bank0 overflowの直接原因は問題文ではなくmain.c側の処理肥大化のため、同時にbattle系の小ラッパーも削除。
+
+
+## rpg214追記: Bank0戦闘ロードラッパー削除
+
+rpg213でも `Possible overflow from Bank 0 into Bank 1` が約0x10 bytes残ったため、
+`show_battle_party_icons()` と `load_battle_enemy_sprite_data()` を削除し、呼び出し元へ直接展開した。
+ITIL問題文はすでにBank18に分離済みなので、今回のBank0 overflow原因ではない。
+
+
+## rpg215追記: Bank0回復泉処理分離
+
+rpg214でも `Possible overflow from Bank 0 into Bank 1` が約6bytes残ったため、
+`activate_heal_spring()` を削除し、回復処理本体を `field_feature_runtime.c` Bank5 の
+`field_feature_activate_heal_spring_runtime()` へ移動。  
+`draw_all_actors()` はmain.c側に残す。
+
+
+## rpg216追記: Bank0戦闘小ラッパー削除
+
+rpg215でも `Possible overflow from Bank 0 into Bank 1` が約10bytes残ったため、
+`battle_start_skill_select()` / `battle_start_ally_target_select()` / `player_defend()` /
+`battle_current_consume_mp()` を削除し、呼び出し元へ直接展開した。  
+あわせて `itil_quiz_bank.c` の到達不能分岐を削除。
+
+
+## rpg217追記: Bank0単発初期化ロード関数削除
+
+rpg216でも `Possible overflow from Bank 0 into Bank 1` が約0x0E bytes残ったため、
+`init_player_skills()` と `load_battle_party_icon_sprite_data()` を削除し、呼び出し元へ直接展開した。
+
+
+## rpg218追記: Bank0カメラ最大座標関数マクロ化
+
+rpg217でも `Possible overflow from Bank 0 into Bank 1` が約5bytes残ったため、
+`camera_max_px_x()` / `camera_max_px_y()` を削除し、`CAMERA_MAX_PX_X` / `CAMERA_MAX_PX_Y` マクロへ置換。

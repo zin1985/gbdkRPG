@@ -8,7 +8,7 @@
  * design reviews. Keep Bank 0 as a tiny non-banked dispatcher. Put bulky
  * runtime/data in banked modules.
  *
- * Current build is expanded to 16 ROM banks (-Wl-yo16) so future systems can
+ * Current build is expanded to 32 ROM banks (-Wl-yo32) so future systems can
  * be allocated without squeezing every new feature into bank 7.
  */
 
@@ -41,6 +41,11 @@
 
 /* rpg164 concrete split: move quest runtime out of overfull bank 7. */
 #define ROM_BANK_QUEST_RUNTIME_CONCRETE 10u
+
+/* rpg202 concrete split: ITIL tower quiz runtime. */
+#define ROM_BANK_ITIL_TOWER_CONCRETE 16u
+#define ROM_BANK_ITIL_QUIZ_DATA_CONCRETE 18u
+#define ROM_BANK_MAP_EVENT_RUNTIME_CONCRETE 17u
 
 /* rpg183 concrete split: move game_flags runtime out of overfull bank 7. */
 #define ROM_BANK_GAME_FLAGS_CONCRETE 10u

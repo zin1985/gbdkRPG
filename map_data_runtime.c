@@ -29,7 +29,7 @@ UINT8 map_data_collision16_at(UINT8 area, UINT8 tx, UINT8 ty) NONBANKED {
         value = town_collision16_map[ty][tx];
     } else if (area == MAP_DATA_AREA_PORT) {
         value = port_collision16_map[ty][tx];
-    } else if (area == MAP_DATA_AREA_DUNGEON) {
+    } else if (area == MAP_DATA_AREA_DUNGEON || area == MAP_DATA_AREA_TOWER) {
         value = dungeon_collision16_map[ty][tx];
     } else if (area == MAP_DATA_AREA_RUINS) {
         value = ruins_collision16_map[ty][tx];
@@ -56,7 +56,7 @@ UINT8 map_data_object16_at(UINT8 area, UINT8 tx, UINT8 ty) NONBANKED {
         value = town_object16_map[ty][tx];
     } else if (area == MAP_DATA_AREA_PORT) {
         value = port_object16_map[ty][tx];
-    } else if (area == MAP_DATA_AREA_DUNGEON) {
+    } else if (area == MAP_DATA_AREA_DUNGEON || area == MAP_DATA_AREA_TOWER) {
         value = dungeon_object16_map[ty][tx];
     } else if (area == MAP_DATA_AREA_RUINS) {
         value = ruins_object16_map[ty][tx];

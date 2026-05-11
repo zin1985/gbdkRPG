@@ -36,7 +36,7 @@ UINT8 ui_icon_tile(UINT8 icon_id) BANKED {
 
 UINT8 ui_icon_tile_for_item(UINT8 item_id) BANKED {
     if ((item_id >= ITEM_COPPER_SWORD && item_id <= ITEM_DRAGON_SWORD) ||
-        item_id == ITEM_WOOD_SWORD || item_id == ITEM_IRON_SWORD) {
+        item_id == ITEM_WOOD_SWORD || item_id == ITEM_IRON_SWORD || item_id == ITEM_ITIL_SWORD) {
         return ui_icon_tile(UI_ICON_SWORD);
     }
     if ((item_id >= ITEM_WILLOW_STAFF && item_id <= ITEM_SHADOW_STAFF) ||
@@ -55,11 +55,11 @@ UINT8 ui_icon_tile_for_item(UINT8 item_id) BANKED {
         return ui_icon_tile(UI_ICON_CLOTH);
     }
     if ((item_id >= ITEM_CHAIN_MAIL && item_id <= ITEM_DRAGON_ARMOR) ||
-        item_id == ITEM_LEATHER_ARMOR || item_id == ITEM_IRON_ARMOR) {
+        item_id == ITEM_LEATHER_ARMOR || item_id == ITEM_IRON_ARMOR || item_id == ITEM_ITIL_ARMOR) {
         return ui_icon_tile(UI_ICON_ARMOR);
     }
     if ((item_id >= ITEM_QUICK_BOOTS && item_id <= ITEM_DARK_MEDAL) ||
-        item_id == ITEM_CHARM || item_id == ITEM_FEATHER ||
+        item_id == ITEM_CHARM || item_id == ITEM_FEATHER || item_id == ITEM_ITIL_CREST ||
         item_id == ITEM_DEBUG_NO_ENCOUNT || item_id == ITEM_DEBUG_ESCAPE) {
         return ui_icon_tile(UI_ICON_ACCESSORY);
     }

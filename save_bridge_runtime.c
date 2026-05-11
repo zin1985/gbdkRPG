@@ -62,7 +62,7 @@ void save_bridge_apply_snapshot(const SaveSnapshot *in) BANKED {
     if (in == 0) return;
 
     current_area = in->area;
-    if (current_area > AREA_RUINS) current_area = AREA_FIELD;
+    if (current_area > AREA_TOWER) current_area = AREA_FIELD;
 
     player_tx = in->player_tx;
     player_ty = in->player_ty;

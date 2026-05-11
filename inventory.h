@@ -98,6 +98,9 @@
 #define ITEM_POISON_GUARD  102u
 #define ITEM_LIGHT_MEDAL   103u
 #define ITEM_DARK_MEDAL    104u
+#define ITEM_ITIL_SWORD   105u
+#define ITEM_ITIL_ARMOR   106u
+#define ITEM_ITIL_CREST   107u
 
 void inventory_clear(void) BANKED;
 void inventory_seed_defaults(void) BANKED;

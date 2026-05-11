@@ -423,6 +423,9 @@ static const char *inventory_item_name(UINT8 item_id) BANKED {
         case ITEM_POISON_GUARD: return "毒守り";
         case ITEM_LIGHT_MEDAL: return "光メダル";
         case ITEM_DARK_MEDAL: return "闇メダル";
+        case ITEM_ITIL_SWORD: return "ITILの剣";
+        case ITEM_ITIL_ARMOR: return "ITILの鎧";
+        case ITEM_ITIL_CREST: return "ITILの紋章";
         default: return "?";
     }
 }
