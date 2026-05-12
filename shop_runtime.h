@@ -7,6 +7,8 @@
 #define SHOP_KIND_ITEM   2u
 #define SHOP_KIND_EQUIP  3u
 #define SHOP_KIND_SAVE   4u
+#define SHOP_KIND_ITEM_STRONG 5u
+#define SHOP_KIND_EQUIP_STRONG 6u
 
 void shop_runtime_open(UINT8 shop_kind) BANKED;
 UINT8 shop_runtime_handle_event(UINT8 event_id) BANKED;

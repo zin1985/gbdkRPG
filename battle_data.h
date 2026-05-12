@@ -22,5 +22,7 @@ typedef struct BattleEnemyData {
 } BattleEnemyData;
 
 void battle_data_load_random(UINT8 seed, BattleEnemyData *out, UINT8 *count) NONBANKED;
+void battle_data_load_random_area(UINT8 seed, UINT8 area, BattleEnemyData *out, UINT8 *count) NONBANKED;
+void battle_data_load_boss(BattleEnemyData *out, UINT8 *count) NONBANKED;
 
 #endif

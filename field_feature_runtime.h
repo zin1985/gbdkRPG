@@ -24,6 +24,14 @@
 #define MAP_EVENT_ITIL_TOWER 18u
 #define MAP_EVENT_ITIL_TOWER_NEXT 19u
 #define MAP_EVENT_ITIL_TOWER_NPC 20u
+#define MAP_EVENT_EAST_TOWN 21u
+#define MAP_EVENT_EAST_TOWN_EXIT 22u
+#define MAP_EVENT_CAVE_DOWN 23u
+#define MAP_EVENT_CAVE_UP 24u
+#define MAP_EVENT_CAVE_TO_EAST 25u
+#define MAP_EVENT_CAVE_BOSS 26u
+#define MAP_EVENT_SHOP_ITEM_STRONG 27u
+#define MAP_EVENT_SHOP_EQUIP_STRONG 28u
 
 #define AREA_FIELD 0u
 #define AREA_TOWN 1u
@@ -31,11 +39,19 @@
 #define AREA_DUNGEON 3u
 #define AREA_RUINS 4u
 #define AREA_TOWER 5u
+#define AREA_FIELD_EAST 6u
+#define AREA_CAVE_1 7u
+#define AREA_CAVE_2 8u
+#define AREA_CAVE_3 9u
+#define AREA_CAVE_4 10u
+#define AREA_EAST_TOWN 11u
 
 #define FLAG_DUNGEON_CHEST 20u
 #define FLAG_RUINS_CHEST 21u
 #define FLAG_TOWN_CHEST 22u
 #define FLAG_TOWN_POT 23u
+#define FLAG_CAVE_CHEST 24u
+#define FLAG_CAVE_BOSS 25u
 
 UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED;
 UINT8 field_feature_encounter_rate(UINT8 area, UINT8 field_rate) BANKED;

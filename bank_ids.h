@@ -60,6 +60,6 @@
 /* rpg188 concrete split: battle_data_bank moved out of bank 7 to protect party/menu additions. */
 #define ROM_BANK_BATTLE_DATA_CONCRETE 10u
 
-#endif
-
 #define ROM_BANK_FIELD_MAP_RENDER_CONCRETE 19u
+
+#endif

@@ -6,7 +6,7 @@
 #include "party_runtime.h"
 
 #define SAVE_SLOT_COUNT 3u
-#define SAVE_EVENT_FLAG_COUNT 16u
+#define SAVE_EVENT_FLAG_COUNT 32u
 #define SAVE_TITLE_NEW 0u
 #define SAVE_TITLE_CONTINUE 1u
 

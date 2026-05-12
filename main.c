@@ -127,7 +127,7 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_DIRTY_CURSOR    0x08u
 #define BATTLE_DIRTY_ENEMY_OAM 0x10u
 
-#define EVENT_FLAG_COUNT 16u
+#define EVENT_FLAG_COUNT 32u
 #define FLAG_ENEMY_DEFEATED 0u
 
 #define GROWTH_NONE 0u
@@ -289,6 +289,7 @@ UINT8 event_flags[EVENT_FLAG_COUNT];
 UINT8 last_growth_type;
 GrowthResult last_growth;
 UINT8 battle_enemy_rank;
+static UINT8 cave_boss_battle_pending;
 static PlayerSkillSet player_skills;
 static SaveSnapshot save_snapshot_work;
 
@@ -908,9 +909,13 @@ static void check_step_event(void) {
         draw_all_actors();
         return;
     }
+    if (event_id == MAP_EVENT_CAVE_BOSS) {
+        inspect_map_event(event_id);
+        return;
+    }
     if (event_id != MAP_EVENT_NONE) return;
 
-    if ((current_area == AREA_DUNGEON || current_area == AREA_RUINS || current_area == AREA_TOWER) && current_object16_at(player_tx, player_ty) == 5u) {
+    if ((current_area == AREA_DUNGEON || current_area == AREA_RUINS || current_area == AREA_TOWER || current_area == AREA_CAVE_1 || current_area == AREA_CAVE_2 || current_area == AREA_CAVE_3 || current_area == AREA_CAVE_4) && current_object16_at(player_tx, player_ty) == 5u) {
         party_damage_active(0u, 2u);
         message_show(MSG_TRAP_DAMAGE);
         draw_all_actors();
@@ -939,6 +944,25 @@ static void inspect_map_event(UINT8 event_id) {
             message_show(MSG_TREASURE_FOUND);
             draw_object_map();
             draw_all_actors();
+        }
+    } else if (event_id == MAP_EVENT_CAVE_BOSS) {
+        if (check_event_flag(FLAG_CAVE_BOSS)) {
+            message_show(MSG_TREASURE_EMPTY);
+        } else {
+            cave_boss_battle_pending = 1u;
+            game_mode = MODE_BATTLE;
+            player_moving = 0u;
+            current_enemy_index = 0xFFu;
+            battle_data_load_boss(battle_enemy_data_slots, &battle_enemy_count);
+            if (battle_enemy_count == 0u) battle_enemy_count = 1u;
+            battle_copy_enemy_from_data(0u);
+            battle_prepare_enemy_rank();
+            battle_target_index = 0u;
+            battle_select_first_alive();
+            menu_index = 0u;
+            battle_guard_flags = 0u;
+            battle_state = BSTATE_PLAYER;
+            enter_battle_screen();
         }
     } else if (event_id == MAP_EVENT_RUIN_LORE) {
         message_show(MSG_RUIN_LORE);
@@ -1725,7 +1749,7 @@ static void init_random_battle_from_field(void) {
     player_battle.heal_power = player_heal_power_stat;
     player_battle.agility = player_agility_stat;
 
-    battle_data_load_random(random_u8(), battle_enemy_data_slots, &battle_enemy_count);
+    battle_data_load_random_area(random_u8(), current_area, battle_enemy_data_slots, &battle_enemy_count);
     if (battle_enemy_count == 0u) battle_enemy_count = 1u;
     if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
 
@@ -1775,6 +1799,16 @@ static void return_to_map_after_battle(UINT8 won) {
     map_overlay_visible = 0u;
 
     if (won) {
+        inventory_add_money((UINT16)(20u + (UINT16)battle_enemy_rank * 18u));
+        if ((random_u8() & 0x07u) == 0u) inventory_add(ITEM_POWER_SEED, 1u);
+        else if ((random_u8() & 0x03u) == 0u) inventory_add(ITEM_HIGH_POTION, 1u);
+        if (cave_boss_battle_pending) {
+            set_event_flag(FLAG_CAVE_BOSS);
+            inventory_add_money(300u);
+            inventory_add(ITEM_DRAGON_SWORD, 1u);
+            inventory_add(ITEM_DRAGON_ARMOR, 1u);
+            cave_boss_battle_pending = 0u;
+        }
         battle_growth_apply();
         party_after_battle_growth(battle_enemy_rank, random_u8());
         battle_growth_show_message();
@@ -1784,6 +1818,8 @@ static void return_to_map_after_battle(UINT8 won) {
             actors[current_enemy_index].solid = 0u;
             set_event_flag(FLAG_ENEMY_DEFEATED);
         }
+    } else {
+        cave_boss_battle_pending = 0u;
     }
     restore_field_vram_state();
     audio_play_music(field_feature_music_track(current_area));

@@ -74,7 +74,7 @@ BANKREF_EXTERN(sprite_data_bank)
 #define FOREST_BG_Y 5u
 
 static UINT8 renderer_area_dangerous(UINT8 area) BANKED {
-    return (UINT8)(area == AREA_DUNGEON || area == AREA_RUINS || area == AREA_TOWER);
+    return (UINT8)(area == AREA_DUNGEON || area == AREA_RUINS || area == AREA_TOWER || area == AREA_CAVE_1 || area == AREA_CAVE_2 || area == AREA_CAVE_3 || area == AREA_CAVE_4);
 }
 
 static void renderer_select_metatile(UINT8 area, UINT8 kind, UINT8 *tl, UINT8 *tr, UINT8 *bl, UINT8 *br) BANKED {
@@ -201,10 +201,10 @@ void field_map_render_runtime_draw(UINT8 area) BANKED {
 
     set_banked_bkg_data(MAP_TILE_BASE, MAP_GFX_TILE_COUNT, map_gfx_tiles, BANK(sprite_data_bank));
 
-    if (area == AREA_PORT) {
+    if (area == AREA_PORT || area == AREA_FIELD || area == AREA_FIELD_EAST) {
         map_load_port_overlay_tiles(MAP_TILE_DUNGEON_PIT_TL, MAP_TILE_CHEST_TL);
         map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
-    } else if (area == AREA_TOWN) {
+    } else if (area == AREA_TOWN || area == AREA_EAST_TOWN) {
         map_load_town_sign_overlay_tiles(MAP_TILE_CHEST_TL, MAP_TILE_DUNGEON_PIT_TL);
         map_load_town_inn_sign_overlay_tiles(MAP_TILE_DUNGEON_WALL_TL);
         map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);

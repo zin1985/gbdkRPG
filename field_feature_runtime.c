@@ -16,6 +16,10 @@ UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED {
         if (tx == 1u && ty == 2u) return MAP_EVENT_RUINS;
         if (tx == 8u && ty == 8u) return MAP_EVENT_HEAL_SPRING;
         if (tx == 8u && ty == 14u) return MAP_EVENT_ITIL_TOWER;
+        if (tx == 14u && ty == 8u) return MAP_EVENT_CAVE_DOWN;
+    } else if (area == AREA_FIELD_EAST) {
+        if (tx == 14u && ty == 2u) return MAP_EVENT_EAST_TOWN;
+        if (tx == 1u && ty == 14u) return MAP_EVENT_CAVE_DOWN;
     } else if (area == AREA_TOWN) {
         if (tx == 2u && ty == 14u) return MAP_EVENT_FIELD_EXIT;
         /* rpg196: upper row shops.
@@ -31,10 +35,21 @@ UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED {
         if (tx == 11u && ty == 8u) return MAP_EVENT_CHEST;
     } else if (area == AREA_PORT) {
         if (tx == 2u && ty == 14u) return MAP_EVENT_PORT_EXIT;
+    } else if (area == AREA_EAST_TOWN) {
+        if (tx == 2u && ty == 14u) return MAP_EVENT_EAST_TOWN_EXIT;
+        if ((tx == 8u && ty == 2u) || (ty == 3u && (tx == 7u || tx == 8u || tx == 9u))) return MAP_EVENT_SHOP_ITEM_STRONG;
+        if ((tx == 12u && ty == 2u) || (ty == 3u && (tx == 11u || tx == 12u || tx == 13u))) return MAP_EVENT_SHOP_EQUIP_STRONG;
+        if ((tx == 4u && ty == 2u) || (ty == 3u && (tx == 3u || tx == 4u || tx == 5u))) return MAP_EVENT_SHOP_INN;
     } else if (area == AREA_TOWER) {
         if (tx == 14u && ty == 2u) return MAP_EVENT_ITIL_TOWER_NEXT;
         if (tx == 8u && ty == 8u) return MAP_EVENT_ITIL_TOWER_NPC;
         if (tx == 2u && ty == 14u) return MAP_EVENT_DUNGEON_EXIT;
+    } else if (area == AREA_CAVE_1 || area == AREA_CAVE_2 || area == AREA_CAVE_3 || area == AREA_CAVE_4) {
+        if (tx == 2u && ty == 14u) return MAP_EVENT_CAVE_UP;
+        if (area != AREA_CAVE_4 && tx == 14u && ty == 2u) return MAP_EVENT_CAVE_DOWN;
+        if (area == AREA_CAVE_4 && tx == 14u && ty == 2u) return MAP_EVENT_CAVE_TO_EAST;
+        if (area == AREA_CAVE_4 && tx == 8u && ty == 6u) return MAP_EVENT_CAVE_BOSS;
+        if (tx == 8u && ty == 8u) return MAP_EVENT_CHEST;
     } else if (area == AREA_DUNGEON) {
         if (tx == 2u && ty == 14u) return MAP_EVENT_DUNGEON_EXIT;
         if (tx == 8u && ty == 6u) return MAP_EVENT_CHEST;
@@ -49,6 +64,7 @@ UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED {
 UINT8 field_feature_encounter_rate(UINT8 area, UINT8 field_rate) BANKED {
     if (party_debug_no_encounter_accessory_equipped()) return 0u;
     if (area == AREA_TOWER) return 0u;
+    if (area == AREA_CAVE_1 || area == AREA_CAVE_2 || area == AREA_CAVE_3 || area == AREA_CAVE_4) return 42u;
     if (area == AREA_DUNGEON) return 34u;
     if (area == AREA_RUINS) return 28u;
     if (area == AREA_FIELD) return field_rate;
@@ -64,8 +80,8 @@ void field_feature_activate_heal_spring_runtime(void) BANKED {
 }
 
 UINT8 field_feature_music_track(UINT8 area) BANKED {
-    if (area == AREA_TOWN || area == AREA_PORT) return AUDIO_TRACK_TOWN;
-    if (area == AREA_DUNGEON || area == AREA_TOWER) return AUDIO_TRACK_DUNGEON;
+    if (area == AREA_TOWN || area == AREA_PORT || area == AREA_EAST_TOWN) return AUDIO_TRACK_TOWN;
+    if (area == AREA_DUNGEON || area == AREA_TOWER || area == AREA_CAVE_1 || area == AREA_CAVE_2 || area == AREA_CAVE_3 || area == AREA_CAVE_4) return AUDIO_TRACK_DUNGEON;
     if (area == AREA_RUINS) return AUDIO_TRACK_RUINS;
     return AUDIO_TRACK_FIELD;
 }
@@ -73,7 +89,7 @@ UINT8 field_feature_music_track(UINT8 area) BANKED {
 UINT8 field_feature_random_encounter_should_start_runtime(UINT8 area, UINT8 can_check, UINT8 tx, UINT8 ty, UINT8 *grace_steps, UINT8 *rand_seed_ptr, UINT8 field_rate) BANKED {
     UINT8 roll;
 
-    if (area != AREA_FIELD && area != AREA_DUNGEON && area != AREA_RUINS && area != AREA_TOWER) return 0u;
+    if (area != AREA_FIELD && area != AREA_FIELD_EAST && area != AREA_DUNGEON && area != AREA_RUINS && area != AREA_TOWER && area != AREA_CAVE_1 && area != AREA_CAVE_2 && area != AREA_CAVE_3 && area != AREA_CAVE_4) return 0u;
     if (!can_check) return 0u;
     if (field_feature_map_event(area, tx, ty) != MAP_EVENT_NONE) return 0u;
 
@@ -91,6 +107,7 @@ UINT8 field_feature_random_encounter_should_start_runtime(UINT8 area, UINT8 can_
 
 UINT8 field_feature_chest_flag(UINT8 area) BANKED {
     if (area == AREA_RUINS) return FLAG_RUINS_CHEST;
-    if (area == AREA_TOWN) return FLAG_TOWN_CHEST;
+    if (area == AREA_TOWN || area == AREA_EAST_TOWN) return FLAG_TOWN_CHEST;
+    if (area == AREA_CAVE_1 || area == AREA_CAVE_2 || area == AREA_CAVE_3 || area == AREA_CAVE_4) return FLAG_CAVE_CHEST;
     return FLAG_DUNGEON_CHEST;
 }

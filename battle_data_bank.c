@@ -24,6 +24,9 @@ static const char name_bit[]   = "ビット";
 static const char name_beast[] = "けもの";
 static const char name_warmachine[] = "ウォーマシン";
 static const char name_golem[] = "ゴーレム";
+static const char name_cave_ogre[] = "どうくつオーガ";
+static const char name_sea_wraith[] = "うみぼうず";
+static const char name_cave_lord[] = "どうくつのぬし";
 
 static const BattleEnemyTemplate enemy_table[] = {
     /* name,            hp,  atk, def, agi, art, size */
@@ -33,7 +36,10 @@ static const BattleEnemyTemplate enemy_table[] = {
     {name_beast,        28u, 7u, 3u, 4u, 2u, BATTLE_ENEMY_SIZE_M},
     {name_warmachine,   36u, 9u, 4u, 5u, 3u, BATTLE_ENEMY_SIZE_M},
     {name_golem,        88u, 12u, 8u, 2u, 4u, BATTLE_ENEMY_SIZE_L},
-    {name_warmachine,   96u, 14u, 9u, 3u, 5u, BATTLE_ENEMY_SIZE_L}
+    {name_warmachine,   96u, 14u, 9u, 3u, 5u, BATTLE_ENEMY_SIZE_L},
+    {name_cave_ogre,    70u, 16u, 8u, 5u, 3u, BATTLE_ENEMY_SIZE_M},
+    {name_sea_wraith,   64u, 15u, 7u, 7u, 2u, BATTLE_ENEMY_SIZE_M},
+    {name_cave_lord,   180u, 24u, 14u, 6u, 5u, BATTLE_ENEMY_SIZE_L}
 };
 
 static const BattleEncounterTemplate encounter_table[] = {
@@ -48,7 +54,10 @@ static const BattleEncounterTemplate encounter_table[] = {
     {1u, {4u, 0u, 0u, 0u, 0u, 0u}}, /* L golem x1 */
     {1u, {5u, 0u, 0u, 0u, 0u, 0u}}, /* L warmachine x1 */
     {3u, {0u, 0u, 0u, 0u, 0u, 0u}}, /* Bit S x3 */
-    {1u, {3u, 0u, 0u, 0u, 0u, 0u}}  /* M x1 */
+    {1u, {3u, 0u, 0u, 0u, 0u, 0u}}, /* M x1 */
+    {2u, {6u, 7u, 0u, 0u, 0u, 0u}}, /* strong cave pair */
+    {3u, {6u, 3u, 7u, 0u, 0u, 0u}}, /* strong cave trio */
+    {1u, {8u, 0u, 0u, 0u, 0u, 0u}}  /* cave boss */
 };
 
 #define ENEMY_TABLE_COUNT ((UINT8)(sizeof(enemy_table) / sizeof(enemy_table[0])))
@@ -118,4 +127,9 @@ void battle_data_load_encounter_bank(UINT8 encounter_id, BattleEnemyData *out, U
             battle_data_copy_enemy_bank(enc.enemy_ids[i], &out[i]);
         }
     }
+}
+
+void battle_data_load_boss_bank(BattleEnemyData *out, UINT8 *count) {
+    *count = 1u;
+    battle_data_copy_enemy_bank(8u, &out[0]);
 }

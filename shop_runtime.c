@@ -40,6 +40,30 @@ static const UINT8 equip_shop_prices[SHOP_ITEM_COUNT] = {
     1u
 };
 
+static const UINT8 strong_item_shop_ids[SHOP_ITEM_COUNT] = {
+    ITEM_HIGH_POTION,
+    ITEM_MANA_BOTTLE,
+    ITEM_REVIVE_STONE
+};
+
+static const UINT8 strong_item_shop_prices[SHOP_ITEM_COUNT] = {
+    80u,
+    90u,
+    180u
+};
+
+static const UINT8 strong_equip_shop_ids[SHOP_ITEM_COUNT] = {
+    ITEM_SILVER_SWORD,
+    ITEM_STEEL_ARMOR,
+    ITEM_POWER_RING
+};
+
+static const UINT8 strong_equip_shop_prices[SHOP_ITEM_COUNT] = {
+    220u,
+    180u,
+    160u
+};
+
 static void shop_clear(void) BANKED {
     ui_icons_load();
     /* rpg172:
@@ -96,6 +120,12 @@ static const char *shop_item_name(UINT8 item_id) BANKED {
         case ITEM_IRON_SWORD: return "鉄のけん";
         case ITEM_LEATHER_ARMOR: return "かわよろい";
         case ITEM_DEBUG_ESCAPE: return "にげあしリング";
+        case ITEM_HIGH_POTION: return "ハイポーション";
+        case ITEM_MANA_BOTTLE: return "まほうびん";
+        case ITEM_REVIVE_STONE: return "ふっかつ石";
+        case ITEM_SILVER_SWORD: return "銀のけん";
+        case ITEM_STEEL_ARMOR: return "はがねよろい";
+        case ITEM_POWER_RING: return "ちからのゆびわ";
         default: return "?";
     }
 }
@@ -113,11 +143,12 @@ static void shop_draw_list(UINT8 kind, UINT8 cursor) BANKED {
     UINT8 i;
     char buf[8];
 
-    ids = (kind == SHOP_KIND_ITEM) ? item_shop_ids : equip_shop_ids;
-    prices = (kind == SHOP_KIND_ITEM) ? item_shop_prices : equip_shop_prices;
+    if (kind == SHOP_KIND_ITEM_STRONG) { ids = strong_item_shop_ids; prices = strong_item_shop_prices; }
+    else if (kind == SHOP_KIND_EQUIP_STRONG) { ids = strong_equip_shop_ids; prices = strong_equip_shop_prices; }
+    else { ids = (kind == SHOP_KIND_ITEM) ? item_shop_ids : equip_shop_ids; prices = (kind == SHOP_KIND_ITEM) ? item_shop_prices : equip_shop_prices; }
 
     shop_clear();
-    jp_put_bkg_text(1u, 1u, (kind == SHOP_KIND_ITEM) ? "どうぐや" : "ぶぐや");
+    jp_put_bkg_text(1u, 1u, (kind == SHOP_KIND_ITEM || kind == SHOP_KIND_ITEM_STRONG) ? "どうぐや" : "ぶぐや");
     shop_draw_money(2u);
 
     for (i = 0u; i < SHOP_ITEM_COUNT; i++) {
@@ -138,8 +169,9 @@ static void shop_buy_loop(UINT8 kind) BANKED {
     const UINT8 *prices;
 
     cursor = 0u;
-    ids = (kind == SHOP_KIND_ITEM) ? item_shop_ids : equip_shop_ids;
-    prices = (kind == SHOP_KIND_ITEM) ? item_shop_prices : equip_shop_prices;
+    if (kind == SHOP_KIND_ITEM_STRONG) { ids = strong_item_shop_ids; prices = strong_item_shop_prices; }
+    else if (kind == SHOP_KIND_EQUIP_STRONG) { ids = strong_equip_shop_ids; prices = strong_equip_shop_prices; }
+    else { ids = (kind == SHOP_KIND_ITEM) ? item_shop_ids : equip_shop_ids; prices = (kind == SHOP_KIND_ITEM) ? item_shop_prices : equip_shop_prices; }
 
     shop_draw_list(kind, cursor);
     while (1) {
@@ -197,7 +229,7 @@ static void shop_inn_loop(void) BANKED {
 void shop_runtime_open(UINT8 shop_kind) BANKED {
     if (shop_kind == SHOP_KIND_INN) {
         shop_inn_loop();
-    } else if (shop_kind == SHOP_KIND_ITEM || shop_kind == SHOP_KIND_EQUIP) {
+    } else if (shop_kind == SHOP_KIND_ITEM || shop_kind == SHOP_KIND_EQUIP || shop_kind == SHOP_KIND_ITEM_STRONG || shop_kind == SHOP_KIND_EQUIP_STRONG) {
         shop_buy_loop(shop_kind);
     }
 }
@@ -213,6 +245,14 @@ UINT8 shop_runtime_handle_event(UINT8 event_id) BANKED {
     }
     if (event_id == MAP_EVENT_SHOP_EQUIP) {
         shop_runtime_open(SHOP_KIND_EQUIP);
+        return 1u;
+    }
+    if (event_id == MAP_EVENT_SHOP_ITEM_STRONG) {
+        shop_runtime_open(SHOP_KIND_ITEM_STRONG);
+        return 1u;
+    }
+    if (event_id == MAP_EVENT_SHOP_EQUIP_STRONG) {
+        shop_runtime_open(SHOP_KIND_EQUIP_STRONG);
         return 1u;
     }
     if (event_id == MAP_EVENT_POT) {
