@@ -24,6 +24,7 @@
 #include "revive_runtime.h"
 #include "itil_tower_runtime.h"
 #include "map_event_runtime.h"
+#include "field_map_render_runtime.h"
 
 BANKREF_EXTERN(sprite_data_bank)
 
@@ -384,14 +385,6 @@ static INT8 find_talkable_actor(void);
 #define CAMERA_MAX_PX_X ((UINT8)((MAP16_W * TILE16_PX > SCREEN_PX_W) ? (MAP16_W * TILE16_PX - SCREEN_PX_W) : 0u))
 #define CAMERA_MAX_PX_Y ((UINT8)((MAP16_H * TILE16_PX > SCREEN_PX_H) ? (MAP16_H * TILE16_PX - SCREEN_PX_H) : 0u))
 static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir);
-void enter_town_marker(void);
-void leave_town_marker(void);
-void enter_port_marker(void);
-void leave_port_marker(void);
-void enter_dungeon_marker(void);
-void leave_dungeon_marker(void);
-void enter_ruins_marker(void);
-void leave_ruins_marker(void);
 static void check_step_event(void);
 static void inspect_map_event(UINT8 event_id);
 static void try_interact(void);
@@ -624,150 +617,7 @@ static void open_main_menu(void) {
 }
 
 static void draw_object_map(void) {
-    UINT8 x;
-    UINT8 y;
-    static UINT8 bg[BG_DRAW_W * BG_DRAW_H];
-    UINT8 sx;
-    UINT8 sy;
-    UINT8 wx;
-    UINT8 wy;
-    UINT8 kind;
-    UINT8 tl;
-    UINT8 tr;
-    UINT8 bl;
-    UINT8 br;
-    UINT8 area_dangerous;
-    UINT16 bg_i;
-    UINT16 top_left_i;
-
-    area_dangerous = (UINT8)(current_area == AREA_DUNGEON || current_area == AREA_RUINS || current_area == AREA_TOWER);
-
-    
-    for (y = 0u; y < BG_DRAW_H; y++) {
-        for (x = 0u; x < BG_DRAW_W; x++) {
-            bg_i = (UINT16)y * (UINT16)BG_DRAW_W + (UINT16)x;
-            bg[bg_i] = MAP_TILE_FLOOR;
-        }
-    }
-
-    for (y = 0u; y < DRAW_MAP16_H; y++) {
-        for (x = 0u; x < DRAW_MAP16_W; x++) {
-            
-            wx = x;
-            wy = y;
-            
-            kind = current_object16_at(wx, wy);
-
-            sx = (UINT8)(x * 2u);
-            sy = (UINT8)(y * 2u);
-
-            if (kind == 1u) {
-                if (area_dangerous) {
-                    tl = MAP_TILE_DUNGEON_WALL_TL;
-                    tr = MAP_TILE_DUNGEON_WALL_TR;
-                    bl = MAP_TILE_DUNGEON_WALL_BL;
-                    br = MAP_TILE_DUNGEON_WALL_BR;
-                } else {
-                    tl = MAP_TILE_WALL_TL;
-                    tr = MAP_TILE_WALL_TR;
-                    bl = MAP_TILE_WALL_BL;
-                    br = MAP_TILE_WALL_BR;
-                }
-            } else if (kind == 2u) {
-                if (current_area == AREA_PORT) {
-                    tl = MAP_TILE_DUNGEON_PIT_TL;
-                    tr = MAP_TILE_DUNGEON_PIT_TR;
-                    bl = MAP_TILE_DUNGEON_PIT_BL;
-                    br = MAP_TILE_DUNGEON_PIT_BR;
-                } else if (area_dangerous) {
-                    tl = MAP_TILE_DUNGEON_PIT_TL;
-                    tr = MAP_TILE_DUNGEON_PIT_TR;
-                    bl = MAP_TILE_DUNGEON_PIT_BL;
-                    br = MAP_TILE_DUNGEON_PIT_BR;
-                } else {
-                    tl = MAP_TILE_CAP_TL;
-                    tr = MAP_TILE_CAP_TR;
-                    bl = MAP_TILE_CAP_BL;
-                    br = MAP_TILE_CAP_BR;
-                }
-            } else if (kind == 5u) {
-                if (current_area == AREA_TOWN) {
-                    tl = MAP_TILE_DUNGEON_PIT_TL;
-                    tr = MAP_TILE_DUNGEON_PIT_TR;
-                    bl = MAP_TILE_DUNGEON_PIT_BL;
-                    br = MAP_TILE_DUNGEON_PIT_BR;
-                } else if (area_dangerous) {
-                    tl = MAP_TILE_DUNGEON_PIT_TL;
-                    tr = MAP_TILE_DUNGEON_PIT_TR;
-                    bl = MAP_TILE_DUNGEON_PIT_BL;
-                    br = MAP_TILE_DUNGEON_PIT_BR;
-                } else {
-                    tl = MAP_TILE_CAP_TL;
-                    tr = MAP_TILE_CAP_TR;
-                    bl = MAP_TILE_CAP_BL;
-                    br = MAP_TILE_CAP_BR;
-                }
-            } else if (kind == 3u) {
-                tl = MAP_TILE_TOWN_TL;
-                tr = MAP_TILE_TOWN_TR;
-                bl = MAP_TILE_TOWN_BL;
-                br = MAP_TILE_TOWN_BR;
-            } else if (kind == 4u) {
-                tl = MAP_TILE_CHEST_TL;
-                tr = MAP_TILE_CHEST_TR;
-                bl = MAP_TILE_CHEST_BL;
-                br = MAP_TILE_CHEST_BR;
-            } else if (kind == 6u) {
-                tl = MAP_TILE_DUNGEON_PIT_TL;
-                tr = MAP_TILE_DUNGEON_PIT_TR;
-                bl = MAP_TILE_DUNGEON_PIT_BL;
-                br = MAP_TILE_DUNGEON_PIT_BR;
-            } else if (kind == 7u) {
-                tl = MAP_TILE_FOREST_TL;
-                tr = MAP_TILE_FOREST_TR;
-                bl = MAP_TILE_FOREST_BL;
-                br = MAP_TILE_FOREST_BR;
-            } else if (kind == 8u) {
-                tl = MAP_TILE_DUNGEON_WALL_TL;
-                tr = MAP_TILE_DUNGEON_WALL_TR;
-                bl = MAP_TILE_DUNGEON_WALL_BL;
-                br = MAP_TILE_DUNGEON_WALL_BR;
-            } else {
-                tl = MAP_TILE_FLOOR;
-                tr = MAP_TILE_FLOOR;
-                bl = MAP_TILE_FLOOR;
-                br = MAP_TILE_FLOOR;
-            }
-
-            top_left_i = (UINT16)sy * (UINT16)BG_DRAW_W + (UINT16)sx;
-            bg[top_left_i] = tl;
-            bg[top_left_i + 1u] = tr;
-            bg[top_left_i + (UINT16)BG_DRAW_W] = bl;
-            bg[top_left_i + (UINT16)BG_DRAW_W + 1u] = br;
-        }
-    }
-
-    
-    if (current_area == AREA_FIELD) {
-        sx = (UINT8)(FOREST_BG_X * 2u);
-        sy = (UINT8)(FOREST_BG_Y * 2u);
-        top_left_i = (UINT16)sy * (UINT16)BG_DRAW_W + (UINT16)sx;
-        bg[top_left_i] = MAP_TILE_FOREST_TL;
-        bg[top_left_i + 1u] = MAP_TILE_FOREST_TR;
-        bg[top_left_i + (UINT16)BG_DRAW_W] = MAP_TILE_FOREST_BL;
-        bg[top_left_i + (UINT16)BG_DRAW_W + 1u] = MAP_TILE_FOREST_BR;
-    }
-
-    set_banked_bkg_data(MAP_TILE_BASE, MAP_GFX_TILE_COUNT, map_gfx_tiles, BANK(sprite_data_bank));
-    if (current_area == AREA_PORT) {
-        map_load_port_overlay_tiles(MAP_TILE_DUNGEON_PIT_TL, MAP_TILE_CHEST_TL);
-        map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
-    } else if (current_area == AREA_TOWN) {
-        map_load_town_sign_overlay_tiles(MAP_TILE_CHEST_TL, MAP_TILE_DUNGEON_PIT_TL);
-        map_load_town_inn_sign_overlay_tiles(MAP_TILE_DUNGEON_WALL_TL);
-        map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
-    }
-    set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
+    field_map_render_runtime_draw(current_area);
 }
 static void set_player_frame(Direction dir, UINT8 frame) {
     UINT8 base;
@@ -988,49 +838,15 @@ static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
 
 #define MSG_NONE_LOCAL 0xFFu
 
-static void change_area_marker(UINT8 before_msg, UINT8 area, UINT8 music, UINT8 tx, UINT8 ty, Direction dir, UINT8 after_msg) {
+void change_area_marker(UINT8 before_msg, UINT8 area, UINT8 music, UINT8 tx, UINT8 ty, UINT8 dir, UINT8 after_msg) {
     if (before_msg != MSG_NONE_LOCAL) message_show(before_msg);
     current_area = area;
     actor_runtime_apply_area_npcs(current_area);
     audio_play_music(music);
     encounter_grace_steps = RANDOM_ENCOUNTER_GRACE_STEPS;
-    warp_player_to_tile(tx, ty, dir);
+    warp_player_to_tile(tx, ty, (Direction)dir);
     if (after_msg != MSG_NONE_LOCAL) message_show(after_msg);
     draw_all_actors();
-}
-
-void enter_town_marker(void) {
-    change_area_marker(MSG_ENTER_TOWN, AREA_TOWN, AUDIO_TRACK_TOWN, 2u, 13u, DIR_DOWN, MSG_ARRIVE_TOWN);
-}
-
-void leave_town_marker(void) {
-    change_area_marker(MSG_BACK_FIELD, AREA_FIELD, AUDIO_TRACK_FIELD, 13u, 2u, DIR_RIGHT, MSG_LEFT_FIELD);
-}
-
-void enter_port_marker(void) {
-    change_area_marker(MSG_ENTER_PORT, AREA_PORT, AUDIO_TRACK_TOWN, 2u, 13u, DIR_DOWN, MSG_ARRIVE_PORT);
-}
-
-void leave_port_marker(void) {
-    change_area_marker(MSG_BACK_FIELD, AREA_FIELD, AUDIO_TRACK_FIELD, 13u, 14u, DIR_RIGHT, MSG_LEFT_FIELD);
-}
-
-void enter_dungeon_marker(void) {
-    change_area_marker(MSG_ENTER_DUNGEON, AREA_DUNGEON, AUDIO_TRACK_DUNGEON, 2u, 13u, DIR_DOWN, MSG_ARRIVE_DUNGEON);
-    quest_start(QUEST_LOST_KEY);
-}
-
-void leave_dungeon_marker(void) {
-    change_area_marker(MSG_DUNGEON_EXIT, AREA_FIELD, AUDIO_TRACK_FIELD, 2u, 14u, DIR_RIGHT, MSG_NONE_LOCAL);
-}
-
-void enter_ruins_marker(void) {
-    change_area_marker(MSG_ENTER_RUINS, AREA_RUINS, AUDIO_TRACK_RUINS, 13u, 13u, DIR_UP, MSG_ARRIVE_RUINS);
-    quest_advance(QUEST_LOST_KEY);
-}
-
-void leave_ruins_marker(void) {
-    change_area_marker(MSG_DUNGEON_EXIT, AREA_FIELD, AUDIO_TRACK_FIELD, 2u, 2u, DIR_RIGHT, MSG_NONE_LOCAL);
 }
 
 void enter_itil_tower_marker(void) {

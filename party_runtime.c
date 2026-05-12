@@ -157,9 +157,9 @@ static const PartyEquipmentDef party_equipment_defs[] = {
     { ITEM_POISON_GUARD,  PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 1u, 0u, 0u, 0u, 0u, 0u, PARTY_STATUS_POISON, "毒守り" },
     { ITEM_LIGHT_MEDAL,   PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 1u, 1u, 0u, 0u, PARTY_ELEM_LIGHT, 0u, "光メダル" },
     { ITEM_DARK_MEDAL,    PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  1u, 0u, 1u, 0u, 0u, 0u, PARTY_ELEM_DARK, 0u, "闇メダル" },
-    { ITEM_ITIL_SWORD,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 100u, 0u, 0u, 0u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "ITILの剣" },
-    { ITEM_ITIL_ARMOR,   PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 100u, 0u, 0u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "ITILの鎧" },
-    { ITEM_ITIL_CREST,   PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 100u, 0u, 0u, 0u, PARTY_ELEM_LIGHT, 0u, "ITILの紋章" }
+    { ITEM_ITIL_SWORD,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 100u, 0u, 0u, 0u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "アイティルの剣" },
+    { ITEM_ITIL_ARMOR,   PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 100u, 0u, 0u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "アイティルの鎧" },
+    { ITEM_ITIL_CREST,   PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 100u, 0u, 0u, 0u, PARTY_ELEM_LIGHT, 0u, "アイティルの紋章" }
 };
 #define PARTY_EQUIPMENT_DEF_COUNT ((UINT8)(sizeof(party_equipment_defs) / sizeof(party_equipment_defs[0])))
 

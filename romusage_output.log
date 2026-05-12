@@ -1,16 +1,16 @@
-* WARNING: Area _CODE_7  at 74000 -> 782a7 extends past end of memory region at 77fff (Overflow by 680 bytes)
+* WARNING: Area _CODE_7  at 74000 -> 782c8 extends past end of memory region at 77fff (Overflow by 713 bytes)
 
 Bank         Range                Size     Used  Used%     Free  Free% 
 --------     ----------------  -------  -------  -----  -------  -----
-ROM_0        0x0000 -> 0x3FFF    16384    16023    98%      361     2% |-###########################|
+ROM_0        0x0000 -> 0x3FFF    16384    15222    93%     1162     7% |-#########################-.|
 |
-+ _CODE                           0x0200 -> 0x3AEF   14576
-+ _HOME                           0x3AF0 -> 0x3FD6    1255
-+ _INITIALIZER                    0x3FD7 -> 0x3FDE       8
-+ _GSINIT                         0x3FDF -> 0x3FEA      12
-+ _GSFINAL                        0x3FEB -> 0x3FEB       1
++ _CODE                           0x0200 -> 0x37CE   13775
++ _HOME                           0x37CF -> 0x3CB5    1255
++ _INITIALIZER                    0x3CB6 -> 0x3CBD       8
++ _GSINIT                         0x3CBE -> 0x3CC9      12
++ _GSFINAL                        0x3CCA -> 0x3CCA       1
 
-ROM_18/31    0x4000 -> 0x7FFF   507904    82353    16%   425551    84% |..-----..-.....-............|
+ROM_19/31    0x4000 -> 0x7FFF   507904    83338    16%   424566    84% |..-----..-.....-............|
 |
 + _CODE_1                         0x4000 -> 0x4555    1366
 + _CODE_2                         0x8000 -> 0x89BB    2492
@@ -27,8 +27,9 @@ ROM_18/31    0x4000 -> 0x7FFF   507904    82353    16%   425551    84% |..-----.
 + _CODE_14                        0x38000 -> 0x386BE    1727
 + _CODE_15                        0x3C000 -> 0x3C7F3    2036
 + _CODE_16                        0x40000 -> 0x4048D    1166
-+ _CODE_17                        0x44000 -> 0x44086     135
++ _CODE_17                        0x44000 -> 0x4415F     352
 + _CODE_18                        0x48000 -> 0x495D0    5585
++ _CODE_19                        0x4C000 -> 0x4C2FF     768
 
 WRAM_LO      0xC000 -> 0xCFFF     4096     3936    96%      160     4% |.-##########################|
 |

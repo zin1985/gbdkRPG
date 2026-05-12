@@ -1227,3 +1227,21 @@ ITILの塔の3択問題が簡単すぎたため、誤答選択肢を「既存の
 
 また、`itil_clear_ui()` が `HIDE_SPRITES` した後、塔階層表示・問題UI終了後にスプライト表示が復帰せず、キャラクターが消える問題があった。  
 `itil_wait_a()` の終了時に `SHOW_SPRITES;` を追加し、UI終了後にメイン側の `draw_all_actors()` が見えるように修正。
+
+
+## rpg221追記: Bank0を増やさない通常エリア遷移テーブル化
+
+今後、フィールド・街・ダンジョンが増える前提で、通常エリア遷移を `map_event_runtime.c` Bank17 の `area_transition_defs[]` テーブル方式へ変更。  
+Bank0側の `enter_town_marker()` / `leave_town_marker()` / `enter_dungeon_marker()` などの個別関数を削除し、Bank0には汎用 `change_area_marker()` のみ残した。  
+今後の通常エリア追加ではmain.cへ専用遷移関数を足さず、Bank17側のテーブルへ定義を追加する。
+
+詳細は `docs/design/13_bank0_future_area_strategy.md`。
+
+
+## rpg222追記: フィールドBG描画をBank19へ分離
+
+今後のフィールド拡張・街追加・ダンジョン追加に備えて、`draw_object_map()` の重い本体を `field_map_render_runtime.c` Bank19へ移動。  
+main.c側は `field_map_render_runtime_draw(current_area)` を呼ぶ薄い橋渡しだけにした。  
+これにより、object kind → BG metatile変換やoverlay tileロードをBank0から外し、今後のマップ見た目追加もBank0を増やさず進めやすくした。
+
+詳細は `docs/design/14_bank0_reduction_policy_rpg222.md`。

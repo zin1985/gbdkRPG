@@ -33,6 +33,7 @@ battle_skill_runtime.c:
 battle_growth_runtime.c:
 field_overlay_runtime.c:
 field_feature_runtime.c:
+field_map_render_runtime.c:
 heavy_metal_celtic_battle_bgm.c:
 sunset_ruins_field_bgm.c:
 sunset_strings_adventure_field_bgm.c:
