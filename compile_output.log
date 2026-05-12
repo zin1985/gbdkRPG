@@ -30,6 +30,10 @@ itil_tower_runtime.c:
 itil_quiz_bank.c:
 map_event_runtime.c:
 battle_skill_runtime.c:
+battle_skill_meta_runtime.c:
+battle_reward_runtime.c:
+battle_command_ui_runtime.c:
+battle_status_ui_runtime.c:
 battle_growth_runtime.c:
 field_overlay_runtime.c:
 field_feature_runtime.c:

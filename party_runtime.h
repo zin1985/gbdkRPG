@@ -16,6 +16,7 @@
 #define PARTY_OP_TRY_CONSUME_MP 2u
 #define PARTY_OP_HEAL_ACTIVE    3u
 #define PARTY_OP_NOTE_ATTACK     4u
+#define PARTY_OP_NOTE_MAGIC      5u
 
 
 #define PARTY_WEAPON_NONE  0u
@@ -40,6 +41,7 @@ typedef struct PartySaveMember {
     UINT8 armor_id;
     UINT8 accessory_id;
     UINT8 weapon_mastery[PARTY_WEAPON_COUNT];
+    UINT8 magic_mastery;
     UINT8 learned_tech_flags;
     UINT8 learned_magic_flags;
     UINT8 morale;
@@ -62,6 +64,7 @@ typedef struct PartyBattleFighter {
     UINT8 defense;
     UINT8 skill_power;
     UINT8 heal_power;
+    UINT8 magic_mastery;
     UINT8 agility;
 } PartyBattleFighter;
 
@@ -93,6 +96,8 @@ UINT16 party_heal_active(UINT8 active_slot, UINT16 amount) BANKED;
 void party_heal_all_active(void) BANKED;
 void party_menu_show_heal_skill_loop(void) BANKED;
 void party_after_battle_growth(UINT8 enemy_rank, UINT8 random_seed) BANKED;
+UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_id_out) BANKED;
+UINT8 party_try_spark_magic(UINT8 active_slot, UINT8 random_seed, UINT8 *magic_id_out) BANKED;
 
 UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id) BANKED;
 void party_menu_show_status_loop(void) BANKED;

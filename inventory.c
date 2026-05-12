@@ -430,6 +430,10 @@ static const char *inventory_item_name(UINT8 item_id) BANKED {
     }
 }
 
+
+const char *inventory_get_item_name(UINT8 item_id) BANKED {
+    return inventory_item_name(item_id);
+}
 static const char *inventory_item_short_name(UINT8 item_id) BANKED {
     switch (item_id) {
         case ITEM_HIGH_POTION: return "上ポー";

@@ -117,5 +117,6 @@ void inventory_set_money(UINT16 amount) BANKED;
 UINT8 inventory_spend_money(UINT16 amount) BANKED;
 UINT8 inventory_battle_use_auto(UINT8 active_slot) BANKED;
 UINT8 inventory_battle_select_use(UINT8 active_slot) BANKED;
+const char *inventory_get_item_name(UINT8 item_id) BANKED;
 
 #endif

@@ -2,6 +2,7 @@
 
 #include <gb/gb.h>
 #include "party_runtime.h"
+#include "skill_defs.h"
 #include "inventory.h"
 #include "jpfont.h"
 #include "audio.h"
@@ -168,6 +169,7 @@ static const PartyEquipmentDef party_equipment_defs[] = {
 #define PARTY_ACTION_SKILL  1u
 #define PARTY_ACTION_HEAL   2u
 #define PARTY_ACTION_DAMAGE 3u
+#define PARTY_ACTION_MAGIC  4u
 
 #define PARTY_MORALE_MAX  31u
 #define PARTY_FOCUS_MAX   31u
@@ -191,6 +193,7 @@ typedef struct PartyMemberRuntime {
     UINT8 accessory_id;
     UINT8 weapon_type;
     UINT8 weapon_mastery[PARTY_WEAPON_COUNT];
+    UINT8 magic_mastery;
     UINT8 learned_tech_flags;
     UINT8 learned_magic_flags;
     UINT8 race_type;
@@ -224,6 +227,7 @@ static void party_init_member(UINT8 id, const char *name, UINT16 hp, UINT16 mp,
     party_roster[id].defense = def;
     party_roster[id].skill_power = skill;
     party_roster[id].heal_power = heal;
+    party_roster[id].magic_mastery = 0u;
     party_roster[id].agility = agi;
     party_roster[id].sprite_tile_offset = sprite_tile_offset;
     party_roster[id].weapon_id = ITEM_NONE;
@@ -689,7 +693,7 @@ static UINT8 party_effective_skill(PartyMemberRuntime *member) BANKED {
     if (member == 0) return 0u;
     value = member->skill_power;
     value += party_equipment_skill(member);
-    value += party_mastery_bonus(member);
+    value += (UINT8)(member->magic_mastery >> 3);
     value += party_focus_bonus(member);
     if (member->race_type == PARTY_RACE_MUTANT) value++;
     if (member->learned_magic_flags & (PARTY_MAGIC_FLAG_FIRE | PARTY_MAGIC_FLAG_ICE | PARTY_MAGIC_FLAG_THUNDER)) value++;
@@ -728,6 +732,7 @@ void party_get_active_fighter(UINT8 active_slot, PartyBattleFighter *out) BANKED
         out->defense = 0u;
         out->skill_power = 0u;
         out->heal_power = 0u;
+        out->magic_mastery = 0u;
         out->agility = 0u;
         return;
     }
@@ -741,6 +746,7 @@ void party_get_active_fighter(UINT8 active_slot, PartyBattleFighter *out) BANKED
     out->defense = party_effective_defense(member);
     out->skill_power = party_effective_skill(member);
     out->heal_power = party_effective_heal(member);
+    out->magic_mastery = member->magic_mastery;
     out->agility = party_effective_agility(member);
 }
 
@@ -834,6 +840,115 @@ static void party_gain_mastery(PartyMemberRuntime *member, UINT8 tech_flag) BANK
 }
 
 
+
+static UINT8 party_spark_skill_for_weapon(UINT8 weapon_type, UINT8 mastery) BANKED {
+    if (weapon_type == PARTY_WEAPON_SWORD) {
+        if (mastery >= 32u) return SKILL_FINAL_BLADE;
+        if (mastery >= 24u) return SKILL_DRAGON_REND;
+        if (mastery >= 18u) return SKILL_FLAME_EDGE;
+        if (mastery >= 12u) return SKILL_CROSS_SLASH;
+        if (mastery >= 7u) return SKILL_DOUBLE_SLASH;
+        return SKILL_SLASH;
+    }
+    if (weapon_type == PARTY_WEAPON_STAFF) {
+        if (mastery >= 28u) return SKILL_MANA_BURST;
+        if (mastery >= 20u) return SKILL_STAR_PRAYER;
+        if (mastery >= 14u) return SKILL_HOLY_LIGHT;
+        if (mastery >= 8u) return SKILL_MIND_SPIKE;
+        return SKILL_STAFF_HIT;
+    }
+    if (weapon_type == PARTY_WEAPON_BOW) {
+        if (mastery >= 30u) return SKILL_RAIN_ARROW;
+        if (mastery >= 22u) return SKILL_THUNDER_ARROW;
+        if (mastery >= 16u) return SKILL_PIERCING_ARROW;
+        if (mastery >= 10u) return SKILL_EAGLE_EYE;
+        if (mastery >= 5u) return SKILL_DOUBLE_ARROW;
+        return SKILL_ARROW_SHOT;
+    }
+    if (weapon_type == PARTY_WEAPON_GLOVE) {
+        if (mastery >= 30u) return SKILL_SOUL_PALM;
+        if (mastery >= 22u) return SKILL_DRAGON_FIST;
+        if (mastery >= 15u) return SKILL_TIGER_CLAW;
+        if (mastery >= 9u) return SKILL_COUNTER_FIST;
+        if (mastery >= 4u) return SKILL_IRON_FIST;
+        return SKILL_PUNCH;
+    }
+    if (weapon_type == PARTY_WEAPON_TOOL) {
+        if (mastery >= 28u) return SKILL_GRAVITY_NET;
+        if (mastery >= 21u) return SKILL_POISON_TRAP;
+        if (mastery >= 15u) return SKILL_FLASH_BOMB;
+        if (mastery >= 9u) return SKILL_GEAR_CUTTER;
+        if (mastery >= 4u) return SKILL_BOMB_THROW;
+        return SKILL_TRAP_SET;
+    }
+    return SKILL_POWER_STRIKE;
+}
+
+UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_id_out) BANKED {
+    PartyMemberRuntime *member;
+    UINT8 weapon_type;
+    UINT8 mastery;
+    UINT8 chance;
+
+    if (skill_id_out == 0) return 0u;
+    *skill_id_out = SKILL_NONE;
+    member = party_get_active_member(active_slot);
+    if (member == 0 || member->hp == 0u) return 0u;
+
+    weapon_type = party_equipped_weapon_type(member);
+    if (weapon_type >= PARTY_WEAPON_COUNT || weapon_type == PARTY_WEAPON_NONE) return 0u;
+
+    if (member->weapon_mastery[weapon_type] < PARTY_MASTERY_MAX) member->weapon_mastery[weapon_type]++;
+    mastery = member->weapon_mastery[weapon_type];
+
+    chance = (UINT8)(4u + (mastery >> 2));
+    if (chance > 18u) chance = 18u;
+    random_seed = (UINT8)(random_seed ^ (UINT8)(mastery * 13u) ^ DIV_REG);
+    if ((UINT8)(random_seed % 100u) >= chance) return 0u;
+
+    *skill_id_out = party_spark_skill_for_weapon(weapon_type, mastery);
+    member->learned_tech_flags |= PARTY_TECH_FLAG_SPARK;
+    return (*skill_id_out != SKILL_NONE) ? 1u : 0u;
+}
+static UINT8 party_spark_magic_for_mastery(UINT8 mastery) BANKED {
+    if (mastery >= 40u) return SKILL_MAGIC_METEOR;
+    if (mastery >= 34u) return SKILL_MAGIC_DARK;
+    if (mastery >= 28u) return SKILL_MAGIC_SHINE;
+    if (mastery >= 23u) return SKILL_MAGIC_STONE;
+    if (mastery >= 18u) return SKILL_MAGIC_WIND;
+    if (mastery >= 14u) return SKILL_MAGIC_AQUA;
+    if (mastery >= 10u) return SKILL_MAGIC_THUNDER;
+    if (mastery >= 6u) return SKILL_MAGIC_BLIZZARD;
+    return SKILL_MAGIC_FLAME;
+}
+
+UINT8 party_try_spark_magic(UINT8 active_slot, UINT8 random_seed, UINT8 *magic_id_out) BANKED {
+    PartyMemberRuntime *member;
+    UINT8 mastery;
+    UINT8 chance;
+
+    if (magic_id_out == 0) return 0u;
+    *magic_id_out = SKILL_NONE;
+    member = party_get_active_member(active_slot);
+    if (member == 0 || member->hp == 0u) return 0u;
+
+    if (member->magic_mastery < PARTY_MASTERY_MAX) member->magic_mastery++;
+    mastery = member->magic_mastery;
+
+    chance = (UINT8)(5u + (mastery >> 2));
+    if (chance > 22u) chance = 22u;
+    random_seed = (UINT8)(random_seed ^ (UINT8)(mastery * 19u) ^ DIV_REG);
+    if ((UINT8)(random_seed % 100u) >= chance) return 0u;
+
+    *magic_id_out = party_spark_magic_for_mastery(mastery);
+    if (*magic_id_out == SKILL_MAGIC_FLAME) member->learned_magic_flags |= PARTY_MAGIC_FLAG_FIRE;
+    else if (*magic_id_out == SKILL_MAGIC_BLIZZARD) member->learned_magic_flags |= PARTY_MAGIC_FLAG_ICE;
+    else if (*magic_id_out == SKILL_MAGIC_THUNDER) member->learned_magic_flags |= PARTY_MAGIC_FLAG_THUNDER;
+    else if (*magic_id_out == SKILL_MAGIC_SHINE) member->learned_magic_flags |= PARTY_MAGIC_FLAG_LIGHT;
+    else if (*magic_id_out == SKILL_MAGIC_DARK) member->learned_magic_flags |= PARTY_MAGIC_FLAG_DARK;
+    return (*magic_id_out != SKILL_NONE) ? 1u : 0u;
+}
+
 static UINT8 party_growth_roll(UINT8 *seed) BANKED {
     *seed = (UINT8)((*seed * 17u) + 29u);
     return *seed;
@@ -870,7 +985,11 @@ static void party_post_battle_one_growth(PartyMemberRuntime *member, UINT8 enemy
             if (member->heal_power < 99u) member->heal_power++;
             if (member->max_mp < 99u && (party_growth_roll(seed) & 1u) != 0u) member->max_mp++;
         } else if (style == PARTY_ACTION_SKILL) {
+            if (member->attack < 99u && (party_growth_roll(seed) & 1u) != 0u) member->attack++;
+            if (member->max_hp < 199u && (party_growth_roll(seed) & 3u) == 0u) member->max_hp++;
+        } else if (style == PARTY_ACTION_MAGIC) {
             if (member->skill_power < 99u) member->skill_power++;
+            if (member->magic_mastery < PARTY_MASTERY_MAX) member->magic_mastery++;
             if (member->max_mp < 99u && (party_growth_roll(seed) & 1u) != 0u) member->max_mp++;
         } else if (style == PARTY_ACTION_ATTACK) {
             if (member->attack < 99u) member->attack++;
@@ -922,6 +1041,12 @@ UINT16 party_battle_op(UINT8 op, UINT8 active_slot, UINT16 value) BANKED {
         party_gain_mastery(member, PARTY_TECH_FLAG_SKILL);
         if (member->focus >= 16u) member->learned_tech_flags |= PARTY_TECH_FLAG_FOCUS;
         party_note_action(member, PARTY_ACTION_SKILL);
+        return 1u;
+    }
+
+    if (op == PARTY_OP_NOTE_MAGIC) {
+        if (member->magic_mastery < PARTY_MASTERY_MAX) member->magic_mastery++;
+        party_note_action(member, PARTY_ACTION_MAGIC);
         return 1u;
     }
 
@@ -1311,7 +1436,7 @@ static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
         jp_put_bkg_text(1u, 4u, "MP"); party_put_u16(6u, 4u, f.mp); jp_put_bkg_text(9u, 4u, "/"); party_put_u16(11u, 4u, f.max_mp);
         jp_put_bkg_text(1u, 5u, "ちから"); party_put_u8(12u, 5u, f.attack);
         jp_put_bkg_text(1u, 6u, "まもり"); party_put_u8(12u, 6u, f.defense);
-        jp_put_bkg_text(1u, 7u, "とくぎ"); party_put_u8(12u, 7u, f.skill_power);
+        jp_put_bkg_text(1u, 7u, "まりょく"); party_put_u8(12u, 7u, f.skill_power);
         jp_put_bkg_text(1u, 8u, "かいふく"); party_put_u8(12u, 8u, f.heal_power);
         jp_put_bkg_text(1u, 9u, "すばやさ"); party_put_u8(12u, 9u, f.agility);
         if (member != 0) {
@@ -1728,6 +1853,7 @@ void party_save_copy_to(PartySaveState *dst) BANKED {
             dst->active[i].defense = 0u;
             dst->active[i].skill_power = 0u;
             dst->active[i].heal_power = 0u;
+            dst->active[i].magic_mastery = 0u;
             dst->active[i].agility = 0u;
             dst->active[i].weapon_id = ITEM_NONE;
             dst->active[i].armor_id = ITEM_NONE;
@@ -1753,6 +1879,7 @@ void party_save_copy_to(PartySaveState *dst) BANKED {
             dst->active[i].defense = member->defense;
             dst->active[i].skill_power = member->skill_power;
             dst->active[i].heal_power = member->heal_power;
+            dst->active[i].magic_mastery = member->magic_mastery;
             dst->active[i].agility = member->agility;
             dst->active[i].weapon_id = member->weapon_id;
             dst->active[i].armor_id = member->armor_id;
@@ -1790,6 +1917,7 @@ void party_save_copy_from(const PartySaveState *src) BANKED {
         member->defense = src->active[i].defense;
         member->skill_power = src->active[i].skill_power;
         member->heal_power = src->active[i].heal_power;
+        member->magic_mastery = src->active[i].magic_mastery;
         member->agility = src->active[i].agility;
         member->weapon_id = src->active[i].weapon_id;
         member->armor_id = src->active[i].armor_id;
