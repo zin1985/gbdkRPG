@@ -22,10 +22,6 @@ BANKREF(party_runtime_bank)
 #define PARTY_ACTION_ATTACK 4u
 #endif
 
-#define PARTY_EQUIP_MSG_SELECT 0u
-#define PARTY_EQUIP_MSG_CHOOSE 1u
-#define PARTY_EQUIP_MSG_DONE   2u
-#define PARTY_EQUIP_MSG_NG     3u
 
 #ifndef PARTY_WEAPON_COUNT
 #define PARTY_WEAPON_NONE  0u
@@ -990,6 +986,8 @@ UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_i
 
     chance = (UINT8)(8u + (mastery >> 1));
     if (chance > 35u) chance = 35u;
+    /* rpg241: debug/test support. At mastery 50+, sparks should be easy to verify. */
+    if (mastery >= 50u) chance = 80u;
     random_seed = (UINT8)(random_seed ^ (UINT8)(mastery * 13u) ^ DIV_REG);
     if ((UINT8)(random_seed % 100u) >= chance) return 0u;
 
@@ -1023,6 +1021,8 @@ UINT8 party_try_spark_magic_from(UINT8 active_slot, UINT8 trigger_skill_id, UINT
 
     chance = (UINT8)(8u + (mastery >> 1));
     if (chance > 40u) chance = 40u;
+    /* rpg241: debug/test support. At mastery 50+, magic sparks should be easy to verify. */
+    if (mastery >= 50u) chance = 85u;
     random_seed = (UINT8)(random_seed ^ (UINT8)(mastery * 19u) ^ DIV_REG);
     if ((UINT8)(random_seed % 100u) >= chance) return 0u;
 
@@ -1850,16 +1850,7 @@ static void party_draw_equip_popup(PartyMemberRuntime *member, UINT8 slot_cursor
 }
 
 
-static const char *party_equip_message_text(UINT8 message_id) BANKED {
-    switch (message_id) {
-        case PARTY_EQUIP_MSG_CHOOSE: return "そうび  やめる";
-        case PARTY_EQUIP_MSG_DONE:   return "そうびしました";
-        case PARTY_EQUIP_MSG_NG:     return "そうびできません";
-        default:                     return "えらぶ  もどる";
-    }
-}
-
-static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 choosing, UINT8 item_cursor, const UINT8 *items, UINT8 item_count, UINT8 message_id) BANKED {
+static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 choosing, UINT8 item_cursor, const UINT8 *items, UINT8 item_count, const char *message) BANKED {
     PartyMemberRuntime *member;
 
     member = party_get_active_member(active_slot);
@@ -1870,7 +1861,7 @@ static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 ch
     jp_put_bkg_text(13u, 1u, "< >");
     if (member == 0) {
         jp_put_bkg_text(2u, 4u, "なかま なし");
-        party_put_field_text(1u, 16u, 18u, party_equip_message_text(message_id));
+        party_put_field_text(1u, 16u, 18u, message);
         return;
     }
     party_put_field_text(1u, 3u, 10u, member->name);
@@ -1881,7 +1872,7 @@ static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 ch
     jp_put_bkg_text(1u, 10u, "こうげき+"); party_put_u8(10u,10u, party_equipment_attack(member));
     jp_put_bkg_text(1u, 11u, "まもり+"); party_put_u8(10u,11u, party_equipment_defense(member));
     jp_put_bkg_text(1u, 12u, "おもさ");  party_put_u8(8u,12u, party_equipment_weight(member));
-    party_put_field_text(1u, 16u, 18u, party_equip_message_text(message_id));
+    party_put_field_text(1u, 16u, 18u, message);
     if (choosing != 0u) party_draw_equip_popup(member, slot_cursor, item_cursor, items, item_count);
 }
 
@@ -1931,7 +1922,7 @@ void party_menu_show_equip_loop(void) BANKED {
     UINT8 item_cursor;
     UINT8 old_item_cursor;
     UINT8 item_count;
-    UINT8 message;
+    const char *message;
     PartyMemberRuntime *member;
     UINT8 redraw_page;
 
@@ -1940,7 +1931,7 @@ void party_menu_show_equip_loop(void) BANKED {
     choosing = 0u;
     item_cursor = 0u;
     item_count = 0u;
-    message = PARTY_EQUIP_MSG_SELECT;
+    message = "えらぶ  もどる";
     for (old_item_cursor = 0u; old_item_cursor < PARTY_EQUIP_CANDIDATE_MAX; old_item_cursor++) party_equip_choices[old_item_cursor] = ITEM_NONE;
     HIDE_WIN;
     SHOW_BKG;
@@ -1975,7 +1966,7 @@ void party_menu_show_equip_loop(void) BANKED {
                 item_count = party_build_equip_candidates(member, slot_cursor, party_equip_choices);
                 item_cursor = 0u;
                 choosing = 1u;
-                message = PARTY_EQUIP_MSG_CHOOSE;
+                message = "そうび  やめる";
                 redraw_page = 1u;
             }
         } else {
@@ -2001,11 +1992,11 @@ void party_menu_show_equip_loop(void) BANKED {
                 }
             } else if (keys & J_B) {
                 choosing = 0u;
-                message = PARTY_EQUIP_MSG_SELECT;
+                message = "えらぶ  もどる";
                 redraw_page = 1u;
             } else if (keys & J_A) {
-                if (party_apply_equip_choice(member, slot_cursor, party_equip_choices[item_cursor])) message = PARTY_EQUIP_MSG_DONE;
-                else message = PARTY_EQUIP_MSG_NG;
+                if (party_apply_equip_choice(member, slot_cursor, party_equip_choices[item_cursor])) message = "そうびしました";
+                else message = "そうびできません";
                 choosing = 0u;
                 redraw_page = 1u;
             }

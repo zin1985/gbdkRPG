@@ -1,0 +1,16 @@
+rpg241_equip_crash_spark_fix
+
+Fixes:
+- Reverted equipment screen message passing from UINT8 message-id back to const char*.
+  The previous message-id change was the most likely cause of equipment screen crash/freeze.
+- Kept bottom messages Japanese-only to avoid unsupported A=/B= glyph garbage.
+- Kept spear/axe spark category fix from rpg239.
+- Increased spark gate for mastery >= 50:
+  tech spark gate = 80%
+  magic spark gate = 85%
+  This is for testability while initial mastery is 50.
+- Hero initial equipment was checked in party_runtime.c. It is still sword type if the save is reset/new.
+
+Important:
+- If old SRAM/save data is loaded, the hero may retain old equipment from the previous save.
+  Delete/reset save data when testing initial equipment and mastery=50 behavior.
