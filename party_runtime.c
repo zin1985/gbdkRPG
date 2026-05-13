@@ -9,6 +9,7 @@
 #include "ui_icons.h"
 #include "banked_graphics.h"
 #include "sprites.h"
+#include "battle_skill_runtime.h"
 
 BANKREF_EXTERN(sprite_data_bank)
 
@@ -854,64 +855,24 @@ static void party_gain_mastery(PartyMemberRuntime *member, UINT8 tech_flag) BANK
 
 
 
-static UINT8 party_spark_skill_for_weapon(UINT8 weapon_type, UINT8 mastery) BANKED {
-    if (weapon_type == PARTY_WEAPON_SWORD) {
-        if (mastery >= 46u) return SKILL_SWORD_COMET;
-        if (mastery >= 40u) return SKILL_SWORD_MOON;
-        if (mastery >= 32u) return SKILL_FINAL_BLADE;
-        if (mastery >= 24u) return SKILL_DRAGON_REND;
-        if (mastery >= 18u) return SKILL_FLAME_EDGE;
-        if (mastery >= 12u) return SKILL_CROSS_SLASH;
-        if (mastery >= 7u) return SKILL_DOUBLE_SLASH;
-        return SKILL_SLASH;
-    }
-    if (weapon_type == PARTY_WEAPON_STAFF) {
-        if (mastery >= 46u) return SKILL_STAFF_SPIRIT;
-        if (mastery >= 38u) return SKILL_STAFF_NOVA;
-        if (mastery >= 28u) return SKILL_MANA_BURST;
-        if (mastery >= 20u) return SKILL_STAR_PRAYER;
-        if (mastery >= 14u) return SKILL_HOLY_LIGHT;
-        if (mastery >= 8u) return SKILL_MIND_SPIKE;
-        return SKILL_STAFF_HIT;
-    }
-    if (weapon_type == PARTY_WEAPON_BOW) {
-        if (mastery >= 46u) return SKILL_BOW_STARFALL;
-        if (mastery >= 38u) return SKILL_BOW_STORM;
-        if (mastery >= 30u) return SKILL_RAIN_ARROW;
-        if (mastery >= 22u) return SKILL_THUNDER_ARROW;
-        if (mastery >= 16u) return SKILL_PIERCING_ARROW;
-        if (mastery >= 10u) return SKILL_EAGLE_EYE;
-        if (mastery >= 5u) return SKILL_DOUBLE_ARROW;
-        return SKILL_ARROW_SHOT;
-    }
-    if (weapon_type == PARTY_WEAPON_GLOVE) {
-        if (mastery >= 46u) return SKILL_FIST_AURA;
-        if (mastery >= 38u) return SKILL_FIST_METEOR;
-        if (mastery >= 30u) return SKILL_SOUL_PALM;
-        if (mastery >= 22u) return SKILL_DRAGON_FIST;
-        if (mastery >= 15u) return SKILL_TIGER_CLAW;
-        if (mastery >= 9u) return SKILL_COUNTER_FIST;
-        if (mastery >= 4u) return SKILL_IRON_FIST;
-        return SKILL_PUNCH;
-    }
-    if (weapon_type == PARTY_WEAPON_TOOL) {
-        if (mastery >= 46u) return SKILL_TOOL_NOVA_BOMB;
-        if (mastery >= 38u) return SKILL_TOOL_RAIL;
-        if (mastery >= 28u) return SKILL_GRAVITY_NET;
-        if (mastery >= 21u) return SKILL_POISON_TRAP;
-        if (mastery >= 15u) return SKILL_FLASH_BOMB;
-        if (mastery >= 9u) return SKILL_GEAR_CUTTER;
-        if (mastery >= 4u) return SKILL_BOMB_THROW;
-        return SKILL_TRAP_SET;
-    }
-    return SKILL_POWER_STRIKE;
+/* rpg235: tier table replaced by prereq-aware spark edges in bank 20.
+ * The starter weapon tech is granted as a fallback when no edge fires.
+ */
+static UINT8 party_spark_starter_skill_for_weapon(UINT8 weapon_type) BANKED {
+    if (weapon_type == PARTY_WEAPON_SWORD) return SKILL_SLASH;
+    if (weapon_type == PARTY_WEAPON_STAFF) return SKILL_STAFF_HIT;
+    if (weapon_type == PARTY_WEAPON_BOW)   return SKILL_ARROW_SHOT;
+    if (weapon_type == PARTY_WEAPON_GLOVE) return SKILL_PUNCH;
+    if (weapon_type == PARTY_WEAPON_TOOL)  return SKILL_TRAP_SET;
+    return SKILL_NONE;
 }
 
 
 static UINT8 party_skill_is_magic_local(UINT8 skill_id) BANKED {
     if (skill_id == SKILL_HEAL_SIMPLE || skill_id == SKILL_FIRE) return 1u;
     if (skill_id >= SKILL_MAGIC_FLAME && skill_id <= SKILL_MAGIC_METEOR) return 1u;
-    if (skill_id >= SKILL_MAGIC_FREEZE && skill_id <= SKILL_MAGIC_GRAND_CROSS) return 1u;
+    if (skill_id >= SKILL_MAGIC_FREEZE && skill_id <= SKILL_MAGIC_ULTIMA) return 1u;
+    if (skill_id >= SKILL_MAGIC_BLAZE && skill_id < SKILL_MAX) return 1u;
     return 0u;
 }
 
@@ -979,6 +940,8 @@ UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_i
     UINT8 weapon_type;
     UINT8 mastery;
     UINT8 chance;
+    UINT8 picked;
+    UINT8 starter;
 
     if (skill_id_out == 0) return 0u;
     *skill_id_out = SKILL_NONE;
@@ -991,40 +954,44 @@ UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_i
     if (member->weapon_mastery[weapon_type] < PARTY_MASTERY_MAX) member->weapon_mastery[weapon_type]++;
     mastery = member->weapon_mastery[weapon_type];
 
+    /* Ensure the starter skill for this weapon is owned so the prereq walk has a foothold. */
+    starter = party_spark_starter_skill_for_weapon(weapon_type);
+    if (starter != SKILL_NONE && !party_has_learned_skill(active_slot, starter)) {
+        party_add_learned_skill(active_slot, starter);
+        *skill_id_out = starter;
+        member->learned_tech_flags |= PARTY_TECH_FLAG_SPARK;
+        return 1u;
+    }
+
     chance = (UINT8)(4u + (mastery >> 2));
     if (chance > 18u) chance = 18u;
     random_seed = (UINT8)(random_seed ^ (UINT8)(mastery * 13u) ^ DIV_REG);
     if ((UINT8)(random_seed % 100u) >= chance) return 0u;
 
-    *skill_id_out = party_spark_skill_for_weapon(weapon_type, mastery);
+    picked = battle_skill_spark_pick_tech(weapon_type, mastery, random_seed, member->learned_skills);
+    if (picked == SKILL_NONE || picked >= SKILL_MAX) return 0u;
+    if (party_skill_is_magic_local(picked)) return 0u; /* tech sparker must never return a magic ID */
+
+    *skill_id_out = picked;
     member->learned_tech_flags |= PARTY_TECH_FLAG_SPARK;
-    return (*skill_id_out != SKILL_NONE) ? 1u : 0u;
-}
-static UINT8 party_spark_magic_for_mastery(UINT8 mastery) BANKED {
-    if (mastery >= 50u) return SKILL_MAGIC_GRAND_CROSS;
-    if (mastery >= 47u) return SKILL_MAGIC_FLARE;
-    if (mastery >= 44u) return SKILL_MAGIC_ABYSS;
-    if (mastery >= 42u) return SKILL_MAGIC_HOLY_RAY;
-    if (mastery >= 40u) return SKILL_MAGIC_METEOR;
-    if (mastery >= 34u) return SKILL_MAGIC_DARK;
-    if (mastery >= 28u) return SKILL_MAGIC_SHINE;
-    if (mastery >= 23u) return SKILL_MAGIC_STONE;
-    if (mastery >= 18u) return SKILL_MAGIC_WIND;
-    if (mastery >= 14u) return SKILL_MAGIC_AQUA;
-    if (mastery >= 10u) return SKILL_MAGIC_THUNDER;
-    if (mastery >= 6u) return SKILL_MAGIC_BLIZZARD;
-    return SKILL_MAGIC_FLAME;
+    return 1u;
 }
 
-UINT8 party_try_spark_magic(UINT8 active_slot, UINT8 random_seed, UINT8 *magic_id_out) BANKED {
+UINT8 party_try_spark_magic_from(UINT8 active_slot, UINT8 trigger_skill_id, UINT8 random_seed, UINT8 *magic_id_out) BANKED {
     PartyMemberRuntime *member;
     UINT8 mastery;
     UINT8 chance;
+    UINT8 category;
+    UINT8 picked;
 
     if (magic_id_out == 0) return 0u;
     *magic_id_out = SKILL_NONE;
     member = party_get_active_member(active_slot);
     if (member == 0 || member->hp == 0u) return 0u;
+    if (!party_skill_is_magic_local(trigger_skill_id)) return 0u;
+
+    category = battle_skill_runtime_magic_category(trigger_skill_id);
+    if (category == SPARK_CAT_NONE) return 0u;
 
     if (member->magic_mastery < PARTY_MASTERY_MAX) member->magic_mastery++;
     mastery = member->magic_mastery;
@@ -1034,13 +1001,25 @@ UINT8 party_try_spark_magic(UINT8 active_slot, UINT8 random_seed, UINT8 *magic_i
     random_seed = (UINT8)(random_seed ^ (UINT8)(mastery * 19u) ^ DIV_REG);
     if ((UINT8)(random_seed % 100u) >= chance) return 0u;
 
-    *magic_id_out = party_spark_magic_for_mastery(mastery);
-    if (*magic_id_out == SKILL_MAGIC_FLAME) member->learned_magic_flags |= PARTY_MAGIC_FLAG_FIRE;
-    else if (*magic_id_out == SKILL_MAGIC_BLIZZARD) member->learned_magic_flags |= PARTY_MAGIC_FLAG_ICE;
-    else if (*magic_id_out == SKILL_MAGIC_THUNDER) member->learned_magic_flags |= PARTY_MAGIC_FLAG_THUNDER;
-    else if (*magic_id_out == SKILL_MAGIC_SHINE) member->learned_magic_flags |= PARTY_MAGIC_FLAG_LIGHT;
-    else if (*magic_id_out == SKILL_MAGIC_DARK) member->learned_magic_flags |= PARTY_MAGIC_FLAG_DARK;
-    return (*magic_id_out != SKILL_NONE) ? 1u : 0u;
+    picked = battle_skill_spark_pick_magic(category, mastery, random_seed, member->learned_skills);
+    if (picked == SKILL_NONE || picked >= SKILL_MAX) return 0u;
+    if (!party_skill_is_magic_local(picked)) return 0u;
+
+    *magic_id_out = picked;
+    if (category == SPARK_CAT_MAGIC_FIRE)         member->learned_magic_flags |= PARTY_MAGIC_FLAG_FIRE;
+    else if (category == SPARK_CAT_MAGIC_ICE)     member->learned_magic_flags |= PARTY_MAGIC_FLAG_ICE;
+    else if (category == SPARK_CAT_MAGIC_THUNDER) member->learned_magic_flags |= PARTY_MAGIC_FLAG_THUNDER;
+    else if (category == SPARK_CAT_MAGIC_LIGHT)   member->learned_magic_flags |= PARTY_MAGIC_FLAG_LIGHT;
+    else if (category == SPARK_CAT_MAGIC_DARK)    member->learned_magic_flags |= PARTY_MAGIC_FLAG_DARK;
+    else if (category == SPARK_CAT_MAGIC_HEAL)    member->learned_magic_flags |= PARTY_MAGIC_FLAG_HEAL;
+    return 1u;
+}
+
+UINT8 party_try_spark_magic(UINT8 active_slot, UINT8 random_seed, UINT8 *magic_id_out) BANKED {
+    /* Backwards-compatible wrapper: no trigger context, so falls back to no spark. */
+    if (magic_id_out != 0) *magic_id_out = SKILL_NONE;
+    (void)active_slot; (void)random_seed;
+    return 0u;
 }
 
 static UINT8 party_growth_roll(UINT8 *seed) BANKED {
@@ -1284,7 +1263,7 @@ static void party_put_u8(UINT8 x, UINT8 y, UINT8 value) BANKED {
 #define PARTY_REPEAT_RATE   4u
 #define PARTY_STATUS_ICON_TILE_BASE 32u
 #define PARTY_STATUS_ICON_SPRITE_BASE 32u
-#define PARTY_STATUS_PAGE_COUNT 3u
+#define PARTY_STATUS_PAGE_COUNT 10u
 #define PARTY_EQUIP_POPUP_ROWS 6u
 #define PARTY_ITEM_EFFECT_NONE 0u
 #define PARTY_ITEM_EFFECT_HP   1u
@@ -1508,6 +1487,38 @@ UINT8 party_get_last_item_effect_kind(void) BANKED {
 }
 
 
+
+static void party_draw_status_skill_names(PartyMemberRuntime *member, UINT8 page) BANKED {
+    UINT8 i;
+    UINT8 sid;
+    UINT8 seen;
+    UINT8 start;
+    UINT8 row;
+
+    if (member == 0) return;
+    start = (UINT8)((page - 2u) * 8u);
+    seen = 0u;
+    row = 0u;
+    jp_put_bkg_text(1u, 4u, "とくぎ一覧");
+    party_put_u8(12u, 4u, (UINT8)(page - 1u));
+    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
+        sid = member->learned_skills[i];
+        if (sid == SKILL_NONE) continue;
+        if (party_skill_is_magic_local(sid)) continue;
+        if (seen >= start && row < 8u) {
+            jp_put_bkg_text(2u, (UINT8)(5u + row), "-");
+            battle_skill_runtime_put_name(4u, (UINT8)(5u + row), sid);
+            row++;
+        }
+        seen++;
+    }
+    if (seen == 0u) {
+        jp_put_bkg_text(2u, 6u, "まだ ありません");
+    } else if (row == 0u) {
+        jp_put_bkg_text(2u, 6u, "このページは からです");
+    }
+}
+
 static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
     PartyBattleFighter f;
     PartyMemberRuntime *member;
@@ -1554,22 +1565,7 @@ static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
         }
     } else {
         party_status_hide_sprite();
-        jp_put_bkg_text(1u, 4u, "とくぎ一覧");
-        if (member != 0) {
-            jp_put_bkg_text(2u, 6u, "こうげき");
-            if (member->learned_tech_flags & PARTY_TECH_FLAG_HEAL) jp_put_bkg_text(2u, 7u, "かいふく");
-            if (member->learned_tech_flags & PARTY_TECH_FLAG_RANK1) jp_put_bkg_text(2u, 8u, "強うち");
-            if (member->learned_tech_flags & PARTY_TECH_FLAG_RANK2) jp_put_bkg_text(2u, 9u, "二だんうち");
-            if (member->learned_tech_flags & PARTY_TECH_FLAG_SPARK) jp_put_bkg_text(2u, 10u, "ひらめき");
-            if (member->learned_tech_flags & PARTY_TECH_FLAG_COUNTER) jp_put_bkg_text(2u, 11u, "かえしわざ");
-            if (member->learned_tech_flags & PARTY_TECH_FLAG_TOOL) jp_put_bkg_text(2u, 12u, "道具わざ");
-            if (member->learned_magic_flags & PARTY_MAGIC_FLAG_HEAL) jp_put_bkg_text(11u, 6u, "回復まほう");
-            if (member->learned_magic_flags & PARTY_MAGIC_FLAG_FIRE) jp_put_bkg_text(11u, 7u, "火まほう");
-            if (member->learned_magic_flags & PARTY_MAGIC_FLAG_ICE) jp_put_bkg_text(11u, 8u, "氷まほう");
-            if (member->learned_magic_flags & PARTY_MAGIC_FLAG_THUNDER) jp_put_bkg_text(11u, 9u, "雷まほう");
-            if (member->learned_magic_flags & PARTY_MAGIC_FLAG_LIGHT) jp_put_bkg_text(11u, 10u, "光まほう");
-            if (member->learned_magic_flags & PARTY_MAGIC_FLAG_DARK) jp_put_bkg_text(11u, 11u, "闇まほう");
-        }
+        party_draw_status_skill_names(member, page);
     }
     jp_put_bkg_text(1u,16u, "< >仲間 上下ページ B戻る");
 }
@@ -1716,6 +1712,7 @@ static void party_member_set_slot_item(PartyMemberRuntime *member, UINT8 slot, U
 }
 
 #define PARTY_EQUIP_CANDIDATE_MAX 48u
+static UINT8 party_equip_choices[PARTY_EQUIP_CANDIDATE_MAX];
 
 static UINT8 party_build_equip_candidates(PartyMemberRuntime *member, UINT8 slot, UINT8 *out) BANKED {
     UINT8 count;
@@ -1850,7 +1847,6 @@ void party_menu_show_equip_loop(void) BANKED {
     UINT8 item_cursor;
     UINT8 old_item_cursor;
     UINT8 item_count;
-    UINT8 item_choices[PARTY_EQUIP_CANDIDATE_MAX];
     const char *message;
     PartyMemberRuntime *member;
     UINT8 redraw_page;
@@ -1861,9 +1857,13 @@ void party_menu_show_equip_loop(void) BANKED {
     item_cursor = 0u;
     item_count = 0u;
     message = "A=えらぶ B=もどる";
+    for (old_item_cursor = 0u; old_item_cursor < PARTY_EQUIP_CANDIDATE_MAX; old_item_cursor++) party_equip_choices[old_item_cursor] = ITEM_NONE;
+    HIDE_WIN;
+    SHOW_BKG;
+    SPRITES_8x8;
     ui_icons_load();
     audio_waitpadup();
-    party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, item_choices, item_count, message);
+    party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, party_equip_choices, item_count, message);
     while (1) {
         keys = party_wait_menu_keys(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START);
         member = party_get_active_member(slot);
@@ -1888,7 +1888,7 @@ void party_menu_show_equip_loop(void) BANKED {
             } else if (keys & (J_B | J_START)) {
                 break;
             } else if (keys & J_A) {
-                item_count = party_build_equip_candidates(member, slot_cursor, item_choices);
+                item_count = party_build_equip_candidates(member, slot_cursor, party_equip_choices);
                 item_cursor = 0u;
                 choosing = 1u;
                 message = "A=そうび B=やめる";
@@ -1900,7 +1900,7 @@ void party_menu_show_equip_loop(void) BANKED {
                 item_cursor = party_equip_cursor_up(item_cursor, item_count);
                 if (old_item_cursor != item_cursor) {
                     if (party_equip_page_start(old_item_cursor) != party_equip_page_start(item_cursor)) {
-                        party_draw_equip_popup(member, slot_cursor, item_cursor, item_choices, item_count);
+                        party_draw_equip_popup(member, slot_cursor, item_cursor, party_equip_choices, item_count);
                     } else {
                         party_update_equip_popup_cursor(old_item_cursor, item_cursor);
                     }
@@ -1910,7 +1910,7 @@ void party_menu_show_equip_loop(void) BANKED {
                 item_cursor = party_equip_cursor_down(item_cursor, item_count);
                 if (old_item_cursor != item_cursor) {
                     if (party_equip_page_start(old_item_cursor) != party_equip_page_start(item_cursor)) {
-                        party_draw_equip_popup(member, slot_cursor, item_cursor, item_choices, item_count);
+                        party_draw_equip_popup(member, slot_cursor, item_cursor, party_equip_choices, item_count);
                     } else {
                         party_update_equip_popup_cursor(old_item_cursor, item_cursor);
                     }
@@ -1920,14 +1920,14 @@ void party_menu_show_equip_loop(void) BANKED {
                 message = "A=えらぶ B=もどる";
                 redraw_page = 1u;
             } else if (keys & J_A) {
-                if (party_apply_equip_choice(member, slot_cursor, item_choices[item_cursor])) message = "そうびした";
+                if (party_apply_equip_choice(member, slot_cursor, party_equip_choices[item_cursor])) message = "そうびした";
                 else message = "そうびできない";
                 choosing = 0u;
                 redraw_page = 1u;
             }
         }
         if (redraw_page != 0u) {
-            party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, item_choices, item_count, message);
+            party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, party_equip_choices, item_count, message);
         }
     }
 }

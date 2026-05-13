@@ -98,6 +98,7 @@ void party_menu_show_heal_skill_loop(void) BANKED;
 void party_after_battle_growth(UINT8 enemy_rank, UINT8 random_seed) BANKED;
 UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_id_out) BANKED;
 UINT8 party_try_spark_magic(UINT8 active_slot, UINT8 random_seed, UINT8 *magic_id_out) BANKED;
+UINT8 party_try_spark_magic_from(UINT8 active_slot, UINT8 trigger_skill_id, UINT8 random_seed, UINT8 *magic_id_out) BANKED;
 
 UINT8 party_get_learned_skill_count(UINT8 active_slot, UINT8 magic_mode) BANKED;
 UINT8 party_get_learned_skill_at(UINT8 active_slot, UINT8 index, UINT8 magic_mode) BANKED;

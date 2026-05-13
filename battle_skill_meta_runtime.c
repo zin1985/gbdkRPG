@@ -76,7 +76,100 @@ static const SkillMeta skill_meta_table[SKILL_MAX] = {
     {BATTLE_SKILL_KIND_HEAL, TARGET_ALLY, 7u, 18u, 100u, SKILL_FLAG_FIELD_OK},
     {BATTLE_SKILL_KIND_HEAL, TARGET_ALLY, 12u, 24u, 100u, SKILL_FLAG_FIELD_OK},
     {BATTLE_SKILL_KIND_HEAL, TARGET_ALLY, 6u, 8u, 100u, SKILL_FLAG_FIELD_OK},
-    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 14u, 36u, 80u, SKILL_FLAG_AI_OK}
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 14u, 36u, 80u, SKILL_FLAG_AI_OK},
+    /* 51..60: upper weapon techniques */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 9u, 30u, 88u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 11u, 36u, 84u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 10u, 34u, 86u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_HEAL,   TARGET_ALLY, 10u, 28u,100u, SKILL_FLAG_FIELD_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,10u, 28u, 88u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,12u, 34u, 84u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 11u, 38u, 84u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 9u, 30u, 90u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 9u, 32u, 88u, SKILL_FLAG_IGNORE_DEF | SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,13u, 40u, 82u, SKILL_FLAG_AI_OK},
+    /* 61..70: upper magic */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 7u, 22u, 90u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 8u, 25u, 88u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,9u, 26u, 88u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 9u, 28u, 88u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 10u, 32u, 88u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 10u, 34u, 86u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_HEAL,   TARGET_ALLY, 12u, 32u,100u, SKILL_FLAG_FIELD_OK},
+    {BATTLE_SKILL_KIND_DEBUFF, TARGET_SELF, 6u, 0u,100u, SKILL_FLAG_FIELD_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,13u, 38u, 84u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,15u, 44u, 80u, SKILL_FLAG_AI_OK},
+    /* 71..80: rpg234 additional techniques/magic */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 12u, 42u, 84u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,14u, 48u, 80u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 12u, 42u, 84u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,13u, 40u, 84u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 13u, 46u, 82u, SKILL_FLAG_IGNORE_DEF | SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,14u, 48u, 80u, SKILL_FLAG_IGNORE_DEF | SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 12u, 40u, 86u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 12u, 38u, 88u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,13u, 42u, 84u, SKILL_FLAG_AI_OK},
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY,16u, 52u, 78u, SKILL_FLAG_AI_OK},
+    /* 81..93: rpg235 sword / axe / lance techniques */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 14u, 50u, 84u, SKILL_FLAG_AI_OK},          /* SWORD_BRAVE_EDGE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 6u, 14u, 90u, SKILL_FLAG_AI_OK},       /* SWORD_WAVE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 12u, 32u, 84u, SKILL_FLAG_AI_OK},      /* SWORD_STORM */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 9u, 22u, 86u, SKILL_FLAG_AI_OK},       /* SWORD_RAIN */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 3u, 10u, 92u, SKILL_FLAG_AI_OK},           /* AXE_TOMAHAWK */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 6u, 18u, 88u, SKILL_FLAG_AI_OK},           /* AXE_CLEAVE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 10u, 34u, 80u, SKILL_FLAG_AI_OK},          /* AXE_GIGANT */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 11u, 28u, 80u, SKILL_FLAG_AI_OK},      /* AXE_QUAKE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 2u, 7u, 96u, SKILL_FLAG_AI_OK},            /* LANCE_THRUST */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 5u, 14u, 92u, SKILL_FLAG_IGNORE_DEF | SKILL_FLAG_AI_OK}, /* LANCE_PIERCE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 11u, 38u, 82u, SKILL_FLAG_AI_OK},          /* LANCE_DRAGON */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 9u, 24u, 84u, SKILL_FLAG_AI_OK},       /* LANCE_TEMPEST */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 13u, 36u, 80u, SKILL_FLAG_AI_OK},      /* LANCE_TYPHOON */
+    /* 94..98: bow techniques */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 4u, 12u, 92u, SKILL_FLAG_AI_OK},           /* ARROW_SPLIT */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 8u, 20u, 86u, SKILL_FLAG_AI_OK},       /* ARROW_BARRAGE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 12u, 34u, 80u, SKILL_FLAG_AI_OK},      /* ARROW_METEOR */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 9u, 28u, 90u, SKILL_FLAG_IGNORE_DEF | SKILL_FLAG_AI_OK}, /* ARROW_SNIPE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 10u, 26u, 84u, SKILL_FLAG_AI_OK},      /* ARROW_AURORA */
+    /* 99..103: martial-art techniques */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 3u, 9u, 94u, SKILL_FLAG_AI_OK},            /* FIST_COMBO */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 5u, 14u, 90u, SKILL_FLAG_AI_OK},           /* FIST_SHOCK */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 9u, 30u, 84u, SKILL_FLAG_AI_OK},           /* FIST_RAGE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 9u, 22u, 84u, SKILL_FLAG_AI_OK},       /* FIST_HURRICANE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 13u, 36u, 78u, SKILL_FLAG_AI_OK},      /* FIST_PHOENIX */
+    /* 104..108: tool / device techniques */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 8u, 26u, 88u, SKILL_FLAG_AI_OK},           /* TOOL_LASER */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 7u, 18u, 86u, SKILL_FLAG_AI_OK},       /* TOOL_QUAKE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 11u, 30u, 82u, SKILL_FLAG_AI_OK},      /* TOOL_PLASMA */
+    {BATTLE_SKILL_KIND_HEAL, TARGET_ALLY, 5u, 10u, 100u, SKILL_FLAG_FIELD_OK},          /* TOOL_REPAIR */
+    {BATTLE_SKILL_KIND_DEBUFF, TARGET_SELF, 4u, 0u, 100u, SKILL_FLAG_FIELD_OK},         /* TOOL_SHIELD */
+    /* 109..112: fire magic */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 5u, 16u, 92u, SKILL_FLAG_AI_OK},           /* MAGIC_BLAZE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 9u, 30u, 86u, SKILL_FLAG_AI_OK},           /* MAGIC_INFERNO */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 8u, 22u, 86u, SKILL_FLAG_AI_OK},       /* MAGIC_FIREWALL */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 14u, 42u, 78u, SKILL_FLAG_AI_OK},      /* MAGIC_METEOR_FLARE */
+    /* 113..115: ice magic */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 4u, 14u, 92u, SKILL_FLAG_AI_OK},           /* MAGIC_FROST */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 10u, 32u, 84u, SKILL_FLAG_AI_OK},          /* MAGIC_ABS_ZERO */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 13u, 38u, 80u, SKILL_FLAG_AI_OK},      /* MAGIC_ICE_AGE */
+    /* 116..118: thunder magic */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 4u, 13u, 94u, SKILL_FLAG_AI_OK},           /* MAGIC_SPARK */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 9u, 30u, 86u, SKILL_FLAG_AI_OK},           /* MAGIC_BOLT */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 13u, 38u, 80u, SKILL_FLAG_AI_OK},      /* MAGIC_JUDGMENT */
+    /* 119..120: light magic */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 6u, 18u, 92u, SKILL_FLAG_AI_OK},           /* MAGIC_SAINT */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 12u, 34u, 82u, SKILL_FLAG_AI_OK},      /* MAGIC_PRISM */
+    /* 121..123: dark magic */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 5u, 16u, 92u, SKILL_FLAG_AI_OK},           /* MAGIC_SHADOW */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ENEMY, 10u, 32u, 84u, SKILL_FLAG_IGNORE_DEF | SKILL_FLAG_AI_OK}, /* MAGIC_NIGHTMARE */
+    {BATTLE_SKILL_KIND_DAMAGE, TARGET_ALL_ENEMY, 14u, 40u, 78u, SKILL_FLAG_AI_OK},      /* MAGIC_VOID_BREAK */
+    /* 124..126: heal magic */
+    {BATTLE_SKILL_KIND_HEAL, TARGET_ALLY, 5u, 12u, 100u, SKILL_FLAG_FIELD_OK},          /* MAGIC_RECOVER */
+    {BATTLE_SKILL_KIND_HEAL, TARGET_ALLY, 9u, 22u, 100u, SKILL_FLAG_FIELD_OK},          /* MAGIC_REGEN */
+    {BATTLE_SKILL_KIND_HEAL, TARGET_ALLY, 14u, 28u, 100u, SKILL_FLAG_FIELD_OK},         /* MAGIC_GROUP_HEAL */
+    /* 127..129: buff magic */
+    {BATTLE_SKILL_KIND_DEBUFF, TARGET_SELF, 5u, 0u, 100u, SKILL_FLAG_FIELD_OK},         /* MAGIC_BOOST */
+    {BATTLE_SKILL_KIND_DEBUFF, TARGET_SELF, 5u, 0u, 100u, SKILL_FLAG_FIELD_OK},         /* MAGIC_AEGIS */
+    {BATTLE_SKILL_KIND_DEBUFF, TARGET_SELF, 6u, 0u, 100u, SKILL_FLAG_FIELD_OK}          /* MAGIC_HASTE */
 };
 
 static UINT8 meta_power(UINT8 skill_id) {
@@ -97,14 +190,99 @@ UINT8 battle_skill_runtime_mp_cost(UINT8 skill_id) BANKED {
 UINT8 battle_skill_runtime_is_magic(UINT8 skill_id) BANKED {
     if (skill_id == SKILL_HEAL_SIMPLE || skill_id == SKILL_FIRE) return 1u;
     if (skill_id >= SKILL_MAGIC_FLAME && skill_id <= SKILL_MAGIC_METEOR) return 1u;
-    if (skill_id >= SKILL_MAGIC_FREEZE && skill_id <= SKILL_MAGIC_GRAND_CROSS) return 1u;
+    if (skill_id >= SKILL_MAGIC_FREEZE && skill_id <= SKILL_MAGIC_ULTIMA) return 1u;
+    if (skill_id >= SKILL_MAGIC_BLAZE && skill_id < SKILL_MAX) return 1u;
     return 0u;
 }
 
 UINT8 battle_skill_runtime_is_heal_magic(UINT8 skill_id) BANKED {
-    return (skill_id == SKILL_HEAL_SIMPLE || skill_id == SKILL_MAGIC_HEAL_PLUS ||
-            skill_id == SKILL_MAGIC_REVIVE || skill_id == SKILL_MAGIC_BARRIER ||
-            skill_id == SKILL_MAGIC_CURE_ALL) ? 1u : 0u;
+    if (skill_id == SKILL_HEAL_SIMPLE) return 1u;
+    if (skill_id == SKILL_MAGIC_HEAL_PLUS) return 1u;
+    if (skill_id == SKILL_MAGIC_REVIVE) return 1u;
+    if (skill_id == SKILL_MAGIC_BARRIER) return 1u;
+    if (skill_id == SKILL_MAGIC_CURE_ALL) return 1u;
+    if (skill_id == SKILL_MAGIC_RECOVER) return 1u;
+    if (skill_id == SKILL_MAGIC_REGEN) return 1u;
+    if (skill_id == SKILL_MAGIC_GROUP_HEAL) return 1u;
+    if (skill_id == SKILL_TOOL_REPAIR) return 1u;
+    return 0u;
+}
+
+UINT8 battle_skill_runtime_is_buff_magic(UINT8 skill_id) BANKED {
+    if (skill_id == SKILL_MAGIC_ACCEL) return 1u;
+    if (skill_id == SKILL_MAGIC_BOOST) return 1u;
+    if (skill_id == SKILL_MAGIC_AEGIS) return 1u;
+    if (skill_id == SKILL_MAGIC_HASTE) return 1u;
+    if (skill_id == SKILL_TOOL_SHIELD) return 1u;
+    return 0u;
+}
+
+UINT8 battle_skill_runtime_is_all_target(UINT8 skill_id) BANKED {
+    UINT8 t;
+    if (skill_id >= SKILL_MAX) return 0u;
+    t = skill_meta_table[skill_id].target;
+    return (t == TARGET_ALL_ENEMY || t == TARGET_ALL_ALLY) ? 1u : 0u;
+}
+
+UINT8 battle_skill_runtime_magic_category(UINT8 skill_id) BANKED {
+    switch (skill_id) {
+        case SKILL_FIRE:
+        case SKILL_MAGIC_FLAME:
+        case SKILL_MAGIC_BLAZE:
+        case SKILL_MAGIC_INFERNO:
+        case SKILL_MAGIC_FIREWALL:
+        case SKILL_MAGIC_METEOR:
+        case SKILL_MAGIC_METEOR_FLARE:
+        case SKILL_MAGIC_FLARE:
+            return SPARK_CAT_MAGIC_FIRE;
+        case SKILL_MAGIC_BLIZZARD:
+        case SKILL_MAGIC_AQUA:
+        case SKILL_MAGIC_FREEZE:
+        case SKILL_MAGIC_FROST:
+        case SKILL_MAGIC_ABS_ZERO:
+        case SKILL_MAGIC_ICE_AGE:
+            return SPARK_CAT_MAGIC_ICE;
+        case SKILL_MAGIC_THUNDER:
+        case SKILL_MAGIC_PLASMA:
+        case SKILL_MAGIC_TORNADO:
+        case SKILL_MAGIC_WIND:
+        case SKILL_MAGIC_SPARK:
+        case SKILL_MAGIC_BOLT:
+        case SKILL_MAGIC_JUDGMENT:
+            return SPARK_CAT_MAGIC_THUNDER;
+        case SKILL_MAGIC_SHINE:
+        case SKILL_MAGIC_HOLY_RAY:
+        case SKILL_MAGIC_PHOTON:
+        case SKILL_MAGIC_LUNA:
+        case SKILL_MAGIC_GRAND_CROSS:
+        case SKILL_MAGIC_SAINT:
+        case SKILL_MAGIC_PRISM:
+            return SPARK_CAT_MAGIC_LIGHT;
+        case SKILL_MAGIC_DARK:
+        case SKILL_MAGIC_ABYSS:
+        case SKILL_MAGIC_ZERO:
+        case SKILL_MAGIC_ULTIMA:
+        case SKILL_MAGIC_SHADOW:
+        case SKILL_MAGIC_NIGHTMARE:
+        case SKILL_MAGIC_VOID_BREAK:
+            return SPARK_CAT_MAGIC_DARK;
+        case SKILL_HEAL_SIMPLE:
+        case SKILL_MAGIC_HEAL_PLUS:
+        case SKILL_MAGIC_REVIVE:
+        case SKILL_MAGIC_CURE_ALL:
+        case SKILL_MAGIC_RECOVER:
+        case SKILL_MAGIC_REGEN:
+        case SKILL_MAGIC_GROUP_HEAL:
+            return SPARK_CAT_MAGIC_HEAL;
+        case SKILL_MAGIC_BARRIER:
+        case SKILL_MAGIC_ACCEL:
+        case SKILL_MAGIC_BOOST:
+        case SKILL_MAGIC_AEGIS:
+        case SKILL_MAGIC_HASTE:
+            return SPARK_CAT_MAGIC_BUFF;
+        default:
+            return SPARK_CAT_NONE;
+    }
 }
 
 static UINT16 meta_clamp_damage_i16(INT16 damage) {
@@ -116,7 +294,9 @@ static UINT16 meta_clamp_damage_i16(INT16 damage) {
 UINT16 battle_skill_runtime_calc_damage(UINT8 skill_id, UINT8 attack, UINT8 magic_power, UINT8 magic_mastery, UINT8 defense) BANKED {
     INT16 damage;
     UINT8 power;
+    UINT8 is_all;
     power = meta_power(skill_id);
+    is_all = battle_skill_runtime_is_all_target(skill_id);
     if (battle_skill_runtime_is_magic(skill_id)) {
         damage = (INT16)((UINT16)magic_power * 3u);
         damage += (INT16)(magic_mastery >> 2);
@@ -127,9 +307,232 @@ UINT16 battle_skill_runtime_calc_damage(UINT8 skill_id, UINT8 attack, UINT8 magi
         damage += (INT16)(power + (attack >> 1));
         damage -= (INT16)(defense >> 1);
     }
+    if (is_all && damage > 1) {
+        damage = (INT16)((damage * 7) >> 3);
+    }
     return meta_clamp_damage_i16(damage);
 }
 
 UINT16 battle_skill_runtime_calc_heal(UINT8 skill_id, UINT8 magic_power, UINT8 magic_mastery) BANKED {
     return (UINT16)((UINT16)magic_power * 2u + (UINT16)(magic_mastery >> 2) + (UINT16)meta_power(skill_id));
+}
+
+/* rpg235: spark derivation tree.
+ *
+ * Each edge says "if you already know `from`, you can spark `to` while
+ * acting in this category, once `mastery >= required_proficiency`."
+ * Walked sequentially in party_runtime; first edge whose roll succeeds wins.
+ */
+typedef struct SkillSparkEdge {
+    UINT8 from_skill;
+    UINT8 to_skill;
+    UINT8 category;
+    UINT8 required_proficiency;
+    UINT8 base_rate;
+    UINT8 flags;
+} SkillSparkEdge;
+
+static const SkillSparkEdge skill_spark_edges[] = {
+    /* Sword tree (剣技). Starter SKILL_SLASH is granted at init. */
+    { SKILL_SLASH,            SKILL_DOUBLE_SLASH,      SPARK_CAT_TECH_SWORD,  3u, 16u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_DOUBLE_SLASH,     SKILL_CROSS_SLASH,       SPARK_CAT_TECH_SWORD,  8u, 14u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_CROSS_SLASH,      SKILL_SWORD_BRAVE_EDGE,  SPARK_CAT_TECH_SWORD, 18u, 10u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_CROSS_SLASH,      SKILL_FLAME_EDGE,        SPARK_CAT_TECH_SWORD, 14u, 12u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_FLAME_EDGE,       SKILL_ICE_EDGE,          SPARK_CAT_TECH_SWORD, 18u, 10u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_FLAME_EDGE,       SKILL_DRAGON_REND,       SPARK_CAT_TECH_SWORD, 22u,  9u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_DRAGON_REND,      SKILL_FINAL_BLADE,       SPARK_CAT_TECH_SWORD, 28u,  7u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_FINAL_BLADE,      SKILL_SWORD_MOON,        SPARK_CAT_TECH_SWORD, 32u,  6u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_SWORD_MOON,       SKILL_SWORD_COMET,       SPARK_CAT_TECH_SWORD, 38u,  6u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_SWORD_COMET,      SKILL_SWORD_SKY,         SPARK_CAT_TECH_SWORD, 44u,  5u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_SWORD_SKY,        SKILL_SWORD_VOID,        SPARK_CAT_TECH_SWORD, 48u,  4u, SPARK_EDGE_FLAG_TECH },
+    /* Sword sweep branch (なぎはらい→ソードストーム). */
+    { SKILL_SLASH,            SKILL_SWORD_WAVE,        SPARK_CAT_TECH_SWORD,  6u, 10u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_SWORD_WAVE,       SKILL_SWORD_RAIN,        SPARK_CAT_TECH_SWORD, 12u,  8u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_SWORD_RAIN,       SKILL_SWORD_STORM,       SPARK_CAT_TECH_SWORD, 24u,  6u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Axe branch on sword weapon. Starter AXE_TOMAHAWK has no prereq. */
+    { SKILL_NONE,             SKILL_AXE_TOMAHAWK,      SPARK_CAT_TECH_SWORD, 10u,  8u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_AXE_TOMAHAWK,     SKILL_AXE_CLEAVE,        SPARK_CAT_TECH_SWORD, 16u,  9u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_AXE_CLEAVE,       SKILL_AXE_GIGANT,        SPARK_CAT_TECH_SWORD, 26u,  6u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_AXE_CLEAVE,       SKILL_AXE_QUAKE,         SPARK_CAT_TECH_SWORD, 22u,  6u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Lance branch on sword weapon. */
+    { SKILL_NONE,             SKILL_LANCE_THRUST,      SPARK_CAT_TECH_SWORD,  8u,  9u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_LANCE_THRUST,     SKILL_LANCE_PIERCE,      SPARK_CAT_TECH_SWORD, 14u,  9u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_LANCE_PIERCE,     SKILL_LANCE_DRAGON,      SPARK_CAT_TECH_SWORD, 26u,  6u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_LANCE_PIERCE,     SKILL_LANCE_TEMPEST,     SPARK_CAT_TECH_SWORD, 20u,  6u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_LANCE_TEMPEST,    SKILL_LANCE_TYPHOON,     SPARK_CAT_TECH_SWORD, 30u,  5u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Staff tree (杖技). Starter SKILL_STAFF_HIT. */
+    { SKILL_STAFF_HIT,        SKILL_MIND_SPIKE,        SPARK_CAT_TECH_STAFF,  4u, 14u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_MIND_SPIKE,       SKILL_HOLY_LIGHT,        SPARK_CAT_TECH_STAFF, 10u, 12u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_HOLY_LIGHT,       SKILL_MANA_BURST,        SPARK_CAT_TECH_STAFF, 18u, 10u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_MANA_BURST,       SKILL_STAR_PRAYER,       SPARK_CAT_TECH_STAFF, 24u,  8u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_STAR_PRAYER,      SKILL_STAFF_NOVA,        SPARK_CAT_TECH_STAFF, 32u,  6u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_STAFF_NOVA,       SKILL_STAFF_SPIRIT,      SPARK_CAT_TECH_STAFF, 40u,  5u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_STAFF_SPIRIT,     SKILL_STAFF_ARCANA,      SPARK_CAT_TECH_STAFF, 46u,  4u, SPARK_EDGE_FLAG_TECH },
+    /* Bow tree (弓技). Starter SKILL_ARROW_SHOT. */
+    { SKILL_ARROW_SHOT,       SKILL_DOUBLE_ARROW,      SPARK_CAT_TECH_BOW,    4u, 16u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_DOUBLE_ARROW,     SKILL_ARROW_SPLIT,       SPARK_CAT_TECH_BOW,    8u, 12u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_ARROW_SPLIT,      SKILL_EAGLE_EYE,         SPARK_CAT_TECH_BOW,   12u, 10u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_EAGLE_EYE,        SKILL_PIERCING_ARROW,    SPARK_CAT_TECH_BOW,   18u, 10u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_PIERCING_ARROW,   SKILL_THUNDER_ARROW,     SPARK_CAT_TECH_BOW,   22u,  9u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_THUNDER_ARROW,    SKILL_ARROW_SNIPE,       SPARK_CAT_TECH_BOW,   28u,  7u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_THUNDER_ARROW,    SKILL_RAIN_ARROW,        SPARK_CAT_TECH_BOW,   24u,  7u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_RAIN_ARROW,       SKILL_ARROW_BARRAGE,     SPARK_CAT_TECH_BOW,   28u,  6u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_ARROW_BARRAGE,    SKILL_BOW_STORM,         SPARK_CAT_TECH_BOW,   34u,  5u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_BOW_STORM,        SKILL_ARROW_AURORA,      SPARK_CAT_TECH_BOW,   40u,  5u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_ARROW_AURORA,     SKILL_BOW_STARFALL,      SPARK_CAT_TECH_BOW,   44u,  4u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_BOW_STARFALL,     SKILL_ARROW_METEOR,      SPARK_CAT_TECH_BOW,   46u,  4u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_ARROW_METEOR,     SKILL_BOW_COMET,         SPARK_CAT_TECH_BOW,   50u,  3u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Martial tree (体術). Starter SKILL_PUNCH. */
+    { SKILL_PUNCH,            SKILL_IRON_FIST,         SPARK_CAT_TECH_GLOVE,  3u, 16u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_IRON_FIST,        SKILL_FIST_COMBO,        SPARK_CAT_TECH_GLOVE,  6u, 12u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_FIST_COMBO,       SKILL_COUNTER_FIST,      SPARK_CAT_TECH_GLOVE, 10u, 10u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_COUNTER_FIST,     SKILL_FIST_SHOCK,        SPARK_CAT_TECH_GLOVE, 14u, 10u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_FIST_SHOCK,       SKILL_TIGER_CLAW,        SPARK_CAT_TECH_GLOVE, 18u,  9u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_TIGER_CLAW,       SKILL_FIST_RAGE,         SPARK_CAT_TECH_GLOVE, 24u,  8u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_FIST_RAGE,        SKILL_DRAGON_FIST,       SPARK_CAT_TECH_GLOVE, 28u,  7u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_DRAGON_FIST,      SKILL_FIST_HURRICANE,    SPARK_CAT_TECH_GLOVE, 32u,  6u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_FIST_HURRICANE,   SKILL_SOUL_PALM,         SPARK_CAT_TECH_GLOVE, 36u,  5u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_SOUL_PALM,        SKILL_FIST_METEOR,       SPARK_CAT_TECH_GLOVE, 40u,  5u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_FIST_METEOR,      SKILL_FIST_PHOENIX,      SPARK_CAT_TECH_GLOVE, 44u,  4u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_FIST_PHOENIX,     SKILL_FIST_AURA,         SPARK_CAT_TECH_GLOVE, 46u,  4u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_FIST_AURA,        SKILL_FIST_GODHAND,      SPARK_CAT_TECH_GLOVE, 50u,  3u, SPARK_EDGE_FLAG_TECH },
+    /* Tool tree (装置系). Starter SKILL_TRAP_SET. */
+    { SKILL_TRAP_SET,         SKILL_BOMB_THROW,        SPARK_CAT_TECH_TOOL,   3u, 16u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_BOMB_THROW,       SKILL_GEAR_CUTTER,       SPARK_CAT_TECH_TOOL,   8u, 12u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_GEAR_CUTTER,      SKILL_FLASH_BOMB,        SPARK_CAT_TECH_TOOL,  12u, 10u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_FLASH_BOMB,       SKILL_TOOL_QUAKE,        SPARK_CAT_TECH_TOOL,  16u,  9u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_FLASH_BOMB,       SKILL_TOOL_REPAIR,       SPARK_CAT_TECH_TOOL,  14u,  9u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_HEAL },
+    { SKILL_TOOL_REPAIR,      SKILL_TOOL_SHIELD,       SPARK_CAT_TECH_TOOL,  18u,  8u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_BUFF },
+    { SKILL_TOOL_QUAKE,       SKILL_POISON_TRAP,       SPARK_CAT_TECH_TOOL,  22u,  7u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_POISON_TRAP,      SKILL_GRAVITY_NET,       SPARK_CAT_TECH_TOOL,  28u,  6u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_GRAVITY_NET,      SKILL_TOOL_LASER,        SPARK_CAT_TECH_TOOL,  32u,  6u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_TOOL_LASER,       SKILL_TOOL_RAIL,         SPARK_CAT_TECH_TOOL,  38u,  5u, SPARK_EDGE_FLAG_TECH },
+    { SKILL_TOOL_RAIL,        SKILL_TOOL_PLASMA,       SPARK_CAT_TECH_TOOL,  42u,  4u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_TOOL_PLASMA,      SKILL_TOOL_NOVA_BOMB,    SPARK_CAT_TECH_TOOL,  46u,  4u, SPARK_EDGE_FLAG_TECH | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_TOOL_NOVA_BOMB,   SKILL_TOOL_ZERO,         SPARK_CAT_TECH_TOOL,  50u,  3u, SPARK_EDGE_FLAG_TECH },
+    /* Fire magic tree. Starter SKILL_FIRE / SKILL_MAGIC_FLAME. */
+    { SKILL_FIRE,             SKILL_MAGIC_FLAME,       SPARK_CAT_MAGIC_FIRE,  2u, 18u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_FLAME,      SKILL_MAGIC_BLAZE,       SPARK_CAT_MAGIC_FIRE,  6u, 16u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_BLAZE,      SKILL_MAGIC_INFERNO,     SPARK_CAT_MAGIC_FIRE, 14u, 12u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_FLAME,      SKILL_MAGIC_FIREWALL,    SPARK_CAT_MAGIC_FIRE, 10u, 10u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_MAGIC_FIREWALL,   SKILL_MAGIC_METEOR,      SPARK_CAT_MAGIC_FIRE, 22u,  8u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_MAGIC_METEOR,     SKILL_MAGIC_METEOR_FLARE,SPARK_CAT_MAGIC_FIRE, 32u,  6u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_MAGIC_METEOR_FLARE, SKILL_MAGIC_FLARE,     SPARK_CAT_MAGIC_FIRE, 40u,  5u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Ice magic tree. Starter SKILL_MAGIC_BLIZZARD. */
+    { SKILL_MAGIC_BLIZZARD,   SKILL_MAGIC_FROST,       SPARK_CAT_MAGIC_ICE,   4u, 16u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_FROST,      SKILL_MAGIC_AQUA,        SPARK_CAT_MAGIC_ICE,  10u, 12u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_AQUA,       SKILL_MAGIC_FREEZE,      SPARK_CAT_MAGIC_ICE,  18u, 10u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_FREEZE,     SKILL_MAGIC_ABS_ZERO,    SPARK_CAT_MAGIC_ICE,  28u,  8u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_ABS_ZERO,   SKILL_MAGIC_ICE_AGE,     SPARK_CAT_MAGIC_ICE,  38u,  6u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Thunder magic tree. Starter SKILL_MAGIC_THUNDER. */
+    { SKILL_MAGIC_THUNDER,    SKILL_MAGIC_SPARK,       SPARK_CAT_MAGIC_THUNDER, 6u, 16u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_SPARK,      SKILL_MAGIC_WIND,        SPARK_CAT_MAGIC_THUNDER, 12u, 12u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_WIND,       SKILL_MAGIC_BOLT,        SPARK_CAT_MAGIC_THUNDER, 20u, 10u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_BOLT,       SKILL_MAGIC_PLASMA,      SPARK_CAT_MAGIC_THUNDER, 28u,  8u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_PLASMA,     SKILL_MAGIC_TORNADO,     SPARK_CAT_MAGIC_THUNDER, 34u,  7u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_MAGIC_TORNADO,    SKILL_MAGIC_JUDGMENT,    SPARK_CAT_MAGIC_THUNDER, 42u,  5u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Light magic tree. Starter SKILL_MAGIC_SHINE. */
+    { SKILL_MAGIC_SHINE,      SKILL_MAGIC_SAINT,       SPARK_CAT_MAGIC_LIGHT,  6u, 16u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_SAINT,      SKILL_MAGIC_HOLY_RAY,    SPARK_CAT_MAGIC_LIGHT, 16u, 12u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_HOLY_RAY,   SKILL_MAGIC_LUNA,        SPARK_CAT_MAGIC_LIGHT, 26u, 10u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_LUNA,       SKILL_MAGIC_PRISM,       SPARK_CAT_MAGIC_LIGHT, 34u,  8u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_MAGIC_PRISM,      SKILL_MAGIC_PHOTON,      SPARK_CAT_MAGIC_LIGHT, 42u,  6u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_PHOTON,     SKILL_MAGIC_GRAND_CROSS, SPARK_CAT_MAGIC_LIGHT, 50u,  4u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Dark magic tree. Starter SKILL_MAGIC_DARK. */
+    { SKILL_MAGIC_DARK,       SKILL_MAGIC_SHADOW,      SPARK_CAT_MAGIC_DARK,   6u, 16u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_SHADOW,     SKILL_MAGIC_STONE,       SPARK_CAT_MAGIC_DARK,  14u, 12u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_STONE,      SKILL_MAGIC_ABYSS,       SPARK_CAT_MAGIC_DARK,  24u, 10u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_ABYSS,      SKILL_MAGIC_NIGHTMARE,   SPARK_CAT_MAGIC_DARK,  32u,  8u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_NIGHTMARE,  SKILL_MAGIC_ZERO,        SPARK_CAT_MAGIC_DARK,  40u,  6u, SPARK_EDGE_FLAG_MAGIC },
+    { SKILL_MAGIC_ZERO,       SKILL_MAGIC_VOID_BREAK,  SPARK_CAT_MAGIC_DARK,  46u,  5u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_MAGIC_VOID_BREAK, SKILL_MAGIC_ULTIMA,      SPARK_CAT_MAGIC_DARK,  50u,  4u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Heal magic tree. Starter SKILL_HEAL_SIMPLE. */
+    { SKILL_HEAL_SIMPLE,      SKILL_MAGIC_RECOVER,     SPARK_CAT_MAGIC_HEAL,   4u, 16u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_HEAL },
+    { SKILL_MAGIC_RECOVER,    SKILL_MAGIC_HEAL_PLUS,   SPARK_CAT_MAGIC_HEAL,  10u, 14u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_HEAL },
+    { SKILL_MAGIC_HEAL_PLUS,  SKILL_MAGIC_REGEN,       SPARK_CAT_MAGIC_HEAL,  18u, 12u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_HEAL },
+    { SKILL_MAGIC_REGEN,      SKILL_MAGIC_REVIVE,      SPARK_CAT_MAGIC_HEAL,  26u, 10u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_HEAL },
+    { SKILL_MAGIC_REVIVE,     SKILL_MAGIC_GROUP_HEAL,  SPARK_CAT_MAGIC_HEAL,  34u,  8u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_HEAL | SPARK_EDGE_FLAG_ALL_TGT },
+    { SKILL_MAGIC_GROUP_HEAL, SKILL_MAGIC_CURE_ALL,    SPARK_CAT_MAGIC_HEAL,  42u,  6u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_HEAL | SPARK_EDGE_FLAG_ALL_TGT },
+    /* Buff magic tree. Starter SKILL_MAGIC_BARRIER. */
+    { SKILL_NONE,             SKILL_MAGIC_BOOST,       SPARK_CAT_MAGIC_BUFF,   6u, 12u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_BUFF },
+    { SKILL_MAGIC_BOOST,      SKILL_MAGIC_BARRIER,     SPARK_CAT_MAGIC_BUFF,  14u, 10u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_BUFF },
+    { SKILL_MAGIC_BARRIER,    SKILL_MAGIC_AEGIS,       SPARK_CAT_MAGIC_BUFF,  24u,  8u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_BUFF },
+    { SKILL_MAGIC_AEGIS,      SKILL_MAGIC_ACCEL,       SPARK_CAT_MAGIC_BUFF,  32u,  6u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_BUFF },
+    { SKILL_MAGIC_ACCEL,      SKILL_MAGIC_HASTE,       SPARK_CAT_MAGIC_BUFF,  40u,  5u, SPARK_EDGE_FLAG_MAGIC | SPARK_EDGE_FLAG_BUFF }
+};
+
+#define SKILL_SPARK_EDGE_COUNT ((UINT8)(sizeof(skill_spark_edges) / sizeof(skill_spark_edges[0])))
+
+static UINT8 spark_learned_has(const UINT8 *learned_skills, UINT8 skill_id) {
+    UINT8 i;
+    if (skill_id == SKILL_NONE) return 1u;
+    if (learned_skills == 0) return 0u;
+    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
+        if (learned_skills[i] == skill_id) return 1u;
+    }
+    return 0u;
+}
+
+static UINT8 spark_mastery_bonus(UINT8 mastery, UINT8 required) {
+    UINT8 over;
+    if (mastery <= required) return 0u;
+    over = (UINT8)(mastery - required);
+    if (over > 30u) over = 30u;
+    return (UINT8)(over >> 1);
+}
+
+UINT8 battle_skill_spark_pick_tech(UINT8 weapon_type, UINT8 mastery, UINT8 seed, const UINT8 *learned_skills) BANKED {
+    UINT8 i;
+    const SkillSparkEdge *edge;
+    UINT8 rate;
+    UINT8 roll;
+    UINT8 mix;
+
+    if (weapon_type == 0u || weapon_type > SPARK_CAT_TECH_TOOL) return SKILL_NONE;
+    if (mastery > 60u) mastery = 60u;
+    mix = (UINT8)(seed ^ (UINT8)(mastery * 23u) ^ DIV_REG);
+    for (i = 0u; i < SKILL_SPARK_EDGE_COUNT; i++) {
+        edge = &skill_spark_edges[i];
+        if (edge->category != weapon_type) continue;
+        if ((edge->flags & SPARK_EDGE_FLAG_TECH) == 0u) continue;
+        if (edge->to_skill >= SKILL_MAX) continue;
+        if (edge->from_skill >= SKILL_MAX) continue;
+        if (mastery < edge->required_proficiency) continue;
+        if (!spark_learned_has(learned_skills, edge->from_skill)) continue;
+        if (spark_learned_has(learned_skills, edge->to_skill)) continue;
+        rate = (UINT8)(edge->base_rate + spark_mastery_bonus(mastery, edge->required_proficiency));
+        if (rate > 60u) rate = 60u;
+        mix = (UINT8)((mix * 5u) + edge->to_skill + 17u);
+        roll = (UINT8)(mix % 100u);
+        if (roll < rate) return edge->to_skill;
+    }
+    return SKILL_NONE;
+}
+
+UINT8 battle_skill_spark_pick_magic(UINT8 magic_category, UINT8 mastery, UINT8 seed, const UINT8 *learned_skills) BANKED {
+    UINT8 i;
+    const SkillSparkEdge *edge;
+    UINT8 rate;
+    UINT8 roll;
+    UINT8 mix;
+
+    if (magic_category < SPARK_CAT_MAGIC_FIRE || magic_category > SPARK_CAT_MAGIC_BUFF) return SKILL_NONE;
+    if (mastery > 60u) mastery = 60u;
+    mix = (UINT8)(seed ^ (UINT8)(mastery * 29u) ^ (UINT8)(DIV_REG ^ 0x5Au));
+    for (i = 0u; i < SKILL_SPARK_EDGE_COUNT; i++) {
+        edge = &skill_spark_edges[i];
+        if (edge->category != magic_category) continue;
+        if ((edge->flags & SPARK_EDGE_FLAG_MAGIC) == 0u) continue;
+        if (edge->to_skill >= SKILL_MAX) continue;
+        if (edge->from_skill >= SKILL_MAX) continue;
+        if (mastery < edge->required_proficiency) continue;
+        if (!spark_learned_has(learned_skills, edge->from_skill)) continue;
+        if (spark_learned_has(learned_skills, edge->to_skill)) continue;
+        rate = (UINT8)(edge->base_rate + spark_mastery_bonus(mastery, edge->required_proficiency));
+        if (rate > 60u) rate = 60u;
+        mix = (UINT8)((mix * 5u) + edge->to_skill + 31u);
+        roll = (UINT8)(mix % 100u);
+        if (roll < rate) return edge->to_skill;
+    }
+    return SKILL_NONE;
 }

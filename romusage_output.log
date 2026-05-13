@@ -1,22 +1,22 @@
-* WARNING: Area _CODE_7  at 74000 -> 789a6 extends past end of memory region at 77fff (Overflow by 2471 bytes)
+* WARNING: Area _CODE_7  at 74000 -> 787fb extends past end of memory region at 77fff (Overflow by 2044 bytes)
 
 Bank         Range                Size     Used  Used%     Free  Free% 
 --------     ----------------  -------  -------  -----  -------  -----
-ROM_0        0x0000 -> 0x3FFF    16384    15856    97%      528     3% |-##########################-|
+ROM_0        0x0000 -> 0x3FFF    16384    15866    97%      518     3% |-##########################-|
 |
-+ _CODE                           0x0200 -> 0x38E4   14053
-+ _HOME                           0x38E5 -> 0x3F2F    1611
-+ _INITIALIZER                    0x3F30 -> 0x3F37       8
-+ _GSINIT                         0x3F38 -> 0x3F43      12
-+ _GSFINAL                        0x3F44 -> 0x3F44       1
++ _CODE                           0x0200 -> 0x38EE   14063
++ _HOME                           0x38EF -> 0x3F39    1611
++ _INITIALIZER                    0x3F3A -> 0x3F41       8
++ _GSINIT                         0x3F42 -> 0x3F4D      12
++ _GSFINAL                        0x3F4E -> 0x3F4E       1
 
-ROM_23/31    0x4000 -> 0x7FFF   507904    91417    18%   416487    82% |..-----..-.....-............|
+ROM_23/31    0x4000 -> 0x7FFF   507904    94700    19%   413204    81% |..-----..-.....-............|
 |
 + _CODE_1                         0x4000 -> 0x4555    1366
 + _CODE_2                         0x8000 -> 0x89BB    2492
 + _CODE_3                         0xC000 -> 0xE011    8210
 + _CODE_4                         0x10000 -> 0x117FF    6144
-+ _CODE_5                         0x14000 -> 0x16E00   11777
++ _CODE_5                         0x14000 -> 0x1729C   12957
 + _CODE_6                         0x18000 -> 0x1B8A7   14504
 + _CODE_7                         0x1C000 -> 0x1FFFF   16384
 + _CODE_9                         0x24000 -> 0x24A5B    2652
@@ -30,7 +30,7 @@ ROM_23/31    0x4000 -> 0x7FFF   507904    91417    18%   416487    82% |..-----.
 + _CODE_17                        0x44000 -> 0x441E3     484
 + _CODE_18                        0x48000 -> 0x495D0    5585
 + _CODE_19                        0x4C000 -> 0x4C328     809
-+ _CODE_20                        0x50000 -> 0x5030B     780
++ _CODE_20                        0x50000 -> 0x50B42    2883
 + _CODE_21                        0x54000 -> 0x541EF     496
 + _CODE_22                        0x58000 -> 0x58124     293
 + _CODE_23                        0x5C000 -> 0x5C1AA     427
@@ -39,8 +39,8 @@ WRAM_LO      0xC000 -> 0xCFFF     4096     3936    96%      160     4% |.-######
 |
 + _DATA                           0xC0A0 -> 0xCFFF    3936
 
-WRAM_HI_0    0xD000 -> 0xDFFF     4096      906    22%     3190    78% |............................|
+WRAM_HI_0    0xD000 -> 0xDFFF     4096      978    24%     3118    76% |............................|
 |
-+ _DATA                           0xC000 -> 0xC381     898
-+ _INITIALIZED                    0xC382 -> 0xC389       8
++ _DATA                           0xC000 -> 0xC3C9     970
++ _INITIALIZED                    0xC3CA -> 0xC3D1       8
 

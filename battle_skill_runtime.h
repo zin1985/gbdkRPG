@@ -25,5 +25,14 @@ UINT8 battle_skill_runtime_is_heal_magic(UINT8 skill_id) BANKED;
 UINT16 battle_skill_runtime_calc_damage(UINT8 skill_id, UINT8 attack, UINT8 magic_power, UINT8 magic_mastery, UINT8 defense) BANKED;
 UINT16 battle_skill_runtime_calc_heal(UINT8 skill_id, UINT8 magic_power, UINT8 magic_mastery) BANKED;
 const char *battle_skill_runtime_name(UINT8 skill_id) BANKED;
+const char *battle_skill_runtime_name_buffered(UINT8 skill_id) BANKED;
+void battle_skill_runtime_put_name(UINT8 x, UINT8 y, UINT8 skill_id) BANKED;
+
+/* rpg235: spark-derivation API. Lookup tables live in bank 20. */
+UINT8 battle_skill_runtime_magic_category(UINT8 skill_id) BANKED;
+UINT8 battle_skill_runtime_is_buff_magic(UINT8 skill_id) BANKED;
+UINT8 battle_skill_runtime_is_all_target(UINT8 skill_id) BANKED;
+UINT8 battle_skill_spark_pick_tech(UINT8 weapon_type, UINT8 mastery, UINT8 seed, const UINT8 *learned_skills) BANKED;
+UINT8 battle_skill_spark_pick_magic(UINT8 magic_category, UINT8 mastery, UINT8 seed, const UINT8 *learned_skills) BANKED;
 
 #endif

@@ -96,8 +96,86 @@ const char *battle_skill_runtime_name(UINT8 skill_id) BANKED {
         case SKILL_MAGIC_ACCEL: return "アクセル";
         case SKILL_MAGIC_FLARE: return "フレアII";
         case SKILL_MAGIC_GRAND_CROSS: return "グランド";
+        case SKILL_SWORD_SKY: return "スカイ";
+        case SKILL_SWORD_VOID: return "ヴォイド";
+        case SKILL_STAFF_ARCANA: return "アルカナ";
+        case SKILL_BOW_COMET: return "コメット矢";
+        case SKILL_FIST_GODHAND: return "ゴッド手";
+        case SKILL_TOOL_ZERO: return "ゼロ装置";
+        case SKILL_MAGIC_ZERO: return "ゼロ";
+        case SKILL_MAGIC_LUNA: return "ルナ";
+        case SKILL_MAGIC_PHOTON: return "フォトン";
+        case SKILL_MAGIC_ULTIMA: return "アルテマ";
+        case SKILL_SWORD_BRAVE_EDGE: return "ブレイブ";
+        case SKILL_SWORD_WAVE: return "なぎ";
+        case SKILL_SWORD_STORM: return "ストーム";
+        case SKILL_SWORD_RAIN: return "ソードレイン";
+        case SKILL_AXE_TOMAHAWK: return "トマホク";
+        case SKILL_AXE_CLEAVE: return "クリーブ";
+        case SKILL_AXE_GIGANT: return "ギガント";
+        case SKILL_AXE_QUAKE: return "クェイク";
+        case SKILL_LANCE_THRUST: return "スラスト";
+        case SKILL_LANCE_PIERCE: return "ピアース";
+        case SKILL_LANCE_DRAGON: return "ドラ槍";
+        case SKILL_LANCE_TEMPEST: return "テンペスト";
+        case SKILL_LANCE_TYPHOON: return "タイフン";
+        case SKILL_ARROW_SPLIT: return "スプリト";
+        case SKILL_ARROW_BARRAGE: return "バラージ";
+        case SKILL_ARROW_METEOR: return "メテオ矢";
+        case SKILL_ARROW_SNIPE: return "スナイプ";
+        case SKILL_ARROW_AURORA: return "オーロラ";
+        case SKILL_FIST_COMBO: return "コンボ";
+        case SKILL_FIST_SHOCK: return "ショック";
+        case SKILL_FIST_RAGE: return "レイジ";
+        case SKILL_FIST_HURRICANE: return "ハリケン";
+        case SKILL_FIST_PHOENIX: return "フェニク";
+        case SKILL_TOOL_LASER: return "レーザ";
+        case SKILL_TOOL_QUAKE: return "シェイク";
+        case SKILL_TOOL_PLASMA: return "プラズマ装";
+        case SKILL_TOOL_REPAIR: return "リペア";
+        case SKILL_TOOL_SHIELD: return "シールド";
+        case SKILL_MAGIC_BLAZE: return "ブレイズ";
+        case SKILL_MAGIC_INFERNO: return "インフェル";
+        case SKILL_MAGIC_FIREWALL: return "ファイア壁";
+        case SKILL_MAGIC_METEOR_FLARE: return "メテオフレア";
+        case SKILL_MAGIC_FROST: return "フロスト";
+        case SKILL_MAGIC_ABS_ZERO: return "ゼロ度";
+        case SKILL_MAGIC_ICE_AGE: return "アイス世";
+        case SKILL_MAGIC_SPARK: return "スパーク";
+        case SKILL_MAGIC_BOLT: return "ボルト";
+        case SKILL_MAGIC_JUDGMENT: return "ジャジ";
+        case SKILL_MAGIC_SAINT: return "セイント";
+        case SKILL_MAGIC_PRISM: return "プリズム";
+        case SKILL_MAGIC_SHADOW: return "シャドウ";
+        case SKILL_MAGIC_NIGHTMARE: return "ナイトメア";
+        case SKILL_MAGIC_VOID_BREAK: return "ボイド";
+        case SKILL_MAGIC_RECOVER: return "リカバ";
+        case SKILL_MAGIC_REGEN: return "リジェン";
+        case SKILL_MAGIC_GROUP_HEAL: return "グルプヒル";
+        case SKILL_MAGIC_BOOST: return "ブースト";
+        case SKILL_MAGIC_AEGIS: return "イージス";
+        case SKILL_MAGIC_HASTE: return "ヘイスト";
         default: return "なし";
     }
+}
+
+static char runtime_skill_name_buf[24];
+
+const char *battle_skill_runtime_name_buffered(UINT8 skill_id) BANKED {
+    const char *src;
+    UINT8 i;
+    src = battle_skill_runtime_name(skill_id);
+    i = 0u;
+    while (i < 23u && src[i] != '\0') {
+        runtime_skill_name_buf[i] = src[i];
+        i++;
+    }
+    runtime_skill_name_buf[i] = '\0';
+    return runtime_skill_name_buf;
+}
+
+void battle_skill_runtime_put_name(UINT8 x, UINT8 y, UINT8 skill_id) BANKED {
+    jp_put_bkg_text(x, y, battle_skill_runtime_name(skill_id));
 }
 
 static UINT8 runtime_skill_kind(UINT8 skill_id) {

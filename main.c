@@ -1807,7 +1807,7 @@ static void player_attack(void) {
             UINT16 spark_dmg;
             party_add_learned_skill(battle_party_turn_slot, spark_skill);
             battle_show_message("ひらめいた!");
-            battle_show_message(battle_skill_runtime_name(spark_skill));
+            battle_show_message(battle_skill_runtime_name_buffered(spark_skill));
             spark_dmg = battle_skill_runtime_calc_damage(spark_skill, actor.attack, actor.skill_power, actor.magic_mastery, enemy_battle.defense);
             if (spark_dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
             else enemy_battle.hp = (UINT16)(enemy_battle.hp - spark_dmg);
@@ -1859,11 +1859,11 @@ static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
         battle_show_damage_message("かいふく!", amount);
         if (battle_skill_runtime_is_heal_magic(skill_id)) {
             UINT8 spark_magic;
-            if (party_try_spark_magic(battle_party_turn_slot, random_u8(), &spark_magic)) {
+            if (party_try_spark_magic_from(battle_party_turn_slot, skill_id, random_u8(), &spark_magic)) {
                 UINT16 spark_heal;
                 party_add_learned_skill(battle_party_turn_slot, spark_magic);
                 battle_show_message("まほうを ひらめいた!");
-                battle_show_message(battle_skill_runtime_name(spark_magic));
+                battle_show_message(battle_skill_runtime_name_buffered(spark_magic));
                 if (battle_skill_runtime_kind(spark_magic) == BATTLE_SKILL_KIND_HEAL) {
                     spark_heal = battle_skill_runtime_calc_heal(spark_magic, actor.skill_power, actor.magic_mastery);
                     battle_heal_actor_slot(ally_slot, spark_heal);
@@ -1902,11 +1902,11 @@ static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
 
     if (battle_skill_runtime_is_magic(skill_id) && enemy_battle.hp > 0u) {
         UINT8 spark_magic;
-        if (party_try_spark_magic(battle_party_turn_slot, random_u8(), &spark_magic)) {
+        if (party_try_spark_magic_from(battle_party_turn_slot, skill_id, random_u8(), &spark_magic)) {
             UINT16 spark_dmg;
             party_add_learned_skill(battle_party_turn_slot, spark_magic);
             battle_show_message("まほうを ひらめいた!");
-            battle_show_message(battle_skill_runtime_name(spark_magic));
+            battle_show_message(battle_skill_runtime_name_buffered(spark_magic));
             spark_dmg = battle_skill_runtime_calc_damage(spark_magic, actor.attack, actor.skill_power, actor.magic_mastery, enemy_battle.defense);
             if (spark_dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
             else enemy_battle.hp = (UINT16)(enemy_battle.hp - spark_dmg);
