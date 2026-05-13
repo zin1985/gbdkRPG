@@ -1801,7 +1801,7 @@ static void player_attack(void) {
     battle_show_damage_message("こうげき!", dmg);
     battle_flash_enemy_sprite(battle_target_index);
 
-    if (enemy_battle.hp > 0u) {
+    {
         UINT8 spark_skill;
         if (party_try_spark_skill(battle_party_turn_slot, random_u8(), &spark_skill)) {
             UINT16 spark_dmg;
@@ -1900,7 +1900,7 @@ static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
     }
     battle_flash_enemy_sprite(battle_target_index);
 
-    if (battle_skill_runtime_is_magic(skill_id) && enemy_battle.hp > 0u) {
+    if (battle_skill_runtime_is_magic(skill_id)) {
         UINT8 spark_magic;
         if (party_try_spark_magic_from(battle_party_turn_slot, skill_id, random_u8(), &spark_magic)) {
             UINT16 spark_dmg;

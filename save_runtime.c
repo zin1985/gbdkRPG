@@ -9,7 +9,7 @@ BANKREF(save_runtime_bank)
 
 #define SAVE_MAGIC0 0x52u /* R */
 #define SAVE_MAGIC1 0x50u /* P */
-#define SAVE_VERSION 3u
+#define SAVE_VERSION 4u
 #define SAVE_SLOT_BYTES 512u
 #define SAVE_HEADER_SIZE 5u
 

@@ -94,7 +94,13 @@ void inventory_seed_defaults(void) BANKED {
     inventory_add(ITEM_SAGE_STAFF, 1u);
     inventory_add(ITEM_LONG_BOW, 1u);
     inventory_add(ITEM_STEEL_BOW, 1u);
+    inventory_add(ITEM_BRONZE_SPEAR, 1u);
+    inventory_add(ITEM_STEEL_SPEAR, 1u);
+    inventory_add(ITEM_HAND_AXE, 1u);
+    inventory_add(ITEM_BATTLE_AXE, 1u);
     inventory_add(ITEM_IRON_GLOVES, 1u);
+    inventory_add(ITEM_BEAST_CLAWS, 1u);
+    inventory_add(ITEM_POWER_KNUCKLE, 1u);
     inventory_add(ITEM_ALCHEMY_KIT, 1u);
     inventory_add(ITEM_TRAVEL_CLOTH, 1u);
     inventory_add(ITEM_MAGE_ROBE, 1u);
@@ -398,6 +404,12 @@ static const char *inventory_item_name(UINT8 item_id) BANKED {
         case ITEM_HUNTER_BOW: return "狩人ゆみ";
         case ITEM_THUNDER_BOW: return "雷のゆみ";
         case ITEM_STAR_BOW: return "星のゆみ";
+        case ITEM_BRONZE_SPEAR: return "青銅のやり";
+        case ITEM_STEEL_SPEAR: return "鋼のやり";
+        case ITEM_DRAGON_SPEAR: return "竜槍";
+        case ITEM_HAND_AXE: return "手おの";
+        case ITEM_BATTLE_AXE: return "戦おの";
+        case ITEM_GREAT_AXE: return "大おの";
         case ITEM_IRON_GLOVES: return "鉄手甲";
         case ITEM_BEAST_CLAWS: return "獣の爪";
         case ITEM_POWER_KNUCKLE: return "力手甲";
@@ -442,6 +454,10 @@ static const char *inventory_item_short_name(UINT8 item_id) BANKED {
         case ITEM_DEBUG_ESCAPE: return "早足輪";
         case ITEM_RETURN_FEATHER: return "帰還羽";
         case ITEM_REVIVE_STONE: return "命の石";
+        case ITEM_BRONZE_SPEAR: return "青銅槍";
+        case ITEM_STEEL_SPEAR: return "鋼槍";
+        case ITEM_HAND_AXE: return "手おの";
+        case ITEM_BATTLE_AXE: return "戦おの";
         case ITEM_POWER_KNUCKLE: return "力手甲";
         case ITEM_DRAGON_SCALE: return "竜うろ";
         default: return inventory_item_name(item_id);

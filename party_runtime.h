@@ -2,6 +2,7 @@
 #define PARTY_RUNTIME_H
 
 #include <gb/gb.h>
+#include "skill_defs.h"
 
 #define PARTY_ACTIVE_COUNT 3u
 #define PARTY_ROSTER_COUNT 6u
@@ -25,7 +26,9 @@
 #define PARTY_WEAPON_BOW   3u
 #define PARTY_WEAPON_GLOVE 4u
 #define PARTY_WEAPON_TOOL  5u
-#define PARTY_WEAPON_COUNT 6u
+#define PARTY_WEAPON_SPEAR 6u
+#define PARTY_WEAPON_AXE   7u
+#define PARTY_WEAPON_COUNT 8u
 
 typedef struct PartySaveMember {
     UINT16 max_hp;
@@ -44,6 +47,7 @@ typedef struct PartySaveMember {
     UINT8 magic_mastery;
     UINT8 learned_tech_flags;
     UINT8 learned_magic_flags;
+    UINT8 learned_skills[PLAYER_SKILL_SLOT_COUNT];
     UINT8 morale;
     UINT8 focus;
     UINT8 adventure_sense;

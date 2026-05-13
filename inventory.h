@@ -102,6 +102,13 @@
 #define ITEM_ITIL_ARMOR   106u
 #define ITEM_ITIL_CREST   107u
 
+#define ITEM_BRONZE_SPEAR 108u
+#define ITEM_STEEL_SPEAR  109u
+#define ITEM_DRAGON_SPEAR 110u
+#define ITEM_HAND_AXE     111u
+#define ITEM_BATTLE_AXE   112u
+#define ITEM_GREAT_AXE    113u
+
 void inventory_clear(void) BANKED;
 void inventory_seed_defaults(void) BANKED;
 UINT8 inventory_get_count(UINT8 item_id) BANKED;

@@ -29,7 +29,9 @@ BANKREF(party_runtime_bank)
 #define PARTY_WEAPON_BOW   3u
 #define PARTY_WEAPON_GLOVE 4u
 #define PARTY_WEAPON_TOOL  5u
-#define PARTY_WEAPON_COUNT 6u
+#define PARTY_WEAPON_SPEAR 6u
+#define PARTY_WEAPON_AXE   7u
+#define PARTY_WEAPON_COUNT 8u
 #endif
 #define PARTY_MASTERY_MAX  50u
 
@@ -134,6 +136,12 @@ static const PartyEquipmentDef party_equipment_defs[] = {
     { ITEM_HUNTER_BOW,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   5u, 0u, 1u, 0u, 2u, 2u, 0u, 0u, "狩人ゆみ" },
     { ITEM_THUNDER_BOW,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   6u, 0u, 1u, 0u, 2u, 3u, PARTY_ELEM_THUNDER, 0u, "雷のゆみ" },
     { ITEM_STAR_BOW,      PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   7u, 0u, 2u, 1u, 3u, 2u, PARTY_ELEM_LIGHT, 0u, "星のゆみ" },
+    { ITEM_BRONZE_SPEAR,  PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SPEAR, 4u, 0u, 0u, 0u, 1u, 2u, 0u, 0u, "青銅のやり" },
+    { ITEM_STEEL_SPEAR,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SPEAR, 6u, 0u, 1u, 0u, 1u, 3u, 0u, 0u, "鋼のやり" },
+    { ITEM_DRAGON_SPEAR,  PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SPEAR, 8u, 0u, 2u, 0u, 1u, 4u, PARTY_ELEM_THUNDER, 0u, "竜槍" },
+    { ITEM_HAND_AXE,      PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_AXE,   5u, 0u, 0u, 0u, 0u, 3u, 0u, 0u, "手おの" },
+    { ITEM_BATTLE_AXE,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_AXE,   7u, 0u, 1u, 0u, 0u, 4u, 0u, 0u, "戦おの" },
+    { ITEM_GREAT_AXE,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_AXE,   9u, 0u, 2u, 0u, 0u, 5u, PARTY_ELEM_FIRE, 0u, "大おの" },
     { ITEM_IRON_GLOVES,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_GLOVE, 3u, 0u, 1u, 0u, 2u, 1u, 0u, 0u, "鉄手甲" },
     { ITEM_BEAST_CLAWS,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_GLOVE, 4u, 0u, 2u, 0u, 3u, 1u, 0u, 0u, "獣の爪" },
     { ITEM_POWER_KNUCKLE, PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_GLOVE, 6u, 0u, 2u, 0u, 1u, 2u, 0u, 0u, "力手甲" },
@@ -274,10 +282,10 @@ void party_init_roster_defaults(void) BANKED {
     party_roster[PARTY_MEMBER_HERO].accessory_id = ITEM_CHARM;
     party_roster[PARTY_MEMBER_HERO].weapon_type = PARTY_WEAPON_SWORD;
 
-    party_roster[PARTY_MEMBER_PRIEST].weapon_id = ITEM_OAK_STAFF;
+    party_roster[PARTY_MEMBER_PRIEST].weapon_id = ITEM_SHORT_BOW;
     party_roster[PARTY_MEMBER_PRIEST].armor_id = ITEM_CLOTH_ARMOR;
     party_roster[PARTY_MEMBER_PRIEST].accessory_id = ITEM_DEBUG_ESCAPE;
-    party_roster[PARTY_MEMBER_PRIEST].weapon_type = PARTY_WEAPON_STAFF;
+    party_roster[PARTY_MEMBER_PRIEST].weapon_type = PARTY_WEAPON_BOW;
 
     party_roster[PARTY_MEMBER_MAGE].weapon_id = ITEM_MAGE_STAFF;
     party_roster[PARTY_MEMBER_MAGE].armor_id = ITEM_CLOTH_ARMOR;
@@ -298,6 +306,14 @@ void party_init_roster_defaults(void) BANKED {
     party_roster[PARTY_MEMBER_MONK].armor_id = ITEM_CLOTH_ARMOR;
     party_roster[PARTY_MEMBER_MONK].accessory_id = ITEM_FEATHER;
     party_roster[PARTY_MEMBER_MONK].weapon_type = PARTY_WEAPON_GLOVE;
+
+    {
+        UINT8 m, w;
+        for (m = 0u; m < PARTY_ROSTER_COUNT; m++) {
+            party_roster[m].magic_mastery = 50u;
+            for (w = 0u; w < PARTY_WEAPON_COUNT; w++) party_roster[m].weapon_mastery[w] = 50u;
+        }
+    }
 
     inventory_seed_defaults();
 
@@ -573,6 +589,8 @@ static const char *party_weapon_type_name(UINT8 weapon_type) BANKED {
         case PARTY_WEAPON_BOW: return "ゆみ";
         case PARTY_WEAPON_GLOVE: return "たい";
         case PARTY_WEAPON_TOOL: return "どうぐ";
+        case PARTY_WEAPON_SPEAR: return "やり";
+        case PARTY_WEAPON_AXE: return "おの";
         default: return "なし";
     }
 }
@@ -1556,12 +1574,13 @@ static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
         jp_put_bkg_text(1u, 4u, "じゅくれん");
         if (member != 0) {
             party_put_mastery_icon_value(2u, 6u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_SWORD), member->weapon_mastery[PARTY_WEAPON_SWORD]);
-            party_put_mastery_icon_value(8u, 6u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_STAFF), member->weapon_mastery[PARTY_WEAPON_STAFF]);
-            party_put_mastery_icon_value(14u, 6u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_BOW), member->weapon_mastery[PARTY_WEAPON_BOW]);
-            party_put_mastery_icon_value(2u, 8u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_GLOVE), member->weapon_mastery[PARTY_WEAPON_GLOVE]);
-            party_put_mastery_icon_value(8u, 8u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_TOOL), member->weapon_mastery[PARTY_WEAPON_TOOL]);
-            jp_put_bkg_text(2u, 10u, "まほう");
-            party_put_u8(10u, 10u, member->magic_mastery);
+            party_put_mastery_icon_value(8u, 6u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_SPEAR), member->weapon_mastery[PARTY_WEAPON_SPEAR]);
+            party_put_mastery_icon_value(14u, 6u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_AXE), member->weapon_mastery[PARTY_WEAPON_AXE]);
+            party_put_mastery_icon_value(2u, 8u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_STAFF), member->weapon_mastery[PARTY_WEAPON_STAFF]);
+            party_put_mastery_icon_value(8u, 8u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_BOW), member->weapon_mastery[PARTY_WEAPON_BOW]);
+            party_put_mastery_icon_value(14u, 8u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_GLOVE), member->weapon_mastery[PARTY_WEAPON_GLOVE]);
+            party_put_mastery_icon_value(2u, 10u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_TOOL), member->weapon_mastery[PARTY_WEAPON_TOOL]);
+            party_put_mastery_icon_value(8u, 10u, ui_icon_tile_for_magic_mastery(), member->magic_mastery);
         }
     } else {
         party_status_hide_sprite();
@@ -1960,6 +1979,9 @@ void party_save_copy_to(PartySaveState *dst) BANKED {
             dst->active[i].weapon_mastery[3] = 0u;
             dst->active[i].weapon_mastery[4] = 0u;
             dst->active[i].weapon_mastery[5] = 0u;
+            dst->active[i].weapon_mastery[6] = 0u;
+            dst->active[i].weapon_mastery[7] = 0u;
+            { UINT8 ls; for (ls = 0u; ls < PLAYER_SKILL_SLOT_COUNT; ls++) dst->active[i].learned_skills[ls] = SKILL_NONE; }
             dst->active[i].learned_tech_flags = 0u;
             dst->active[i].learned_magic_flags = 0u;
             dst->active[i].morale = 0u;
@@ -1986,6 +2008,9 @@ void party_save_copy_to(PartySaveState *dst) BANKED {
             dst->active[i].weapon_mastery[3] = member->weapon_mastery[3];
             dst->active[i].weapon_mastery[4] = member->weapon_mastery[4];
             dst->active[i].weapon_mastery[5] = member->weapon_mastery[5];
+            dst->active[i].weapon_mastery[6] = member->weapon_mastery[6];
+            dst->active[i].weapon_mastery[7] = member->weapon_mastery[7];
+            { UINT8 ls; for (ls = 0u; ls < PLAYER_SKILL_SLOT_COUNT; ls++) dst->active[i].learned_skills[ls] = member->learned_skills[ls]; }
             dst->active[i].learned_tech_flags = member->learned_tech_flags;
             dst->active[i].learned_magic_flags = member->learned_magic_flags;
             dst->active[i].morale = member->morale;
@@ -2024,6 +2049,9 @@ void party_save_copy_from(const PartySaveState *src) BANKED {
         member->weapon_mastery[3] = src->active[i].weapon_mastery[3];
         member->weapon_mastery[4] = src->active[i].weapon_mastery[4];
         member->weapon_mastery[5] = src->active[i].weapon_mastery[5];
+        member->weapon_mastery[6] = src->active[i].weapon_mastery[6];
+        member->weapon_mastery[7] = src->active[i].weapon_mastery[7];
+        { UINT8 ls; for (ls = 0u; ls < PLAYER_SKILL_SLOT_COUNT; ls++) member->learned_skills[ls] = src->active[i].learned_skills[ls]; }
         member->learned_tech_flags = src->active[i].learned_tech_flags;
         member->learned_magic_flags = src->active[i].learned_magic_flags;
         member->morale = src->active[i].morale;

@@ -25,13 +25,35 @@ static const unsigned char ui_icon_tiles[8u * 16u] = {
     0x0A,0x0E,0x20,0x31,0x21,0x41,0x40,0x41,0x71,0x73,0x94,0xBC,0x90,0xF0,0xE0,0xE0
 };
 
+/* user-provided 8x8 icons, cut from left to right: spear, axe, body, attack magic, support magic, heal magic.
+ * Stored at tile IDs 233-238 to avoid colliding with the existing inventory category icons.
+ */
+static const unsigned char ui_extra_icon_tiles[6u * 16u] = {
+    0x00,0x00,0x02,0x02,0x04,0x04,0x10,0x00,0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x30,0x00,0x60,0x20,0x40,0x00,0x02,0x00,0x06,0x04,0x0C,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x20,0x00,0x70,0x30,0x78,0x70,0x70,0x60,0x00,0x00,
+    0x3C,0x00,0x42,0x00,0x81,0x00,0xA5,0x00,0x81,0x00,0x99,0x00,0x42,0x00,0x3C,0x00,
+    0x3C,0x3C,0x7E,0x42,0xDB,0x81,0xFF,0xA5,0xFF,0x81,0xE7,0x99,0x42,0x42,0x3C,0x3C,
+    0x3C,0x3C,0x7E,0x7E,0xDB,0xDB,0xFF,0xFF,0xFF,0xFF,0xE7,0xE7,0x42,0x42,0x3C,0x3C
+};
+
 void ui_icons_load(void) BANKED {
     set_bkg_data(UI_ICON_TILE_BASE, 8u, ui_icon_tiles);
+    set_bkg_data(UI_ICON_EXTRA_TILE_BASE, 6u, ui_extra_icon_tiles);
 }
 
 UINT8 ui_icon_tile(UINT8 icon_id) BANKED {
     if (icon_id >= 8u) return (UINT8)(JP_FRAME_BASE + 0u);
     return (UINT8)(UI_ICON_TILE_BASE + icon_id);
+}
+
+UINT8 ui_icon_tile_extra(UINT8 icon_id) BANKED {
+    if (icon_id >= 6u) return (UINT8)(JP_FRAME_BASE + 0u);
+    return (UINT8)(UI_ICON_EXTRA_TILE_BASE + icon_id);
+}
+
+UINT8 ui_icon_tile_for_magic_mastery(void) BANKED {
+    return ui_icon_tile_extra(UI_ICON_MAGIC_ATTACK);
 }
 
 UINT8 ui_icon_tile_for_item(UINT8 item_id) BANKED {
@@ -46,8 +68,16 @@ UINT8 ui_icon_tile_for_item(UINT8 item_id) BANKED {
     if ((item_id >= ITEM_LONG_BOW && item_id <= ITEM_STAR_BOW) || item_id == ITEM_SHORT_BOW) {
         return ui_icon_tile(UI_ICON_BOW);
     }
-    if ((item_id >= ITEM_IRON_GLOVES && item_id <= ITEM_GEAR_TOOL) ||
-        item_id == ITEM_GLOVES || item_id == ITEM_TOOL_KIT) {
+    if (item_id >= ITEM_BRONZE_SPEAR && item_id <= ITEM_DRAGON_SPEAR) {
+        return ui_icon_tile_extra(UI_ICON_SPEAR);
+    }
+    if (item_id >= ITEM_HAND_AXE && item_id <= ITEM_GREAT_AXE) {
+        return ui_icon_tile_extra(UI_ICON_AXE);
+    }
+    if ((item_id >= ITEM_IRON_GLOVES && item_id <= ITEM_MONK_FIST) || item_id == ITEM_GLOVES) {
+        return ui_icon_tile_extra(UI_ICON_BODY);
+    }
+    if ((item_id >= ITEM_ALCHEMY_KIT && item_id <= ITEM_GEAR_TOOL) || item_id == ITEM_TOOL_KIT) {
         return ui_icon_tile(UI_ICON_TOOL_WEAPON);
     }
     if (item_id == ITEM_CLOTH_ARMOR || item_id == ITEM_TRAVEL_CLOTH ||
@@ -72,8 +102,10 @@ UINT8 ui_icon_tile_for_weapon_type(UINT8 weapon_type) BANKED {
         case PARTY_WEAPON_SWORD: return ui_icon_tile(UI_ICON_SWORD);
         case PARTY_WEAPON_STAFF: return ui_icon_tile(UI_ICON_STAFF);
         case PARTY_WEAPON_BOW:   return ui_icon_tile(UI_ICON_BOW);
-        case PARTY_WEAPON_GLOVE: return ui_icon_tile(UI_ICON_TOOL_WEAPON);
+        case PARTY_WEAPON_GLOVE: return ui_icon_tile_extra(UI_ICON_BODY);
         case PARTY_WEAPON_TOOL:  return ui_icon_tile(UI_ICON_TOOL_WEAPON);
+        case PARTY_WEAPON_SPEAR: return ui_icon_tile_extra(UI_ICON_SPEAR);
+        case PARTY_WEAPON_AXE:   return ui_icon_tile_extra(UI_ICON_AXE);
         default: return (UINT8)(JP_FRAME_BASE + 0u);
     }
 }
