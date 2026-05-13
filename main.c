@@ -161,7 +161,12 @@ typedef struct GrowthResult {
 #define MENU_OBJECTIVE 3u
 #define MENU_COUNT 4u
 
-#define SAFE_DUPLICATE_FIRST_ACTOR_FRAME 1
+/* rpg232: keep the per-direction/per-walk-frame actor sheet intact.
+ * rpg231 copied the first 16x16 frame into every direction slot, so the
+ * player always looked like the same sideways/right-facing sprite.
+ * This flag now means "load each 4-tile frame separately", not duplicate it.
+ */
+#define SAFE_PER_FRAME_ACTOR_LOAD 1
 
 typedef enum GameMode {
     MODE_MAP = 0,
@@ -618,11 +623,24 @@ static void draw_all_actors(void) {
 }
 
 static void load_actor_sprite_data_safe(UINT8 tile_base, const unsigned char *tiles) {
-#if SAFE_DUPLICATE_FIRST_ACTOR_FRAME
+#if SAFE_PER_FRAME_ACTOR_LOAD
     UINT8 frame;
-    
+    const unsigned char *frame_tiles;
+
+    /* Actor sheets are 4 directions x 2 walk frames.
+     * One 16x16 frame = 4 OBJ tiles = 64 bytes.
+     *
+     * rpg231 accidentally passed the same base pointer for every frame:
+     *   set_banked_sprite_data(tile_base + frame*4, 4, tiles, bank)
+     * This made all eight frame slots contain frame 0, so changing
+     * player_dir / walk_frame could not change the displayed sprite.
+     *
+     * Keep the safe 4-tile chunked VRAM transfer, but advance the pointer
+     * to the matching frame in the banked sheet.
+     */
     for (frame = 0u; frame < (UINT8)(ACTOR_TOTAL_TILES / ACTOR_TILE_COUNT); frame++) {
-        set_banked_sprite_data((UINT8)(tile_base + frame * ACTOR_TILE_COUNT), ACTOR_TILE_COUNT, tiles, BANK(sprite_data_bank));
+        frame_tiles = tiles + ((UINT16)frame * (UINT16)ACTOR_TILE_COUNT * 16u);
+        set_banked_sprite_data((UINT8)(tile_base + frame * ACTOR_TILE_COUNT), ACTOR_TILE_COUNT, frame_tiles, BANK(sprite_data_bank));
     }
 #else
     set_banked_sprite_data(tile_base, ACTOR_TOTAL_TILES, tiles, BANK(sprite_data_bank));
