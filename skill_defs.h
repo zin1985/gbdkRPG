@@ -148,6 +148,8 @@
 #define SPARK_CAT_TECH_BOW      3u
 #define SPARK_CAT_TECH_GLOVE    4u
 #define SPARK_CAT_TECH_TOOL     5u
+#define SPARK_CAT_TECH_SPEAR    6u
+#define SPARK_CAT_TECH_AXE      7u
 #define SPARK_CAT_MAGIC_FIRE    16u
 #define SPARK_CAT_MAGIC_ICE     17u
 #define SPARK_CAT_MAGIC_THUNDER 18u

@@ -22,6 +22,11 @@ BANKREF(party_runtime_bank)
 #define PARTY_ACTION_ATTACK 4u
 #endif
 
+#define PARTY_EQUIP_MSG_SELECT 0u
+#define PARTY_EQUIP_MSG_CHOOSE 1u
+#define PARTY_EQUIP_MSG_DONE   2u
+#define PARTY_EQUIP_MSG_NG     3u
+
 #ifndef PARTY_WEAPON_COUNT
 #define PARTY_WEAPON_NONE  0u
 #define PARTY_WEAPON_SWORD 1u
@@ -882,6 +887,8 @@ static UINT8 party_spark_starter_skill_for_weapon(UINT8 weapon_type) BANKED {
     if (weapon_type == PARTY_WEAPON_BOW)   return SKILL_ARROW_SHOT;
     if (weapon_type == PARTY_WEAPON_GLOVE) return SKILL_PUNCH;
     if (weapon_type == PARTY_WEAPON_TOOL)  return SKILL_TRAP_SET;
+    if (weapon_type == PARTY_WEAPON_SPEAR) return SKILL_LANCE_THRUST;
+    if (weapon_type == PARTY_WEAPON_AXE)   return SKILL_AXE_TOMAHAWK;
     return SKILL_NONE;
 }
 
@@ -981,8 +988,8 @@ UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_i
         return 1u;
     }
 
-    chance = (UINT8)(4u + (mastery >> 2));
-    if (chance > 18u) chance = 18u;
+    chance = (UINT8)(8u + (mastery >> 1));
+    if (chance > 35u) chance = 35u;
     random_seed = (UINT8)(random_seed ^ (UINT8)(mastery * 13u) ^ DIV_REG);
     if ((UINT8)(random_seed % 100u) >= chance) return 0u;
 
@@ -1014,8 +1021,8 @@ UINT8 party_try_spark_magic_from(UINT8 active_slot, UINT8 trigger_skill_id, UINT
     if (member->magic_mastery < PARTY_MASTERY_MAX) member->magic_mastery++;
     mastery = member->magic_mastery;
 
-    chance = (UINT8)(5u + (mastery >> 2));
-    if (chance > 22u) chance = 22u;
+    chance = (UINT8)(8u + (mastery >> 1));
+    if (chance > 40u) chance = 40u;
     random_seed = (UINT8)(random_seed ^ (UINT8)(mastery * 19u) ^ DIV_REG);
     if ((UINT8)(random_seed % 100u) >= chance) return 0u;
 
@@ -1281,7 +1288,7 @@ static void party_put_u8(UINT8 x, UINT8 y, UINT8 value) BANKED {
 #define PARTY_REPEAT_RATE   4u
 #define PARTY_STATUS_ICON_TILE_BASE 32u
 #define PARTY_STATUS_ICON_SPRITE_BASE 32u
-#define PARTY_STATUS_PAGE_COUNT 10u
+#define PARTY_STATUS_PAGE_MAX 10u
 #define PARTY_EQUIP_POPUP_ROWS 6u
 #define PARTY_ITEM_EFFECT_NONE 0u
 #define PARTY_ITEM_EFFECT_HP   1u
@@ -1506,23 +1513,69 @@ UINT8 party_get_last_item_effect_kind(void) BANKED {
 
 
 
+static UINT8 party_count_learned_by_mode(PartyMemberRuntime *member, UINT8 magic_mode) BANKED {
+    UINT8 i;
+    UINT8 sid;
+    UINT8 count;
+
+    if (member == 0) return 0u;
+    count = 0u;
+    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
+        sid = member->learned_skills[i];
+        if (sid == SKILL_NONE) continue;
+        if (party_skill_is_magic_local(sid) != magic_mode) continue;
+        count++;
+    }
+    return count;
+}
+
+static UINT8 party_status_page_count(PartyMemberRuntime *member) BANKED {
+    UINT8 tech_count;
+    UINT8 magic_count;
+    UINT8 pages;
+
+    pages = 2u; /* base + mastery */
+    tech_count = party_count_learned_by_mode(member, 0u);
+    magic_count = party_count_learned_by_mode(member, 1u);
+
+    if (tech_count != 0u) pages = (UINT8)(pages + (UINT8)((tech_count + 7u) >> 3));
+    if (magic_count != 0u) pages = (UINT8)(pages + (UINT8)((magic_count + 7u) >> 3));
+    if (pages > PARTY_STATUS_PAGE_MAX) pages = PARTY_STATUS_PAGE_MAX;
+    return pages;
+}
+
 static void party_draw_status_skill_names(PartyMemberRuntime *member, UINT8 page) BANKED {
     UINT8 i;
     UINT8 sid;
     UINT8 seen;
     UINT8 start;
     UINT8 row;
+    UINT8 magic_mode;
+    UINT8 tech_pages;
+    UINT8 tech_count;
 
     if (member == 0) return;
-    start = (UINT8)((page - 2u) * 8u);
+
+    tech_count = party_count_learned_by_mode(member, 0u);
+    tech_pages = (tech_count == 0u) ? 0u : (UINT8)((tech_count + 7u) >> 3);
+    if (page < (UINT8)(2u + tech_pages)) {
+        magic_mode = 0u;
+        start = (UINT8)((page - 2u) * 8u);
+        jp_put_bkg_text(1u, 4u, "とくぎ一覧");
+        party_put_u8(12u, 4u, (UINT8)(page - 1u));
+    } else {
+        magic_mode = 1u;
+        start = (UINT8)((page - 2u - tech_pages) * 8u);
+        jp_put_bkg_text(1u, 4u, "まほう一覧");
+        party_put_u8(12u, 4u, (UINT8)(page - 1u - tech_pages));
+    }
+
     seen = 0u;
     row = 0u;
-    jp_put_bkg_text(1u, 4u, "とくぎ一覧");
-    party_put_u8(12u, 4u, (UINT8)(page - 1u));
     for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
         sid = member->learned_skills[i];
         if (sid == SKILL_NONE) continue;
-        if (party_skill_is_magic_local(sid)) continue;
+        if (party_skill_is_magic_local(sid) != magic_mode) continue;
         if (seen >= start && row < 8u) {
             jp_put_bkg_text(2u, (UINT8)(5u + row), "-");
             battle_skill_runtime_put_name(4u, (UINT8)(5u + row), sid);
@@ -1532,17 +1585,18 @@ static void party_draw_status_skill_names(PartyMemberRuntime *member, UINT8 page
     }
     if (seen == 0u) {
         jp_put_bkg_text(2u, 6u, "まだ ありません");
-    } else if (row == 0u) {
-        jp_put_bkg_text(2u, 6u, "このページは からです");
     }
 }
 
 static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
     PartyBattleFighter f;
     PartyMemberRuntime *member;
+    UINT8 page_count;
 
     party_get_active_fighter(active_slot, &f);
     member = party_get_active_member(active_slot);
+    page_count = party_status_page_count(member);
+    if (page >= page_count) page = (UINT8)(page_count - 1u);
 
     party_hide_all_oam_sprites();
     party_ui_clear();
@@ -1550,7 +1604,7 @@ static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
     jp_draw_bkg_frame(0u, 15u, 20u, 3u);
     jp_put_bkg_text(1u, 1u, "つよさ");
     jp_put_bkg_text(13u, 1u, "< >");
-    party_draw_page_arrows(page, PARTY_STATUS_PAGE_COUNT);
+    party_draw_page_arrows(page, page_count);
     party_put_field_text(1u, 2u, 10u, f.name);
 
     if (page == 0u) {
@@ -1698,15 +1752,17 @@ void party_menu_show_status_loop(void) BANKED {
         if (keys & J_LEFT) {
             if (slot == 0u) slot = PARTY_ACTIVE_COUNT - 1u;
             else slot--;
+            if (page >= party_status_page_count(party_get_active_member(slot))) page = (UINT8)(party_status_page_count(party_get_active_member(slot)) - 1u);
             party_draw_status_page(slot, page);
         } else if (keys & J_RIGHT) {
             slot++;
             if (slot >= PARTY_ACTIVE_COUNT) slot = 0u;
+            if (page >= party_status_page_count(party_get_active_member(slot))) page = (UINT8)(party_status_page_count(party_get_active_member(slot)) - 1u);
             party_draw_status_page(slot, page);
         } else if (keys & J_UP) {
             if (page > 0u) { page--; party_draw_status_page(slot, page); }
         } else if (keys & J_DOWN) {
-            if ((UINT8)(page + 1u) < PARTY_STATUS_PAGE_COUNT) { page++; party_draw_status_page(slot, page); }
+            if ((UINT8)(page + 1u) < party_status_page_count(party_get_active_member(slot))) { page++; party_draw_status_page(slot, page); }
         } else {
             break;
         }
@@ -1794,7 +1850,16 @@ static void party_draw_equip_popup(PartyMemberRuntime *member, UINT8 slot_cursor
 }
 
 
-static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 choosing, UINT8 item_cursor, const UINT8 *items, UINT8 item_count, const char *message) BANKED {
+static const char *party_equip_message_text(UINT8 message_id) BANKED {
+    switch (message_id) {
+        case PARTY_EQUIP_MSG_CHOOSE: return "そうび  やめる";
+        case PARTY_EQUIP_MSG_DONE:   return "そうびしました";
+        case PARTY_EQUIP_MSG_NG:     return "そうびできません";
+        default:                     return "えらぶ  もどる";
+    }
+}
+
+static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 choosing, UINT8 item_cursor, const UINT8 *items, UINT8 item_count, UINT8 message_id) BANKED {
     PartyMemberRuntime *member;
 
     member = party_get_active_member(active_slot);
@@ -1805,7 +1870,7 @@ static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 ch
     jp_put_bkg_text(13u, 1u, "< >");
     if (member == 0) {
         jp_put_bkg_text(2u, 4u, "なかま なし");
-        party_put_field_text(1u, 16u, 18u, message);
+        party_put_field_text(1u, 16u, 18u, party_equip_message_text(message_id));
         return;
     }
     party_put_field_text(1u, 3u, 10u, member->name);
@@ -1816,7 +1881,7 @@ static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 ch
     jp_put_bkg_text(1u, 10u, "こうげき+"); party_put_u8(10u,10u, party_equipment_attack(member));
     jp_put_bkg_text(1u, 11u, "まもり+"); party_put_u8(10u,11u, party_equipment_defense(member));
     jp_put_bkg_text(1u, 12u, "おもさ");  party_put_u8(8u,12u, party_equipment_weight(member));
-    party_put_field_text(1u, 16u, 18u, message);
+    party_put_field_text(1u, 16u, 18u, party_equip_message_text(message_id));
     if (choosing != 0u) party_draw_equip_popup(member, slot_cursor, item_cursor, items, item_count);
 }
 
@@ -1866,7 +1931,7 @@ void party_menu_show_equip_loop(void) BANKED {
     UINT8 item_cursor;
     UINT8 old_item_cursor;
     UINT8 item_count;
-    const char *message;
+    UINT8 message;
     PartyMemberRuntime *member;
     UINT8 redraw_page;
 
@@ -1875,7 +1940,7 @@ void party_menu_show_equip_loop(void) BANKED {
     choosing = 0u;
     item_cursor = 0u;
     item_count = 0u;
-    message = "A=えらぶ B=もどる";
+    message = PARTY_EQUIP_MSG_SELECT;
     for (old_item_cursor = 0u; old_item_cursor < PARTY_EQUIP_CANDIDATE_MAX; old_item_cursor++) party_equip_choices[old_item_cursor] = ITEM_NONE;
     HIDE_WIN;
     SHOW_BKG;
@@ -1910,7 +1975,7 @@ void party_menu_show_equip_loop(void) BANKED {
                 item_count = party_build_equip_candidates(member, slot_cursor, party_equip_choices);
                 item_cursor = 0u;
                 choosing = 1u;
-                message = "A=そうび B=やめる";
+                message = PARTY_EQUIP_MSG_CHOOSE;
                 redraw_page = 1u;
             }
         } else {
@@ -1936,11 +2001,11 @@ void party_menu_show_equip_loop(void) BANKED {
                 }
             } else if (keys & J_B) {
                 choosing = 0u;
-                message = "A=えらぶ B=もどる";
+                message = PARTY_EQUIP_MSG_SELECT;
                 redraw_page = 1u;
             } else if (keys & J_A) {
-                if (party_apply_equip_choice(member, slot_cursor, party_equip_choices[item_cursor])) message = "そうびした";
-                else message = "そうびできない";
+                if (party_apply_equip_choice(member, slot_cursor, party_equip_choices[item_cursor])) message = PARTY_EQUIP_MSG_DONE;
+                else message = PARTY_EQUIP_MSG_NG;
                 choosing = 0u;
                 redraw_page = 1u;
             }

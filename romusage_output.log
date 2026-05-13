@@ -1,4 +1,4 @@
-* WARNING: Area _CODE_7  at 74000 -> 78a80 extends past end of memory region at 77fff (Overflow by 2689 bytes)
+* WARNING: Area _CODE_7  at 74000 -> 78c63 extends past end of memory region at 77fff (Overflow by 3172 bytes)
 
 Bank         Range                Size     Used  Used%     Free  Free% 
 --------     ----------------  -------  -------  -----  -------  -----
@@ -10,18 +10,18 @@ ROM_0        0x0000 -> 0x3FFF    16384    15820    97%      564     3% |-#######
 + _GSINIT                         0x3F14 -> 0x3F1F      12
 + _GSFINAL                        0x3F20 -> 0x3F20       1
 
-ROM_23/31    0x4000 -> 0x7FFF   507904    95226    19%   412678    81% |..-----..-.....-............|
+ROM_23/31    0x4000 -> 0x7FFF   507904    95308    19%   412596    81% |..-----..-.....-............|
 |
 + _CODE_1                         0x4000 -> 0x464D    1614
 + _CODE_2                         0x8000 -> 0x89BB    2492
 + _CODE_3                         0xC000 -> 0xE011    8210
 + _CODE_4                         0x10000 -> 0x117FF    6144
-+ _CODE_5                         0x14000 -> 0x172AD   12974
++ _CODE_5                         0x14000 -> 0x172D5   13014
 + _CODE_6                         0x18000 -> 0x1B8A7   14504
 + _CODE_7                         0x1C000 -> 0x1FFFF   16384
 + _CODE_9                         0x24000 -> 0x24A5B    2652
 + _CODE_10                        0x28000 -> 0x28871    2162
-+ _CODE_11                        0x2C000 -> 0x2E1CB    8652
++ _CODE_11                        0x2C000 -> 0x2E1F5    8694
 + _CODE_12                        0x30000 -> 0x306CF    1744
 + _CODE_13                        0x34000 -> 0x346FB    1788
 + _CODE_14                        0x38000 -> 0x386BE    1727

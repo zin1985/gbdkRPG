@@ -137,6 +137,12 @@ static void shop_draw_cursor(UINT8 cursor, UINT8 count) BANKED {
     }
 }
 
+static void shop_update_cursor(UINT8 old_cursor, UINT8 cursor) BANKED {
+    if (old_cursor == cursor) return;
+    jp_put_bkg_text(1u, (UINT8)(4u + old_cursor), " ");
+    jp_put_bkg_text(1u, (UINT8)(4u + cursor), ">");
+}
+
 static void shop_draw_list(UINT8 kind, UINT8 cursor) BANKED {
     const UINT8 *ids;
     const UINT8 *prices;
@@ -164,6 +170,7 @@ static void shop_draw_list(UINT8 kind, UINT8 cursor) BANKED {
 
 static void shop_buy_loop(UINT8 kind) BANKED {
     UINT8 cursor;
+    UINT8 old_cursor;
     UINT8 keys;
     const UINT8 *ids;
     const UINT8 *prices;
@@ -179,13 +186,15 @@ static void shop_buy_loop(UINT8 kind) BANKED {
         audio_waitpadup();
 
         if (keys & J_UP) {
+            old_cursor = cursor;
             if (cursor == 0u) cursor = SHOP_ITEM_COUNT - 1u;
             else cursor--;
-            shop_draw_cursor(cursor, SHOP_ITEM_COUNT);
+            shop_update_cursor(old_cursor, cursor);
         } else if (keys & J_DOWN) {
+            old_cursor = cursor;
             cursor++;
             if (cursor >= SHOP_ITEM_COUNT) cursor = 0u;
-            shop_draw_cursor(cursor, SHOP_ITEM_COUNT);
+            shop_update_cursor(old_cursor, cursor);
         } else if (keys & (J_B | J_START)) {
             break;
         } else if (keys & J_A) {

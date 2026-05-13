@@ -26,6 +26,8 @@ static UINT8 inventory_visible_count(void) BANKED;
 static UINT8 inventory_item_at_visible_index(UINT8 index) BANKED;
 static UINT8 inventory_clamp_page_top(UINT8 page_top, UINT8 visible_count) BANKED;
 static void inventory_draw_items_page(UINT8 cursor_index, UINT8 page_top, const char *message) BANKED;
+static void inventory_draw_menu_shell(void) BANKED;
+static void inventory_clear_list_area(void) BANKED;
 static void inventory_draw_cursor_only(UINT8 visible_index, UINT8 page_top, UINT8 enabled) BANKED;
 static void inventory_draw_page_counter(UINT8 cursor_index, UINT8 visible_count) BANKED;
 static UINT8 inventory_cursor_down(UINT8 cursor_index, UINT8 *page_top, UINT8 visible_count) BANKED;
@@ -274,6 +276,7 @@ UINT8 inventory_battle_select_use(UINT8 active_slot) BANKED {
     page_top = 0u;
     target_slot = active_slot;
     msg = "A=使う B=戻る";
+    inventory_draw_menu_shell();
     inventory_draw_items_page(cursor_index, page_top, msg);
 
     while (1) {
@@ -472,6 +475,19 @@ static void inventory_ui_clear(void) BANKED {
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
 }
 
+/* rpg238: keep the frame and redraw only the list/message area.
+ * Full frame redraw was the main reason item pages felt slow.
+ */
+static void inventory_clear_list_area(void) BANKED {
+    jp_bkg_clear_area(1u, 1u, 18u, 14u);
+    jp_bkg_clear_area(1u, 16u, 18u, 1u);
+}
+
+static void inventory_draw_menu_shell(void) BANKED {
+    inventory_ui_clear();
+    jp_draw_bkg_frame(0u, 15u, 20u, 3u);
+}
+
 static void inventory_put_field_text(UINT8 x, UINT8 y, UINT8 w, const char *text) BANKED {
     jp_bkg_clear_area(x, y, w, 1u);
     jp_put_bkg_text(x, y, text);
@@ -625,9 +641,7 @@ static void inventory_draw_items_page(UINT8 cursor_index, UINT8 page_top, const 
 
     visible_count = inventory_visible_count();
     page_top = inventory_clamp_page_top(page_top, visible_count);
-    inventory_ui_clear();
-    jp_draw_bkg_frame(0u, 0u, 20u, 15u);
-    jp_draw_bkg_frame(0u, 15u, 20u, 3u);
+    inventory_clear_list_area();
     jp_put_bkg_text(1u, 1u, "もちもの");
 
     if (visible_count == 0u) {
@@ -799,6 +813,7 @@ void inventory_menu_show_items_loop(void) BANKED {
     target_slot = 0u;
     msg = "A=つかう B=もどる";
     audio_waitpadup();
+    inventory_draw_menu_shell();
     inventory_draw_items_page(cursor_index, page_top, msg);
     while (1) {
         visible_count = inventory_visible_count();
