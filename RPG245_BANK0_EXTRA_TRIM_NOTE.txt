@@ -1,0 +1,13 @@
+rpg245_bank0_extra_trim_alltarget
+
+Uploaded log still showed Bank0 overflow at main.c bytes 73114.
+This version trims more Bank0 code while keeping real all-target damage.
+
+Changes from rpg244:
+- Simplified all-target damage helper.
+- Removed total-damage summary message for all-target attacks.
+- Removed all-target draw_battle_enemy_names/battle_select_first_alive inside helper.
+- Unified spark message to short 'ひらめいた!'.
+- Removed unused assignment from damage branch.
+
+All-target attacks still iterate through all living enemy slots and reduce each enemy HP.

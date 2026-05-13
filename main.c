@@ -1777,6 +1777,40 @@ static void battle_heal_actor_slot(UINT8 target_slot, UINT16 amount) {
     }
 }
 
+static UINT16 battle_use_damage_skill_on_enemies(UINT8 skill_id, const Fighter *actor) {
+    UINT8 i;
+    UINT16 amount;
+
+    if (!battle_skill_runtime_is_all_target(skill_id)) {
+        amount = battle_skill_runtime_calc_damage(skill_id, actor->attack, actor->skill_power, actor->magic_mastery, enemy_battle.defense);
+        if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
+        else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
+        battle_show_damage_message(battle_skill_runtime_is_magic(skill_id) ? "まほう!" : "とくぎ!", amount);
+        battle_flash_enemy_sprite(battle_target_index);
+        return amount;
+    }
+
+    for (i = 0u; i < battle_enemy_count; i++) {
+        if (enemy_battles[i].hp == 0u) continue;
+        amount = battle_skill_runtime_calc_damage(skill_id, actor->attack, actor->skill_power, actor->magic_mastery, enemy_battles[i].defense);
+        if (amount >= enemy_battles[i].hp) enemy_battles[i].hp = 0u;
+        else enemy_battles[i].hp = (UINT16)(enemy_battles[i].hp - amount);
+        battle_flash_enemy_sprite(i);
+    }
+    battle_refresh_enemy_sprites_compact(0u);
+    return 0u;
+}
+
+static void battle_apply_spark_skill(UINT8 skill_id, UINT8 is_magic, const Fighter *actor) {
+    (void)is_magic;
+    party_add_learned_skill(battle_party_turn_slot, skill_id);
+    battle_show_message("ひらめいた!");
+    battle_show_message(battle_skill_runtime_name_buffered(skill_id));
+    (void)battle_use_damage_skill_on_enemies(skill_id, actor);
+}
+
+
+
 static void player_attack(void) {
     UINT16 dmg;
     Fighter actor;
@@ -1804,15 +1838,7 @@ static void player_attack(void) {
     {
         UINT8 spark_skill;
         if (party_try_spark_skill(battle_party_turn_slot, random_u8(), &spark_skill)) {
-            UINT16 spark_dmg;
-            party_add_learned_skill(battle_party_turn_slot, spark_skill);
-            battle_show_message("ひらめいた!");
-            battle_show_message(battle_skill_runtime_name_buffered(spark_skill));
-            spark_dmg = battle_skill_runtime_calc_damage(spark_skill, actor.attack, actor.skill_power, actor.magic_mastery, enemy_battle.defense);
-            if (spark_dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
-            else enemy_battle.hp = (UINT16)(enemy_battle.hp - spark_dmg);
-            battle_show_damage_message("とくぎ!", spark_dmg);
-            battle_flash_enemy_sprite(battle_target_index);
+            battle_apply_spark_skill(spark_skill, 0u, &actor);
         }
     }
 
@@ -1888,30 +1914,20 @@ static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
     }
 
     if (battle_party_turn_slot == 0u) last_growth_type = GROWTH_SKILL;
-    amount = battle_skill_runtime_calc_damage(skill_id, actor.attack, actor.skill_power, actor.magic_mastery, enemy_battle.defense);
-    if (amount >= enemy_battle.hp) enemy_battle.hp = 0u;
-    else enemy_battle.hp = (UINT16)(enemy_battle.hp - amount);
-
     if (battle_skill_runtime_is_magic(skill_id)) {
         party_battle_op(PARTY_OP_NOTE_MAGIC, battle_party_turn_slot, 0u);
-        battle_show_damage_message("まほう!", amount);
-    } else {
-        battle_show_damage_message("とくぎ!", amount);
     }
-    battle_flash_enemy_sprite(battle_target_index);
+    (void)battle_use_damage_skill_on_enemies(skill_id, &actor);
 
     if (battle_skill_runtime_is_magic(skill_id)) {
         UINT8 spark_magic;
         if (party_try_spark_magic_from(battle_party_turn_slot, skill_id, random_u8(), &spark_magic)) {
-            UINT16 spark_dmg;
-            party_add_learned_skill(battle_party_turn_slot, spark_magic);
-            battle_show_message("まほうを ひらめいた!");
-            battle_show_message(battle_skill_runtime_name_buffered(spark_magic));
-            spark_dmg = battle_skill_runtime_calc_damage(spark_magic, actor.attack, actor.skill_power, actor.magic_mastery, enemy_battle.defense);
-            if (spark_dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
-            else enemy_battle.hp = (UINT16)(enemy_battle.hp - spark_dmg);
-            battle_show_damage_message("まほう!", spark_dmg);
-            battle_flash_enemy_sprite(battle_target_index);
+            battle_apply_spark_skill(spark_magic, 1u, &actor);
+        }
+    } else {
+        UINT8 spark_skill;
+        if (party_try_spark_skill_from(battle_party_turn_slot, skill_id, random_u8(), &spark_skill)) {
+            battle_apply_spark_skill(spark_skill, 0u, &actor);
         }
     }
 

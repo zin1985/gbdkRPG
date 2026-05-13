@@ -1,16 +1,16 @@
-* WARNING: Area _CODE_7  at 74000 -> 78c59 extends past end of memory region at 77fff (Overflow by 3162 bytes)
+* WARNING: Area _CODE_7  at 74000 -> 78c9e extends past end of memory region at 77fff (Overflow by 3231 bytes)
 
 Bank         Range                Size     Used  Used%     Free  Free% 
 --------     ----------------  -------  -------  -----  -------  -----
-ROM_0        0x0000 -> 0x3FFF    16384    15820    97%      564     3% |-##########################-|
+ROM_0        0x0000 -> 0x3FFF    16384    15983    98%      401     2% |-##########################-|
 |
-+ _CODE                           0x0200 -> 0x38C0   14017
-+ _HOME                           0x38C1 -> 0x3F0B    1611
-+ _INITIALIZER                    0x3F0C -> 0x3F13       8
-+ _GSINIT                         0x3F14 -> 0x3F1F      12
-+ _GSFINAL                        0x3F20 -> 0x3F20       1
++ _CODE                           0x0200 -> 0x3963   14180
++ _HOME                           0x3964 -> 0x3FAE    1611
++ _INITIALIZER                    0x3FAF -> 0x3FB6       8
++ _GSINIT                         0x3FB7 -> 0x3FC2      12
++ _GSFINAL                        0x3FC3 -> 0x3FC3       1
 
-ROM_23/31    0x4000 -> 0x7FFF   507904    95308    19%   412596    81% |..-----..-.....-............|
+ROM_23/31    0x4000 -> 0x7FFF   507904    95990    19%   411914    81% |..-----..-.....-............|
 |
 + _CODE_1                         0x4000 -> 0x464D    1614
 + _CODE_2                         0x8000 -> 0x89BB    2492
@@ -30,7 +30,7 @@ ROM_23/31    0x4000 -> 0x7FFF   507904    95308    19%   412596    81% |..-----.
 + _CODE_17                        0x44000 -> 0x441E3     484
 + _CODE_18                        0x48000 -> 0x495D0    5585
 + _CODE_19                        0x4C000 -> 0x4C328     809
-+ _CODE_20                        0x50000 -> 0x50B42    2883
++ _CODE_20                        0x50000 -> 0x50DEC    3565
 + _CODE_21                        0x54000 -> 0x541EF     496
 + _CODE_22                        0x58000 -> 0x58124     293
 + _CODE_23                        0x5C000 -> 0x5C1AA     427

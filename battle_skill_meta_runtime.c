@@ -481,6 +481,106 @@ static UINT8 spark_mastery_bonus(UINT8 mastery, UINT8 required) {
     return (UINT8)(over >> 1);
 }
 
+
+typedef struct TechStarterDef {
+    UINT8 weapon_type;
+    UINT8 skill_id;
+    UINT8 required_mastery;
+    UINT8 base_rate;
+} TechStarterDef;
+
+/* rpg242:
+ * Normal attack starter table.  The roots are shared with the current skill IDs
+ * so SKILL_MAX does not grow.  Stronger starters are unlocked by mastery.
+ */
+static const TechStarterDef tech_starter_defs[] = {
+    { SPARK_CAT_TECH_SWORD, SKILL_SLASH,             0u, 85u },
+    { SPARK_CAT_TECH_SWORD, SKILL_DOUBLE_SLASH,     12u, 55u },
+    { SPARK_CAT_TECH_SWORD, SKILL_CROSS_SLASH,      28u, 40u },
+    { SPARK_CAT_TECH_SWORD, SKILL_SWORD_WAVE,        8u, 55u },
+    { SPARK_CAT_TECH_SWORD, SKILL_SWORD_RAIN,       24u, 40u },
+    { SPARK_CAT_TECH_SWORD, SKILL_SWORD_STORM,      40u, 30u },
+
+    { SPARK_CAT_TECH_STAFF, SKILL_STAFF_HIT,         0u, 85u },
+    { SPARK_CAT_TECH_STAFF, SKILL_MIND_SPIKE,       12u, 55u },
+    { SPARK_CAT_TECH_STAFF, SKILL_HOLY_LIGHT,       28u, 40u },
+    { SPARK_CAT_TECH_STAFF, SKILL_MANA_BURST,        8u, 55u },
+    { SPARK_CAT_TECH_STAFF, SKILL_STAFF_NOVA,       24u, 40u },
+    { SPARK_CAT_TECH_STAFF, SKILL_STAFF_ARCANA,     40u, 30u },
+
+    { SPARK_CAT_TECH_BOW,   SKILL_ARROW_SHOT,        0u, 85u },
+    { SPARK_CAT_TECH_BOW,   SKILL_DOUBLE_ARROW,     12u, 55u },
+    { SPARK_CAT_TECH_BOW,   SKILL_EAGLE_EYE,        28u, 40u },
+    { SPARK_CAT_TECH_BOW,   SKILL_RAIN_ARROW,        8u, 55u },
+    { SPARK_CAT_TECH_BOW,   SKILL_ARROW_BARRAGE,    24u, 40u },
+    { SPARK_CAT_TECH_BOW,   SKILL_BOW_STORM,        40u, 30u },
+
+    { SPARK_CAT_TECH_GLOVE, SKILL_PUNCH,             0u, 85u },
+    { SPARK_CAT_TECH_GLOVE, SKILL_IRON_FIST,        12u, 55u },
+    { SPARK_CAT_TECH_GLOVE, SKILL_FIST_COMBO,       28u, 40u },
+    { SPARK_CAT_TECH_GLOVE, SKILL_FIST_HURRICANE,    8u, 55u },
+    { SPARK_CAT_TECH_GLOVE, SKILL_FIST_PHOENIX,     24u, 40u },
+    { SPARK_CAT_TECH_GLOVE, SKILL_FIST_GODHAND,     40u, 30u },
+
+    { SPARK_CAT_TECH_TOOL,  SKILL_TRAP_SET,          0u, 85u },
+    { SPARK_CAT_TECH_TOOL,  SKILL_BOMB_THROW,       12u, 55u },
+    { SPARK_CAT_TECH_TOOL,  SKILL_GEAR_CUTTER,      28u, 40u },
+    { SPARK_CAT_TECH_TOOL,  SKILL_TOOL_QUAKE,        8u, 55u },
+    { SPARK_CAT_TECH_TOOL,  SKILL_TOOL_PLASMA,      24u, 40u },
+    { SPARK_CAT_TECH_TOOL,  SKILL_TOOL_NOVA_BOMB,   40u, 30u },
+
+    { SPARK_CAT_TECH_SPEAR, SKILL_LANCE_THRUST,      0u, 85u },
+    { SPARK_CAT_TECH_SPEAR, SKILL_LANCE_PIERCE,     12u, 55u },
+    { SPARK_CAT_TECH_SPEAR, SKILL_LANCE_DRAGON,     28u, 40u },
+    { SPARK_CAT_TECH_SPEAR, SKILL_LANCE_TEMPEST,     8u, 55u },
+    { SPARK_CAT_TECH_SPEAR, SKILL_LANCE_TYPHOON,    24u, 40u },
+
+    { SPARK_CAT_TECH_AXE,   SKILL_AXE_TOMAHAWK,      0u, 85u },
+    { SPARK_CAT_TECH_AXE,   SKILL_AXE_CLEAVE,       12u, 55u },
+    { SPARK_CAT_TECH_AXE,   SKILL_AXE_GIGANT,       28u, 40u },
+    { SPARK_CAT_TECH_AXE,   SKILL_AXE_QUAKE,         8u, 55u },
+    { SPARK_CAT_TECH_AXE,   SKILL_HEAVY_BLOW,       24u, 40u },
+    { SPARK_CAT_TECH_AXE,   SKILL_ARMOR_BREAK,      40u, 30u }
+};
+
+#define TECH_STARTER_COUNT ((UINT8)(sizeof(tech_starter_defs) / sizeof(tech_starter_defs[0])))
+
+UINT8 battle_skill_spark_pick_tech_starter(UINT8 weapon_type, UINT8 mastery, UINT8 seed, const UINT8 *learned_skills) BANKED {
+    UINT8 i;
+    UINT8 roll;
+    UINT8 rate;
+    UINT8 mix;
+    UINT8 over;
+    const TechStarterDef *def;
+
+    if (weapon_type == 0u || weapon_type > SPARK_CAT_TECH_AXE) return SKILL_NONE;
+    if (mastery > 60u) mastery = 60u;
+    mix = (UINT8)(seed ^ (UINT8)(mastery * 11u) ^ DIV_REG);
+
+    for (i = 0u; i < TECH_STARTER_COUNT; i++) {
+        def = &tech_starter_defs[i];
+        if (def->weapon_type != weapon_type) continue;
+        if (mastery < def->required_mastery) continue;
+        if (spark_learned_has(learned_skills, def->skill_id)) continue;
+
+        rate = def->base_rate;
+        over = 0u;
+        if (mastery > def->required_mastery) {
+            over = (UINT8)(mastery - def->required_mastery);
+            if (over > 30u) over = 30u;
+            rate = (UINT8)(rate + (over >> 1));
+        }
+        if (mastery >= 50u && rate < 80u) rate = 80u;
+        if (rate > 95u) rate = 95u;
+
+        mix = (UINT8)((mix * 5u) + def->skill_id + 13u);
+        roll = (UINT8)(mix % 100u);
+        if (roll < rate) return def->skill_id;
+    }
+
+    return SKILL_NONE;
+}
+
 UINT8 battle_skill_spark_pick_tech(UINT8 weapon_type, UINT8 mastery, UINT8 seed, const UINT8 *learned_skills) BANKED {
     UINT8 i;
     const SkillSparkEdge *edge;
@@ -503,6 +603,41 @@ UINT8 battle_skill_spark_pick_tech(UINT8 weapon_type, UINT8 mastery, UINT8 seed,
         rate = (UINT8)(edge->base_rate + spark_mastery_bonus(mastery, edge->required_proficiency));
         if (rate > 60u) rate = 60u;
         mix = (UINT8)((mix * 5u) + edge->to_skill + 17u);
+        roll = (UINT8)(mix % 100u);
+        if (roll < rate) return edge->to_skill;
+    }
+    return SKILL_NONE;
+}
+
+UINT8 battle_skill_spark_pick_tech_from(UINT8 weapon_type, UINT8 trigger_skill_id, UINT8 mastery, UINT8 seed, const UINT8 *learned_skills) BANKED {
+    UINT8 i;
+    const SkillSparkEdge *edge;
+    UINT8 rate;
+    UINT8 roll;
+    UINT8 mix;
+
+    if (weapon_type == 0u || weapon_type > SPARK_CAT_TECH_AXE) return SKILL_NONE;
+    if (trigger_skill_id == SKILL_NONE || trigger_skill_id >= SKILL_MAX) return SKILL_NONE;
+    if (mastery > 60u) mastery = 60u;
+
+    /* rpg242:
+     * Skill-use sparks are anchored to the actual technique used.
+     * Normal attacks only spark starter techniques; derived techniques come from here.
+     */
+    mix = (UINT8)(seed ^ trigger_skill_id ^ (UINT8)(mastery * 31u) ^ DIV_REG);
+    for (i = 0u; i < SKILL_SPARK_EDGE_COUNT; i++) {
+        edge = &skill_spark_edges[i];
+        if (edge->category != weapon_type) continue;
+        if (edge->from_skill != trigger_skill_id) continue;
+        if ((edge->flags & SPARK_EDGE_FLAG_TECH) == 0u) continue;
+        if (edge->to_skill >= SKILL_MAX) continue;
+        if (edge->from_skill >= SKILL_MAX) continue;
+        if (mastery < edge->required_proficiency) continue;
+        if (spark_learned_has(learned_skills, edge->to_skill)) continue;
+        rate = (UINT8)(edge->base_rate + spark_mastery_bonus(mastery, edge->required_proficiency));
+        if (mastery >= 50u && rate < 35u) rate = 35u;
+        if (rate > 75u) rate = 75u;
+        mix = (UINT8)((mix * 7u) + edge->to_skill + 29u);
         roll = (UINT8)(mix % 100u);
         if (roll < rate) return edge->to_skill;
     }

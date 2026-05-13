@@ -1,0 +1,16 @@
+rpg244_bank0_trim_alltarget_spark
+
+Purpose:
+- Uploaded build log showed Bank0 overflow / Multiple write at main.c bytes 73404.
+- rpg243 added real all-target damage, but main.c grew too much.
+- This version keeps the all-target implementation and skill-use spark behavior, while trimming Bank0-side code.
+
+Changes:
+- Consolidated duplicated spark damage handling into battle_apply_spark_skill().
+- Consolidated all-target/single-target skill damage into a compact battle_use_damage_skill_on_enemies().
+- Removed the all-target target-select shortcut to save Bank0. All-target skills still damage all living enemies after selection.
+- Kept SPARK_TREE_rpg243.txt.
+
+Expected:
+- main.c source bytes dropped from rpg243 approx 74231 to approx 73114 before local GBDK compile.
+- Still must verify with build_safe.sh / build.bat safe.

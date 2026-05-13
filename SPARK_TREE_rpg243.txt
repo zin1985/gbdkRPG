@@ -1,0 +1,397 @@
+特技・魔法 ひらめき派生 樹形図（rpg243_all_target_attack_tree 時点）
+
+【仕様】
+- 通常攻撃: 武器種ごとのスターター技だけをひらめく。
+- スターター技以外: 戦闘中にその特技を使用した時だけ、使用技を起点に派生する。
+- 魔法: 魔法使用時に同じ魔法カテゴリ内で派生する。
+- 全体攻撃: rpg243で複数敵すべてへ実ダメージを与える処理へ変更。
+
+【通常攻撃でひらめくスターター技】
+■ 剣
+  - 単体弱: スラッシュ [SKILL_SLASH] / 熟練度0+ / 基本率85%
+  - 単体中: ダブル [SKILL_DOUBLE_SLASH] / 熟練度12+ / 基本率55%
+  - 単体強: クロス [SKILL_CROSS_SLASH] / 熟練度28+ / 基本率40%
+  - 全体弱: なぎ [SKILL_SWORD_WAVE] / 熟練度8+ / 基本率55%
+  - 全体中: ソードレイン [SKILL_SWORD_RAIN] / 熟練度24+ / 基本率40%
+  - 全体強: ストーム [SKILL_SWORD_STORM] / 熟練度40+ / 基本率30%
+
+■ 槍
+  - 単体弱: スラスト [SKILL_LANCE_THRUST] / 熟練度0+ / 基本率85%
+  - 単体中: ピアース [SKILL_LANCE_PIERCE] / 熟練度12+ / 基本率55%
+  - 単体強: ドラ槍 [SKILL_LANCE_DRAGON] / 熟練度28+ / 基本率40%
+  - 全体弱: テンペスト [SKILL_LANCE_TEMPEST] / 熟練度8+ / 基本率55%
+  - 全体中: タイフン [SKILL_LANCE_TYPHOON] / 熟練度24+ / 基本率40%
+
+■ 斧
+  - 単体弱: トマホク [SKILL_AXE_TOMAHAWK] / 熟練度0+ / 基本率85%
+  - 単体中: クリーブ [SKILL_AXE_CLEAVE] / 熟練度12+ / 基本率55%
+  - 単体強: ギガント [SKILL_AXE_GIGANT] / 熟練度28+ / 基本率40%
+  - 全体弱: クェイク [SKILL_AXE_QUAKE] / 熟練度8+ / 基本率55%
+  - 全体中: ヘビー [SKILL_HEAVY_BLOW] / 熟練度24+ / 基本率40%
+  - 全体強: アーマー [SKILL_ARMOR_BREAK] / 熟練度40+ / 基本率30%
+
+■ 杖
+  - 単体弱: スタッフ [SKILL_STAFF_HIT] / 熟練度0+ / 基本率85%
+  - 単体中: マインド [SKILL_MIND_SPIKE] / 熟練度12+ / 基本率55%
+  - 単体強: ホーリー [SKILL_HOLY_LIGHT] / 熟練度28+ / 基本率40%
+  - 全体弱: マナ [SKILL_MANA_BURST] / 熟練度8+ / 基本率55%
+  - 全体中: ノヴァ [SKILL_STAFF_NOVA] / 熟練度24+ / 基本率40%
+  - 全体強: アルカナ [SKILL_STAFF_ARCANA] / 熟練度40+ / 基本率30%
+
+■ 弓
+  - 単体弱: アロー [SKILL_ARROW_SHOT] / 熟練度0+ / 基本率85%
+  - 単体中: ツイン [SKILL_DOUBLE_ARROW] / 熟練度12+ / 基本率55%
+  - 単体強: イーグル [SKILL_EAGLE_EYE] / 熟練度28+ / 基本率40%
+  - 全体弱: レイン [SKILL_RAIN_ARROW] / 熟練度8+ / 基本率55%
+  - 全体中: バラージ [SKILL_ARROW_BARRAGE] / 熟練度24+ / 基本率40%
+  - 全体強: ストーム [SKILL_BOW_STORM] / 熟練度40+ / 基本率30%
+
+■ 体術
+  - 単体弱: パンチ [SKILL_PUNCH] / 熟練度0+ / 基本率85%
+  - 単体中: アイアン [SKILL_IRON_FIST] / 熟練度12+ / 基本率55%
+  - 単体強: コンボ [SKILL_FIST_COMBO] / 熟練度28+ / 基本率40%
+  - 全体弱: ハリケン [SKILL_FIST_HURRICANE] / 熟練度8+ / 基本率55%
+  - 全体中: フェニク [SKILL_FIST_PHOENIX] / 熟練度24+ / 基本率40%
+  - 全体強: ゴッド手 [SKILL_FIST_GODHAND] / 熟練度40+ / 基本率30%
+
+■ 装置
+  - 単体弱: トラップ [SKILL_TRAP_SET] / 熟練度0+ / 基本率85%
+  - 単体中: ボム [SKILL_BOMB_THROW] / 熟練度12+ / 基本率55%
+  - 単体強: ギア [SKILL_GEAR_CUTTER] / 熟練度28+ / 基本率40%
+  - 全体弱: シェイク [SKILL_TOOL_QUAKE] / 熟練度8+ / 基本率55%
+  - 全体中: プラズマ装 [SKILL_TOOL_PLASMA] / 熟練度24+ / 基本率40%
+  - 全体強: ノヴァボム [SKILL_TOOL_NOVA_BOMB] / 熟練度40+ / 基本率30%
+
+【特技派生ツリー（特技使用時のみ）】
+■ 剣
+  スラッシュ [SKILL_SLASH]
+  ├─ ダブル [SKILL_DOUBLE_SLASH] / 熟練度3+ / 基本率16% / 単体
+  │  └─ クロス [SKILL_CROSS_SLASH] / 熟練度8+ / 基本率14% / 単体
+  │     ├─ ブレイブ [SKILL_SWORD_BRAVE_EDGE] / 熟練度18+ / 基本率10% / 単体
+  │     └─ フレイム [SKILL_FLAME_EDGE] / 熟練度14+ / 基本率12% / 単体
+  │        ├─ アイス [SKILL_ICE_EDGE] / 熟練度18+ / 基本率10% / 単体
+  │        └─ ドラゴン [SKILL_DRAGON_REND] / 熟練度22+ / 基本率9% / 単体
+  │           └─ ファイナル [SKILL_FINAL_BLADE] / 熟練度28+ / 基本率7% / 単体
+  │              └─ ムーン [SKILL_SWORD_MOON] / 熟練度32+ / 基本率6% / 単体
+  │                 └─ コメット [SKILL_SWORD_COMET] / 熟練度38+ / 基本率6% / 単体
+  │                    └─ スカイ [SKILL_SWORD_SKY] / 熟練度44+ / 基本率5% / 単体
+  │                       └─ ヴォイド [SKILL_SWORD_VOID] / 熟練度48+ / 基本率4% / 単体
+  └─ なぎ [SKILL_SWORD_WAVE] / 熟練度6+ / 基本率10% / 全体
+     └─ ソードレイン [SKILL_SWORD_RAIN] / 熟練度12+ / 基本率8% / 全体
+        └─ ストーム [SKILL_SWORD_STORM] / 熟練度24+ / 基本率6% / 全体
+  ダブル [SKILL_DOUBLE_SLASH]
+  └─ クロス [SKILL_CROSS_SLASH] / 熟練度8+ / 基本率14% / 単体
+     ├─ ブレイブ [SKILL_SWORD_BRAVE_EDGE] / 熟練度18+ / 基本率10% / 単体
+     └─ フレイム [SKILL_FLAME_EDGE] / 熟練度14+ / 基本率12% / 単体
+        ├─ アイス [SKILL_ICE_EDGE] / 熟練度18+ / 基本率10% / 単体
+        └─ ドラゴン [SKILL_DRAGON_REND] / 熟練度22+ / 基本率9% / 単体
+           └─ ファイナル [SKILL_FINAL_BLADE] / 熟練度28+ / 基本率7% / 単体
+              └─ ムーン [SKILL_SWORD_MOON] / 熟練度32+ / 基本率6% / 単体
+                 └─ コメット [SKILL_SWORD_COMET] / 熟練度38+ / 基本率6% / 単体
+                    └─ スカイ [SKILL_SWORD_SKY] / 熟練度44+ / 基本率5% / 単体
+                       └─ ヴォイド [SKILL_SWORD_VOID] / 熟練度48+ / 基本率4% / 単体
+  クロス [SKILL_CROSS_SLASH]
+  ├─ ブレイブ [SKILL_SWORD_BRAVE_EDGE] / 熟練度18+ / 基本率10% / 単体
+  └─ フレイム [SKILL_FLAME_EDGE] / 熟練度14+ / 基本率12% / 単体
+     ├─ アイス [SKILL_ICE_EDGE] / 熟練度18+ / 基本率10% / 単体
+     └─ ドラゴン [SKILL_DRAGON_REND] / 熟練度22+ / 基本率9% / 単体
+        └─ ファイナル [SKILL_FINAL_BLADE] / 熟練度28+ / 基本率7% / 単体
+           └─ ムーン [SKILL_SWORD_MOON] / 熟練度32+ / 基本率6% / 単体
+              └─ コメット [SKILL_SWORD_COMET] / 熟練度38+ / 基本率6% / 単体
+                 └─ スカイ [SKILL_SWORD_SKY] / 熟練度44+ / 基本率5% / 単体
+                    └─ ヴォイド [SKILL_SWORD_VOID] / 熟練度48+ / 基本率4% / 単体
+  なぎ [SKILL_SWORD_WAVE]
+  └─ ソードレイン [SKILL_SWORD_RAIN] / 熟練度12+ / 基本率8% / 全体
+     └─ ストーム [SKILL_SWORD_STORM] / 熟練度24+ / 基本率6% / 全体
+  ソードレイン [SKILL_SWORD_RAIN]
+  └─ ストーム [SKILL_SWORD_STORM] / 熟練度24+ / 基本率6% / 全体
+
+■ 槍
+  スラスト [SKILL_LANCE_THRUST]
+  └─ ピアース [SKILL_LANCE_PIERCE] / 熟練度14+ / 基本率9% / 単体
+     ├─ ドラ槍 [SKILL_LANCE_DRAGON] / 熟練度26+ / 基本率6% / 単体
+     └─ テンペスト [SKILL_LANCE_TEMPEST] / 熟練度20+ / 基本率6% / 全体
+        └─ タイフン [SKILL_LANCE_TYPHOON] / 熟練度30+ / 基本率5% / 全体
+  ピアース [SKILL_LANCE_PIERCE]
+  ├─ ドラ槍 [SKILL_LANCE_DRAGON] / 熟練度26+ / 基本率6% / 単体
+  └─ テンペスト [SKILL_LANCE_TEMPEST] / 熟練度20+ / 基本率6% / 全体
+     └─ タイフン [SKILL_LANCE_TYPHOON] / 熟練度30+ / 基本率5% / 全体
+  テンペスト [SKILL_LANCE_TEMPEST]
+  └─ タイフン [SKILL_LANCE_TYPHOON] / 熟練度30+ / 基本率5% / 全体
+  前提なし
+  └─ スラスト [SKILL_LANCE_THRUST] / 熟練度8+ / 基本率9% / 単体
+     └─ ピアース [SKILL_LANCE_PIERCE] / 熟練度14+ / 基本率9% / 単体
+        ├─ ドラ槍 [SKILL_LANCE_DRAGON] / 熟練度26+ / 基本率6% / 単体
+        └─ テンペスト [SKILL_LANCE_TEMPEST] / 熟練度20+ / 基本率6% / 全体
+           └─ タイフン [SKILL_LANCE_TYPHOON] / 熟練度30+ / 基本率5% / 全体
+
+■ 斧
+  トマホク [SKILL_AXE_TOMAHAWK]
+  └─ クリーブ [SKILL_AXE_CLEAVE] / 熟練度16+ / 基本率9% / 単体
+     ├─ ギガント [SKILL_AXE_GIGANT] / 熟練度26+ / 基本率6% / 単体
+     └─ クェイク [SKILL_AXE_QUAKE] / 熟練度22+ / 基本率6% / 全体
+  クリーブ [SKILL_AXE_CLEAVE]
+  ├─ ギガント [SKILL_AXE_GIGANT] / 熟練度26+ / 基本率6% / 単体
+  └─ クェイク [SKILL_AXE_QUAKE] / 熟練度22+ / 基本率6% / 全体
+  前提なし
+  └─ トマホク [SKILL_AXE_TOMAHAWK] / 熟練度10+ / 基本率8% / 単体
+     └─ クリーブ [SKILL_AXE_CLEAVE] / 熟練度16+ / 基本率9% / 単体
+        ├─ ギガント [SKILL_AXE_GIGANT] / 熟練度26+ / 基本率6% / 単体
+        └─ クェイク [SKILL_AXE_QUAKE] / 熟練度22+ / 基本率6% / 全体
+
+■ 杖
+  スタッフ [SKILL_STAFF_HIT]
+  └─ マインド [SKILL_MIND_SPIKE] / 熟練度4+ / 基本率14% / 単体
+     └─ ホーリー [SKILL_HOLY_LIGHT] / 熟練度10+ / 基本率12% / 単体
+        └─ マナ [SKILL_MANA_BURST] / 熟練度18+ / 基本率10% / 単体
+           └─ スター [SKILL_STAR_PRAYER] / 熟練度24+ / 基本率8% / 単体
+              └─ ノヴァ [SKILL_STAFF_NOVA] / 熟練度32+ / 基本率6% / 単体
+                 └─ スピリット [SKILL_STAFF_SPIRIT] / 熟練度40+ / 基本率5% / 単体
+                    └─ アルカナ [SKILL_STAFF_ARCANA] / 熟練度46+ / 基本率4% / 単体
+  マインド [SKILL_MIND_SPIKE]
+  └─ ホーリー [SKILL_HOLY_LIGHT] / 熟練度10+ / 基本率12% / 単体
+     └─ マナ [SKILL_MANA_BURST] / 熟練度18+ / 基本率10% / 単体
+        └─ スター [SKILL_STAR_PRAYER] / 熟練度24+ / 基本率8% / 単体
+           └─ ノヴァ [SKILL_STAFF_NOVA] / 熟練度32+ / 基本率6% / 単体
+              └─ スピリット [SKILL_STAFF_SPIRIT] / 熟練度40+ / 基本率5% / 単体
+                 └─ アルカナ [SKILL_STAFF_ARCANA] / 熟練度46+ / 基本率4% / 単体
+  ホーリー [SKILL_HOLY_LIGHT]
+  └─ マナ [SKILL_MANA_BURST] / 熟練度18+ / 基本率10% / 単体
+     └─ スター [SKILL_STAR_PRAYER] / 熟練度24+ / 基本率8% / 単体
+        └─ ノヴァ [SKILL_STAFF_NOVA] / 熟練度32+ / 基本率6% / 単体
+           └─ スピリット [SKILL_STAFF_SPIRIT] / 熟練度40+ / 基本率5% / 単体
+              └─ アルカナ [SKILL_STAFF_ARCANA] / 熟練度46+ / 基本率4% / 単体
+  マナ [SKILL_MANA_BURST]
+  └─ スター [SKILL_STAR_PRAYER] / 熟練度24+ / 基本率8% / 単体
+     └─ ノヴァ [SKILL_STAFF_NOVA] / 熟練度32+ / 基本率6% / 単体
+        └─ スピリット [SKILL_STAFF_SPIRIT] / 熟練度40+ / 基本率5% / 単体
+           └─ アルカナ [SKILL_STAFF_ARCANA] / 熟練度46+ / 基本率4% / 単体
+  ノヴァ [SKILL_STAFF_NOVA]
+  └─ スピリット [SKILL_STAFF_SPIRIT] / 熟練度40+ / 基本率5% / 単体
+     └─ アルカナ [SKILL_STAFF_ARCANA] / 熟練度46+ / 基本率4% / 単体
+
+■ 弓
+  アロー [SKILL_ARROW_SHOT]
+  └─ ツイン [SKILL_DOUBLE_ARROW] / 熟練度4+ / 基本率16% / 単体
+     └─ スプリト [SKILL_ARROW_SPLIT] / 熟練度8+ / 基本率12% / 単体
+        └─ イーグル [SKILL_EAGLE_EYE] / 熟練度12+ / 基本率10% / 単体
+           └─ ピアス [SKILL_PIERCING_ARROW] / 熟練度18+ / 基本率10% / 単体
+              └─ サンダー [SKILL_THUNDER_ARROW] / 熟練度22+ / 基本率9% / 単体
+                 ├─ スナイプ [SKILL_ARROW_SNIPE] / 熟練度28+ / 基本率7% / 単体
+                 └─ レイン [SKILL_RAIN_ARROW] / 熟練度24+ / 基本率7% / 全体
+                    └─ バラージ [SKILL_ARROW_BARRAGE] / 熟練度28+ / 基本率6% / 全体
+                       └─ ストーム [SKILL_BOW_STORM] / 熟練度34+ / 基本率5% / 全体
+                          └─ オーロラ [SKILL_ARROW_AURORA] / 熟練度40+ / 基本率5% / 全体
+                             └─ スター [SKILL_BOW_STARFALL] / 熟練度44+ / 基本率4% / 全体
+                                └─ メテオ矢 [SKILL_ARROW_METEOR] / 熟練度46+ / 基本率4% / 全体
+                                   └─ コメット矢 [SKILL_BOW_COMET] / 熟練度50+ / 基本率3% / 全体
+  ツイン [SKILL_DOUBLE_ARROW]
+  └─ スプリト [SKILL_ARROW_SPLIT] / 熟練度8+ / 基本率12% / 単体
+     └─ イーグル [SKILL_EAGLE_EYE] / 熟練度12+ / 基本率10% / 単体
+        └─ ピアス [SKILL_PIERCING_ARROW] / 熟練度18+ / 基本率10% / 単体
+           └─ サンダー [SKILL_THUNDER_ARROW] / 熟練度22+ / 基本率9% / 単体
+              ├─ スナイプ [SKILL_ARROW_SNIPE] / 熟練度28+ / 基本率7% / 単体
+              └─ レイン [SKILL_RAIN_ARROW] / 熟練度24+ / 基本率7% / 全体
+                 └─ バラージ [SKILL_ARROW_BARRAGE] / 熟練度28+ / 基本率6% / 全体
+                    └─ ストーム [SKILL_BOW_STORM] / 熟練度34+ / 基本率5% / 全体
+                       └─ オーロラ [SKILL_ARROW_AURORA] / 熟練度40+ / 基本率5% / 全体
+                          └─ スター [SKILL_BOW_STARFALL] / 熟練度44+ / 基本率4% / 全体
+                             └─ メテオ矢 [SKILL_ARROW_METEOR] / 熟練度46+ / 基本率4% / 全体
+                                └─ コメット矢 [SKILL_BOW_COMET] / 熟練度50+ / 基本率3% / 全体
+  イーグル [SKILL_EAGLE_EYE]
+  └─ ピアス [SKILL_PIERCING_ARROW] / 熟練度18+ / 基本率10% / 単体
+     └─ サンダー [SKILL_THUNDER_ARROW] / 熟練度22+ / 基本率9% / 単体
+        ├─ スナイプ [SKILL_ARROW_SNIPE] / 熟練度28+ / 基本率7% / 単体
+        └─ レイン [SKILL_RAIN_ARROW] / 熟練度24+ / 基本率7% / 全体
+           └─ バラージ [SKILL_ARROW_BARRAGE] / 熟練度28+ / 基本率6% / 全体
+              └─ ストーム [SKILL_BOW_STORM] / 熟練度34+ / 基本率5% / 全体
+                 └─ オーロラ [SKILL_ARROW_AURORA] / 熟練度40+ / 基本率5% / 全体
+                    └─ スター [SKILL_BOW_STARFALL] / 熟練度44+ / 基本率4% / 全体
+                       └─ メテオ矢 [SKILL_ARROW_METEOR] / 熟練度46+ / 基本率4% / 全体
+                          └─ コメット矢 [SKILL_BOW_COMET] / 熟練度50+ / 基本率3% / 全体
+  レイン [SKILL_RAIN_ARROW]
+  └─ バラージ [SKILL_ARROW_BARRAGE] / 熟練度28+ / 基本率6% / 全体
+     └─ ストーム [SKILL_BOW_STORM] / 熟練度34+ / 基本率5% / 全体
+        └─ オーロラ [SKILL_ARROW_AURORA] / 熟練度40+ / 基本率5% / 全体
+           └─ スター [SKILL_BOW_STARFALL] / 熟練度44+ / 基本率4% / 全体
+              └─ メテオ矢 [SKILL_ARROW_METEOR] / 熟練度46+ / 基本率4% / 全体
+                 └─ コメット矢 [SKILL_BOW_COMET] / 熟練度50+ / 基本率3% / 全体
+  バラージ [SKILL_ARROW_BARRAGE]
+  └─ ストーム [SKILL_BOW_STORM] / 熟練度34+ / 基本率5% / 全体
+     └─ オーロラ [SKILL_ARROW_AURORA] / 熟練度40+ / 基本率5% / 全体
+        └─ スター [SKILL_BOW_STARFALL] / 熟練度44+ / 基本率4% / 全体
+           └─ メテオ矢 [SKILL_ARROW_METEOR] / 熟練度46+ / 基本率4% / 全体
+              └─ コメット矢 [SKILL_BOW_COMET] / 熟練度50+ / 基本率3% / 全体
+  ストーム [SKILL_BOW_STORM]
+  └─ オーロラ [SKILL_ARROW_AURORA] / 熟練度40+ / 基本率5% / 全体
+     └─ スター [SKILL_BOW_STARFALL] / 熟練度44+ / 基本率4% / 全体
+        └─ メテオ矢 [SKILL_ARROW_METEOR] / 熟練度46+ / 基本率4% / 全体
+           └─ コメット矢 [SKILL_BOW_COMET] / 熟練度50+ / 基本率3% / 全体
+
+■ 体術
+  パンチ [SKILL_PUNCH]
+  └─ アイアン [SKILL_IRON_FIST] / 熟練度3+ / 基本率16% / 単体
+     └─ コンボ [SKILL_FIST_COMBO] / 熟練度6+ / 基本率12% / 単体
+        └─ カウンタ [SKILL_COUNTER_FIST] / 熟練度10+ / 基本率10% / 単体
+           └─ ショック [SKILL_FIST_SHOCK] / 熟練度14+ / 基本率10% / 単体
+              └─ タイガー [SKILL_TIGER_CLAW] / 熟練度18+ / 基本率9% / 単体
+                 └─ レイジ [SKILL_FIST_RAGE] / 熟練度24+ / 基本率8% / 単体
+                    └─ ドラゴン [SKILL_DRAGON_FIST] / 熟練度28+ / 基本率7% / 単体
+                       └─ ハリケン [SKILL_FIST_HURRICANE] / 熟練度32+ / 基本率6% / 全体
+                          └─ ソウル [SKILL_SOUL_PALM] / 熟練度36+ / 基本率5% / 単体
+                             └─ メテオ拳 [SKILL_FIST_METEOR] / 熟練度40+ / 基本率5% / 単体
+                                └─ フェニク [SKILL_FIST_PHOENIX] / 熟練度44+ / 基本率4% / 全体
+                                   └─ オーラ [SKILL_FIST_AURA] / 熟練度46+ / 基本率4% / 単体
+                                      └─ ゴッド手 [SKILL_FIST_GODHAND] / 熟練度50+ / 基本率3% / 単体
+  アイアン [SKILL_IRON_FIST]
+  └─ コンボ [SKILL_FIST_COMBO] / 熟練度6+ / 基本率12% / 単体
+     └─ カウンタ [SKILL_COUNTER_FIST] / 熟練度10+ / 基本率10% / 単体
+        └─ ショック [SKILL_FIST_SHOCK] / 熟練度14+ / 基本率10% / 単体
+           └─ タイガー [SKILL_TIGER_CLAW] / 熟練度18+ / 基本率9% / 単体
+              └─ レイジ [SKILL_FIST_RAGE] / 熟練度24+ / 基本率8% / 単体
+                 └─ ドラゴン [SKILL_DRAGON_FIST] / 熟練度28+ / 基本率7% / 単体
+                    └─ ハリケン [SKILL_FIST_HURRICANE] / 熟練度32+ / 基本率6% / 全体
+                       └─ ソウル [SKILL_SOUL_PALM] / 熟練度36+ / 基本率5% / 単体
+                          └─ メテオ拳 [SKILL_FIST_METEOR] / 熟練度40+ / 基本率5% / 単体
+                             └─ フェニク [SKILL_FIST_PHOENIX] / 熟練度44+ / 基本率4% / 全体
+                                └─ オーラ [SKILL_FIST_AURA] / 熟練度46+ / 基本率4% / 単体
+                                   └─ ゴッド手 [SKILL_FIST_GODHAND] / 熟練度50+ / 基本率3% / 単体
+  コンボ [SKILL_FIST_COMBO]
+  └─ カウンタ [SKILL_COUNTER_FIST] / 熟練度10+ / 基本率10% / 単体
+     └─ ショック [SKILL_FIST_SHOCK] / 熟練度14+ / 基本率10% / 単体
+        └─ タイガー [SKILL_TIGER_CLAW] / 熟練度18+ / 基本率9% / 単体
+           └─ レイジ [SKILL_FIST_RAGE] / 熟練度24+ / 基本率8% / 単体
+              └─ ドラゴン [SKILL_DRAGON_FIST] / 熟練度28+ / 基本率7% / 単体
+                 └─ ハリケン [SKILL_FIST_HURRICANE] / 熟練度32+ / 基本率6% / 全体
+                    └─ ソウル [SKILL_SOUL_PALM] / 熟練度36+ / 基本率5% / 単体
+                       └─ メテオ拳 [SKILL_FIST_METEOR] / 熟練度40+ / 基本率5% / 単体
+                          └─ フェニク [SKILL_FIST_PHOENIX] / 熟練度44+ / 基本率4% / 全体
+                             └─ オーラ [SKILL_FIST_AURA] / 熟練度46+ / 基本率4% / 単体
+                                └─ ゴッド手 [SKILL_FIST_GODHAND] / 熟練度50+ / 基本率3% / 単体
+  ハリケン [SKILL_FIST_HURRICANE]
+  └─ ソウル [SKILL_SOUL_PALM] / 熟練度36+ / 基本率5% / 単体
+     └─ メテオ拳 [SKILL_FIST_METEOR] / 熟練度40+ / 基本率5% / 単体
+        └─ フェニク [SKILL_FIST_PHOENIX] / 熟練度44+ / 基本率4% / 全体
+           └─ オーラ [SKILL_FIST_AURA] / 熟練度46+ / 基本率4% / 単体
+              └─ ゴッド手 [SKILL_FIST_GODHAND] / 熟練度50+ / 基本率3% / 単体
+  フェニク [SKILL_FIST_PHOENIX]
+  └─ オーラ [SKILL_FIST_AURA] / 熟練度46+ / 基本率4% / 単体
+     └─ ゴッド手 [SKILL_FIST_GODHAND] / 熟練度50+ / 基本率3% / 単体
+
+■ 装置
+  トラップ [SKILL_TRAP_SET]
+  └─ ボム [SKILL_BOMB_THROW] / 熟練度3+ / 基本率16% / 単体
+     └─ ギア [SKILL_GEAR_CUTTER] / 熟練度8+ / 基本率12% / 単体
+        └─ フラッシュ [SKILL_FLASH_BOMB] / 熟練度12+ / 基本率10% / 単体
+           ├─ シェイク [SKILL_TOOL_QUAKE] / 熟練度16+ / 基本率9% / 全体
+           │  └─ ポイズン [SKILL_POISON_TRAP] / 熟練度22+ / 基本率7% / 単体
+           │     └─ グラビティ [SKILL_GRAVITY_NET] / 熟練度28+ / 基本率6% / 単体
+           │        └─ レーザ [SKILL_TOOL_LASER] / 熟練度32+ / 基本率6% / 単体
+           │           └─ レール [SKILL_TOOL_RAIL] / 熟練度38+ / 基本率5% / 単体
+           │              └─ プラズマ装 [SKILL_TOOL_PLASMA] / 熟練度42+ / 基本率4% / 全体
+           │                 └─ ノヴァボム [SKILL_TOOL_NOVA_BOMB] / 熟練度46+ / 基本率4% / 全体
+           │                    └─ ゼロ装置 [SKILL_TOOL_ZERO] / 熟練度50+ / 基本率3% / 単体
+           └─ リペア [SKILL_TOOL_REPAIR] / 熟練度14+ / 基本率9% / 単体/回復
+              └─ シールド [SKILL_TOOL_SHIELD] / 熟練度18+ / 基本率8% / 単体/補助
+  ボム [SKILL_BOMB_THROW]
+  └─ ギア [SKILL_GEAR_CUTTER] / 熟練度8+ / 基本率12% / 単体
+     └─ フラッシュ [SKILL_FLASH_BOMB] / 熟練度12+ / 基本率10% / 単体
+        ├─ シェイク [SKILL_TOOL_QUAKE] / 熟練度16+ / 基本率9% / 全体
+        │  └─ ポイズン [SKILL_POISON_TRAP] / 熟練度22+ / 基本率7% / 単体
+        │     └─ グラビティ [SKILL_GRAVITY_NET] / 熟練度28+ / 基本率6% / 単体
+        │        └─ レーザ [SKILL_TOOL_LASER] / 熟練度32+ / 基本率6% / 単体
+        │           └─ レール [SKILL_TOOL_RAIL] / 熟練度38+ / 基本率5% / 単体
+        │              └─ プラズマ装 [SKILL_TOOL_PLASMA] / 熟練度42+ / 基本率4% / 全体
+        │                 └─ ノヴァボム [SKILL_TOOL_NOVA_BOMB] / 熟練度46+ / 基本率4% / 全体
+        │                    └─ ゼロ装置 [SKILL_TOOL_ZERO] / 熟練度50+ / 基本率3% / 単体
+        └─ リペア [SKILL_TOOL_REPAIR] / 熟練度14+ / 基本率9% / 単体/回復
+           └─ シールド [SKILL_TOOL_SHIELD] / 熟練度18+ / 基本率8% / 単体/補助
+  ギア [SKILL_GEAR_CUTTER]
+  └─ フラッシュ [SKILL_FLASH_BOMB] / 熟練度12+ / 基本率10% / 単体
+     ├─ シェイク [SKILL_TOOL_QUAKE] / 熟練度16+ / 基本率9% / 全体
+     │  └─ ポイズン [SKILL_POISON_TRAP] / 熟練度22+ / 基本率7% / 単体
+     │     └─ グラビティ [SKILL_GRAVITY_NET] / 熟練度28+ / 基本率6% / 単体
+     │        └─ レーザ [SKILL_TOOL_LASER] / 熟練度32+ / 基本率6% / 単体
+     │           └─ レール [SKILL_TOOL_RAIL] / 熟練度38+ / 基本率5% / 単体
+     │              └─ プラズマ装 [SKILL_TOOL_PLASMA] / 熟練度42+ / 基本率4% / 全体
+     │                 └─ ノヴァボム [SKILL_TOOL_NOVA_BOMB] / 熟練度46+ / 基本率4% / 全体
+     │                    └─ ゼロ装置 [SKILL_TOOL_ZERO] / 熟練度50+ / 基本率3% / 単体
+     └─ リペア [SKILL_TOOL_REPAIR] / 熟練度14+ / 基本率9% / 単体/回復
+        └─ シールド [SKILL_TOOL_SHIELD] / 熟練度18+ / 基本率8% / 単体/補助
+  シェイク [SKILL_TOOL_QUAKE]
+  └─ ポイズン [SKILL_POISON_TRAP] / 熟練度22+ / 基本率7% / 単体
+     └─ グラビティ [SKILL_GRAVITY_NET] / 熟練度28+ / 基本率6% / 単体
+        └─ レーザ [SKILL_TOOL_LASER] / 熟練度32+ / 基本率6% / 単体
+           └─ レール [SKILL_TOOL_RAIL] / 熟練度38+ / 基本率5% / 単体
+              └─ プラズマ装 [SKILL_TOOL_PLASMA] / 熟練度42+ / 基本率4% / 全体
+                 └─ ノヴァボム [SKILL_TOOL_NOVA_BOMB] / 熟練度46+ / 基本率4% / 全体
+                    └─ ゼロ装置 [SKILL_TOOL_ZERO] / 熟練度50+ / 基本率3% / 単体
+  プラズマ装 [SKILL_TOOL_PLASMA]
+  └─ ノヴァボム [SKILL_TOOL_NOVA_BOMB] / 熟練度46+ / 基本率4% / 全体
+     └─ ゼロ装置 [SKILL_TOOL_ZERO] / 熟練度50+ / 基本率3% / 単体
+  ノヴァボム [SKILL_TOOL_NOVA_BOMB]
+  └─ ゼロ装置 [SKILL_TOOL_ZERO] / 熟練度50+ / 基本率3% / 単体
+
+【魔法派生ツリー（魔法使用時）】
+■ 火魔法
+  ファイア [SKILL_FIRE]
+  └─ フレア [SKILL_MAGIC_FLAME] / 熟練度2+ / 基本率18% / 単体
+     ├─ ブレイズ [SKILL_MAGIC_BLAZE] / 熟練度6+ / 基本率16% / 単体
+     │  └─ インフェル [SKILL_MAGIC_INFERNO] / 熟練度14+ / 基本率12% / 単体
+     └─ ファイア壁 [SKILL_MAGIC_FIREWALL] / 熟練度10+ / 基本率10% / 全体
+        └─ メテオ [SKILL_MAGIC_METEOR] / 熟練度22+ / 基本率8% / 全体
+           └─ メテオフレア [SKILL_MAGIC_METEOR_FLARE] / 熟練度32+ / 基本率6% / 全体
+              └─ フレアII [SKILL_MAGIC_FLARE] / 熟練度40+ / 基本率5% / 全体
+
+■ 氷魔法
+  ブリザド [SKILL_MAGIC_BLIZZARD]
+  └─ フロスト [SKILL_MAGIC_FROST] / 熟練度4+ / 基本率16% / 単体
+     └─ アクア [SKILL_MAGIC_AQUA] / 熟練度10+ / 基本率12% / 単体
+        └─ フリーズ [SKILL_MAGIC_FREEZE] / 熟練度18+ / 基本率10% / 単体
+           └─ ゼロ度 [SKILL_MAGIC_ABS_ZERO] / 熟練度28+ / 基本率8% / 単体
+              └─ アイス世 [SKILL_MAGIC_ICE_AGE] / 熟練度38+ / 基本率6% / 全体
+
+■ 雷/風魔法
+  サンダー [SKILL_MAGIC_THUNDER]
+  └─ スパーク [SKILL_MAGIC_SPARK] / 熟練度6+ / 基本率16% / 単体
+     └─ エアロ [SKILL_MAGIC_WIND] / 熟練度12+ / 基本率12% / 単体
+        └─ ボルト [SKILL_MAGIC_BOLT] / 熟練度20+ / 基本率10% / 単体
+           └─ プラズマ [SKILL_MAGIC_PLASMA] / 熟練度28+ / 基本率8% / 単体
+              └─ トルネド [SKILL_MAGIC_TORNADO] / 熟練度34+ / 基本率7% / 全体
+                 └─ ジャジ [SKILL_MAGIC_JUDGMENT] / 熟練度42+ / 基本率5% / 全体
+
+■ 光魔法
+  シャイン [SKILL_MAGIC_SHINE]
+  └─ セイント [SKILL_MAGIC_SAINT] / 熟練度6+ / 基本率16% / 単体
+     └─ ホーリィ [SKILL_MAGIC_HOLY_RAY] / 熟練度16+ / 基本率12% / 単体
+        └─ ルナ [SKILL_MAGIC_LUNA] / 熟練度26+ / 基本率10% / 単体
+           └─ プリズム [SKILL_MAGIC_PRISM] / 熟練度34+ / 基本率8% / 全体
+              └─ フォトン [SKILL_MAGIC_PHOTON] / 熟練度42+ / 基本率6% / 単体
+                 └─ グランド [SKILL_MAGIC_GRAND_CROSS] / 熟練度50+ / 基本率4% / 全体
+
+■ 闇/地魔法
+  ダーク [SKILL_MAGIC_DARK]
+  └─ シャドウ [SKILL_MAGIC_SHADOW] / 熟練度6+ / 基本率16% / 単体
+     └─ ストーン [SKILL_MAGIC_STONE] / 熟練度14+ / 基本率12% / 単体
+        └─ アビス [SKILL_MAGIC_ABYSS] / 熟練度24+ / 基本率10% / 単体
+           └─ ナイトメア [SKILL_MAGIC_NIGHTMARE] / 熟練度32+ / 基本率8% / 単体
+              └─ ゼロ [SKILL_MAGIC_ZERO] / 熟練度40+ / 基本率6% / 単体
+                 └─ ボイド [SKILL_MAGIC_VOID_BREAK] / 熟練度46+ / 基本率5% / 全体
+                    └─ アルテマ [SKILL_MAGIC_ULTIMA] / 熟練度50+ / 基本率4% / 全体
+
+■ 回復魔法
+  ヒール [SKILL_HEAL_SIMPLE]
+  └─ リカバ [SKILL_MAGIC_RECOVER] / 熟練度4+ / 基本率16% / 単体/回復
+     └─ ハイヒール [SKILL_MAGIC_HEAL_PLUS] / 熟練度10+ / 基本率14% / 単体/回復
+        └─ リジェン [SKILL_MAGIC_REGEN] / 熟練度18+ / 基本率12% / 単体/回復
+           └─ リバイブ [SKILL_MAGIC_REVIVE] / 熟練度26+ / 基本率10% / 単体/回復
+              └─ グルプヒル [SKILL_MAGIC_GROUP_HEAL] / 熟練度34+ / 基本率8% / 全体/回復
+                 └─ キュアオル [SKILL_MAGIC_CURE_ALL] / 熟練度42+ / 基本率6% / 全体/回復
+
+■ 補助魔法
+  前提なし
+  └─ ブースト [SKILL_MAGIC_BOOST] / 熟練度6+ / 基本率12% / 単体/補助
+     └─ バリア [SKILL_MAGIC_BARRIER] / 熟練度14+ / 基本率10% / 単体/補助
+        └─ イージス [SKILL_MAGIC_AEGIS] / 熟練度24+ / 基本率8% / 単体/補助
+           └─ アクセル [SKILL_MAGIC_ACCEL] / 熟練度32+ / 基本率6% / 単体/補助
+              └─ ヘイスト [SKILL_MAGIC_HASTE] / 熟練度40+ / 基本率5% / 単体/補助

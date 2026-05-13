@@ -877,18 +877,6 @@ static void party_gain_mastery(PartyMemberRuntime *member, UINT8 tech_flag) BANK
 /* rpg235: tier table replaced by prereq-aware spark edges in bank 20.
  * The starter weapon tech is granted as a fallback when no edge fires.
  */
-static UINT8 party_spark_starter_skill_for_weapon(UINT8 weapon_type) BANKED {
-    if (weapon_type == PARTY_WEAPON_SWORD) return SKILL_SLASH;
-    if (weapon_type == PARTY_WEAPON_STAFF) return SKILL_STAFF_HIT;
-    if (weapon_type == PARTY_WEAPON_BOW)   return SKILL_ARROW_SHOT;
-    if (weapon_type == PARTY_WEAPON_GLOVE) return SKILL_PUNCH;
-    if (weapon_type == PARTY_WEAPON_TOOL)  return SKILL_TRAP_SET;
-    if (weapon_type == PARTY_WEAPON_SPEAR) return SKILL_LANCE_THRUST;
-    if (weapon_type == PARTY_WEAPON_AXE)   return SKILL_AXE_TOMAHAWK;
-    return SKILL_NONE;
-}
-
-
 static UINT8 party_skill_is_magic_local(UINT8 skill_id) BANKED {
     if (skill_id == SKILL_HEAL_SIMPLE || skill_id == SKILL_FIRE) return 1u;
     if (skill_id >= SKILL_MAGIC_FLAME && skill_id <= SKILL_MAGIC_METEOR) return 1u;
@@ -960,9 +948,7 @@ UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_i
     PartyMemberRuntime *member;
     UINT8 weapon_type;
     UINT8 mastery;
-    UINT8 chance;
     UINT8 picked;
-    UINT8 starter;
 
     if (skill_id_out == 0) return 0u;
     *skill_id_out = SKILL_NONE;
@@ -975,25 +961,50 @@ UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_i
     if (member->weapon_mastery[weapon_type] < PARTY_MASTERY_MAX) member->weapon_mastery[weapon_type]++;
     mastery = member->weapon_mastery[weapon_type];
 
-    /* Ensure the starter skill for this weapon is owned so the prereq walk has a foothold. */
-    starter = party_spark_starter_skill_for_weapon(weapon_type);
-    if (starter != SKILL_NONE && !party_has_learned_skill(active_slot, starter)) {
-        party_add_learned_skill(active_slot, starter);
-        *skill_id_out = starter;
-        member->learned_tech_flags |= PARTY_TECH_FLAG_SPARK;
-        return 1u;
-    }
+    picked = battle_skill_spark_pick_tech_starter(weapon_type, mastery, random_seed, member->learned_skills);
+    if (picked == SKILL_NONE || picked >= SKILL_MAX) return 0u;
+    if (party_skill_is_magic_local(picked)) return 0u;
+
+    *skill_id_out = picked;
+    member->learned_tech_flags |= PARTY_TECH_FLAG_SPARK;
+    return 1u;
+}
+
+/* rpg242:
+ * Non-starter derivations are sparked only when a technique is used.
+ * The used technique becomes the edge root, so Slash can lead to its own branch,
+ * Double to its own branch, and so on.
+ */
+UINT8 party_try_spark_skill_from(UINT8 active_slot, UINT8 trigger_skill_id, UINT8 random_seed, UINT8 *skill_id_out) BANKED {
+    PartyMemberRuntime *member;
+    UINT8 weapon_type;
+    UINT8 mastery;
+    UINT8 chance;
+    UINT8 picked;
+
+    if (skill_id_out == 0) return 0u;
+    *skill_id_out = SKILL_NONE;
+    member = party_get_active_member(active_slot);
+    if (member == 0 || member->hp == 0u) return 0u;
+    if (trigger_skill_id == SKILL_NONE || trigger_skill_id >= SKILL_MAX) return 0u;
+    if (party_skill_is_magic_local(trigger_skill_id)) return 0u;
+
+    weapon_type = party_equipped_weapon_type(member);
+    if (weapon_type >= PARTY_WEAPON_COUNT || weapon_type == PARTY_WEAPON_NONE) return 0u;
+
+    if (member->weapon_mastery[weapon_type] < PARTY_MASTERY_MAX) member->weapon_mastery[weapon_type]++;
+    mastery = member->weapon_mastery[weapon_type];
 
     chance = (UINT8)(8u + (mastery >> 1));
-    if (chance > 35u) chance = 35u;
-    /* rpg241: debug/test support. At mastery 50+, sparks should be easy to verify. */
-    if (mastery >= 50u) chance = 80u;
-    random_seed = (UINT8)(random_seed ^ (UINT8)(mastery * 13u) ^ DIV_REG);
+    if (chance > 40u) chance = 40u;
+    if (mastery >= 50u) chance = 90u;
+
+    random_seed = (UINT8)(random_seed ^ trigger_skill_id ^ (UINT8)(mastery * 17u) ^ DIV_REG);
     if ((UINT8)(random_seed % 100u) >= chance) return 0u;
 
-    picked = battle_skill_spark_pick_tech(weapon_type, mastery, random_seed, member->learned_skills);
+    picked = battle_skill_spark_pick_tech_from(weapon_type, trigger_skill_id, mastery, random_seed, member->learned_skills);
     if (picked == SKILL_NONE || picked >= SKILL_MAX) return 0u;
-    if (party_skill_is_magic_local(picked)) return 0u; /* tech sparker must never return a magic ID */
+    if (party_skill_is_magic_local(picked)) return 0u;
 
     *skill_id_out = picked;
     member->learned_tech_flags |= PARTY_TECH_FLAG_SPARK;
