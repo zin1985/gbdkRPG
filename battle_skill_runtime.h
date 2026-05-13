@@ -24,5 +24,6 @@ UINT8 battle_skill_runtime_is_magic(UINT8 skill_id) BANKED;
 UINT8 battle_skill_runtime_is_heal_magic(UINT8 skill_id) BANKED;
 UINT16 battle_skill_runtime_calc_damage(UINT8 skill_id, UINT8 attack, UINT8 magic_power, UINT8 magic_mastery, UINT8 defense) BANKED;
 UINT16 battle_skill_runtime_calc_heal(UINT8 skill_id, UINT8 magic_power, UINT8 magic_mastery) BANKED;
+const char *battle_skill_runtime_name(UINT8 skill_id) BANKED;
 
 #endif

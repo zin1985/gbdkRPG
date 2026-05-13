@@ -95,12 +95,16 @@ UINT8 battle_skill_runtime_mp_cost(UINT8 skill_id) BANKED {
 }
 
 UINT8 battle_skill_runtime_is_magic(UINT8 skill_id) BANKED {
-    return (skill_id == SKILL_HEAL_SIMPLE || skill_id == SKILL_FIRE || skill_id >= SKILL_MAGIC_FLAME) ? 1u : 0u;
+    if (skill_id == SKILL_HEAL_SIMPLE || skill_id == SKILL_FIRE) return 1u;
+    if (skill_id >= SKILL_MAGIC_FLAME && skill_id <= SKILL_MAGIC_METEOR) return 1u;
+    if (skill_id >= SKILL_MAGIC_FREEZE && skill_id <= SKILL_MAGIC_GRAND_CROSS) return 1u;
+    return 0u;
 }
 
 UINT8 battle_skill_runtime_is_heal_magic(UINT8 skill_id) BANKED {
     return (skill_id == SKILL_HEAL_SIMPLE || skill_id == SKILL_MAGIC_HEAL_PLUS ||
-            skill_id == SKILL_MAGIC_REVIVE || skill_id == SKILL_MAGIC_BARRIER) ? 1u : 0u;
+            skill_id == SKILL_MAGIC_REVIVE || skill_id == SKILL_MAGIC_BARRIER ||
+            skill_id == SKILL_MAGIC_CURE_ALL) ? 1u : 0u;
 }
 
 static UINT16 meta_clamp_damage_i16(INT16 damage) {

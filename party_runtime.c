@@ -196,6 +196,7 @@ typedef struct PartyMemberRuntime {
     UINT8 magic_mastery;
     UINT8 learned_tech_flags;
     UINT8 learned_magic_flags;
+    UINT8 learned_skills[PLAYER_SKILL_SLOT_COUNT];
     UINT8 race_type;
     UINT8 equip_weight;
     UINT8 formation_role;
@@ -211,6 +212,9 @@ typedef struct PartyMemberRuntime {
 
 static PartyMemberRuntime party_roster[PARTY_ROSTER_COUNT];
 static UINT8 party_active_slots[PARTY_ACTIVE_COUNT];
+
+UINT8 party_add_learned_skill(UINT8 active_slot, UINT8 skill_id) BANKED;
+UINT8 party_has_learned_skill(UINT8 active_slot, UINT8 skill_id) BANKED;
 
 static void party_init_member(UINT8 id, const char *name, UINT16 hp, UINT16 mp,
                               UINT8 atk, UINT8 def, UINT8 skill, UINT8 heal,
@@ -235,6 +239,7 @@ static void party_init_member(UINT8 id, const char *name, UINT16 hp, UINT16 mp,
     party_roster[id].accessory_id = ITEM_NONE;
     party_roster[id].weapon_type = PARTY_WEAPON_NONE;
     for (i = 0u; i < PARTY_WEAPON_COUNT; i++) party_roster[id].weapon_mastery[i] = 0u;
+    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) party_roster[id].learned_skills[i] = SKILL_NONE;
     party_roster[id].learned_tech_flags = 0u;
     party_roster[id].learned_magic_flags = 0u;
     party_roster[id].race_type = PARTY_RACE_HUMAN;
@@ -324,6 +329,14 @@ void party_init_roster_defaults(void) BANKED {
     party_roster[PARTY_MEMBER_MONK].formation_role = PARTY_FORM_FOCUS;
     party_roster[PARTY_MEMBER_MONK].equip_weight = 0u;
     party_roster[PARTY_MEMBER_MONK].morale = 6u;
+
+    /* rpg231: learned skills are now owned by each active member, not by main.c. */
+    party_add_learned_skill(0u, SKILL_POWER_STRIKE);
+    party_add_learned_skill(0u, SKILL_SLASH);
+    party_add_learned_skill(1u, SKILL_HEAL_SIMPLE);
+    party_add_learned_skill(1u, SKILL_MAGIC_HEAL_PLUS);
+    party_add_learned_skill(2u, SKILL_FIRE);
+    party_add_learned_skill(2u, SKILL_MAGIC_FLAME);
 }
 
 void party_prepare_battle_members(UINT16 hero_max_hp, UINT16 hero_max_mp,
@@ -843,6 +856,8 @@ static void party_gain_mastery(PartyMemberRuntime *member, UINT8 tech_flag) BANK
 
 static UINT8 party_spark_skill_for_weapon(UINT8 weapon_type, UINT8 mastery) BANKED {
     if (weapon_type == PARTY_WEAPON_SWORD) {
+        if (mastery >= 46u) return SKILL_SWORD_COMET;
+        if (mastery >= 40u) return SKILL_SWORD_MOON;
         if (mastery >= 32u) return SKILL_FINAL_BLADE;
         if (mastery >= 24u) return SKILL_DRAGON_REND;
         if (mastery >= 18u) return SKILL_FLAME_EDGE;
@@ -851,6 +866,8 @@ static UINT8 party_spark_skill_for_weapon(UINT8 weapon_type, UINT8 mastery) BANK
         return SKILL_SLASH;
     }
     if (weapon_type == PARTY_WEAPON_STAFF) {
+        if (mastery >= 46u) return SKILL_STAFF_SPIRIT;
+        if (mastery >= 38u) return SKILL_STAFF_NOVA;
         if (mastery >= 28u) return SKILL_MANA_BURST;
         if (mastery >= 20u) return SKILL_STAR_PRAYER;
         if (mastery >= 14u) return SKILL_HOLY_LIGHT;
@@ -858,6 +875,8 @@ static UINT8 party_spark_skill_for_weapon(UINT8 weapon_type, UINT8 mastery) BANK
         return SKILL_STAFF_HIT;
     }
     if (weapon_type == PARTY_WEAPON_BOW) {
+        if (mastery >= 46u) return SKILL_BOW_STARFALL;
+        if (mastery >= 38u) return SKILL_BOW_STORM;
         if (mastery >= 30u) return SKILL_RAIN_ARROW;
         if (mastery >= 22u) return SKILL_THUNDER_ARROW;
         if (mastery >= 16u) return SKILL_PIERCING_ARROW;
@@ -866,6 +885,8 @@ static UINT8 party_spark_skill_for_weapon(UINT8 weapon_type, UINT8 mastery) BANK
         return SKILL_ARROW_SHOT;
     }
     if (weapon_type == PARTY_WEAPON_GLOVE) {
+        if (mastery >= 46u) return SKILL_FIST_AURA;
+        if (mastery >= 38u) return SKILL_FIST_METEOR;
         if (mastery >= 30u) return SKILL_SOUL_PALM;
         if (mastery >= 22u) return SKILL_DRAGON_FIST;
         if (mastery >= 15u) return SKILL_TIGER_CLAW;
@@ -874,6 +895,8 @@ static UINT8 party_spark_skill_for_weapon(UINT8 weapon_type, UINT8 mastery) BANK
         return SKILL_PUNCH;
     }
     if (weapon_type == PARTY_WEAPON_TOOL) {
+        if (mastery >= 46u) return SKILL_TOOL_NOVA_BOMB;
+        if (mastery >= 38u) return SKILL_TOOL_RAIL;
         if (mastery >= 28u) return SKILL_GRAVITY_NET;
         if (mastery >= 21u) return SKILL_POISON_TRAP;
         if (mastery >= 15u) return SKILL_FLASH_BOMB;
@@ -882,6 +905,73 @@ static UINT8 party_spark_skill_for_weapon(UINT8 weapon_type, UINT8 mastery) BANK
         return SKILL_TRAP_SET;
     }
     return SKILL_POWER_STRIKE;
+}
+
+
+static UINT8 party_skill_is_magic_local(UINT8 skill_id) BANKED {
+    if (skill_id == SKILL_HEAL_SIMPLE || skill_id == SKILL_FIRE) return 1u;
+    if (skill_id >= SKILL_MAGIC_FLAME && skill_id <= SKILL_MAGIC_METEOR) return 1u;
+    if (skill_id >= SKILL_MAGIC_FREEZE && skill_id <= SKILL_MAGIC_GRAND_CROSS) return 1u;
+    return 0u;
+}
+
+UINT8 party_has_learned_skill(UINT8 active_slot, UINT8 skill_id) BANKED {
+    UINT8 i;
+    PartyMemberRuntime *member;
+    if (skill_id == SKILL_NONE) return 1u;
+    member = party_get_active_member(active_slot);
+    if (member == 0) return 0u;
+    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
+        if (member->learned_skills[i] == skill_id) return 1u;
+    }
+    return 0u;
+}
+
+UINT8 party_add_learned_skill(UINT8 active_slot, UINT8 skill_id) BANKED {
+    UINT8 i;
+    PartyMemberRuntime *member;
+    if (skill_id == SKILL_NONE) return 0u;
+    if (party_has_learned_skill(active_slot, skill_id)) return 0u;
+    member = party_get_active_member(active_slot);
+    if (member == 0) return 0u;
+    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
+        if (member->learned_skills[i] == SKILL_NONE) {
+            member->learned_skills[i] = skill_id;
+            return 1u;
+        }
+    }
+    return 0u;
+}
+
+UINT8 party_get_learned_skill_count(UINT8 active_slot, UINT8 magic_mode) BANKED {
+    UINT8 i;
+    UINT8 count;
+    UINT8 sid;
+    PartyMemberRuntime *member;
+    member = party_get_active_member(active_slot);
+    if (member == 0) return 0u;
+    count = 0u;
+    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
+        sid = member->learned_skills[i];
+        if (sid != SKILL_NONE && party_skill_is_magic_local(sid) == magic_mode) count++;
+    }
+    return count;
+}
+
+UINT8 party_get_learned_skill_at(UINT8 active_slot, UINT8 index, UINT8 magic_mode) BANKED {
+    UINT8 i;
+    UINT8 sid;
+    PartyMemberRuntime *member;
+    member = party_get_active_member(active_slot);
+    if (member == 0) return SKILL_NONE;
+    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
+        sid = member->learned_skills[i];
+        if (sid != SKILL_NONE && party_skill_is_magic_local(sid) == magic_mode) {
+            if (index == 0u) return sid;
+            index--;
+        }
+    }
+    return SKILL_NONE;
 }
 
 UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_id_out) BANKED {
@@ -911,6 +1001,10 @@ UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_i
     return (*skill_id_out != SKILL_NONE) ? 1u : 0u;
 }
 static UINT8 party_spark_magic_for_mastery(UINT8 mastery) BANKED {
+    if (mastery >= 50u) return SKILL_MAGIC_GRAND_CROSS;
+    if (mastery >= 47u) return SKILL_MAGIC_FLARE;
+    if (mastery >= 44u) return SKILL_MAGIC_ABYSS;
+    if (mastery >= 42u) return SKILL_MAGIC_HOLY_RAY;
     if (mastery >= 40u) return SKILL_MAGIC_METEOR;
     if (mastery >= 34u) return SKILL_MAGIC_DARK;
     if (mastery >= 28u) return SKILL_MAGIC_SHINE;
@@ -1455,6 +1549,8 @@ static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
             party_put_mastery_icon_value(14u, 6u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_BOW), member->weapon_mastery[PARTY_WEAPON_BOW]);
             party_put_mastery_icon_value(2u, 8u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_GLOVE), member->weapon_mastery[PARTY_WEAPON_GLOVE]);
             party_put_mastery_icon_value(8u, 8u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_TOOL), member->weapon_mastery[PARTY_WEAPON_TOOL]);
+            jp_put_bkg_text(2u, 10u, "まほう");
+            party_put_u8(10u, 10u, member->magic_mastery);
         }
     } else {
         party_status_hide_sprite();

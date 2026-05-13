@@ -99,6 +99,11 @@ void party_after_battle_growth(UINT8 enemy_rank, UINT8 random_seed) BANKED;
 UINT8 party_try_spark_skill(UINT8 active_slot, UINT8 random_seed, UINT8 *skill_id_out) BANKED;
 UINT8 party_try_spark_magic(UINT8 active_slot, UINT8 random_seed, UINT8 *magic_id_out) BANKED;
 
+UINT8 party_get_learned_skill_count(UINT8 active_slot, UINT8 magic_mode) BANKED;
+UINT8 party_get_learned_skill_at(UINT8 active_slot, UINT8 index, UINT8 magic_mode) BANKED;
+UINT8 party_has_learned_skill(UINT8 active_slot, UINT8 skill_id) BANKED;
+UINT8 party_add_learned_skill(UINT8 active_slot, UINT8 skill_id) BANKED;
+
 UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id) BANKED;
 void party_menu_show_status_loop(void) BANKED;
 void party_menu_show_equip_loop(void) BANKED;

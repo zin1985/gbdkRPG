@@ -12,11 +12,6 @@ BANKREF(battle_skill_runtime)
 #define SKILL_KIND_DAMAGE 0u
 #define SKILL_KIND_HEAL   1u
 
-/* main.c owns the actual learned skill list.  This runtime only draws and selects it. */
-UINT8 player_get_skill_slot(UINT8 slot);
-UINT8 player_get_skill_count(void);
-UINT8 player_get_skill_at(UINT8 index);
-
 static UINT8 skill_cursor;
 static UINT8 skill_page_top;
 static UINT8 skill_count;
@@ -29,7 +24,7 @@ static UINT8 runtime_is_magic(UINT8 skill_id) {
     return battle_skill_runtime_is_magic(skill_id);
 }
 
-static const char *runtime_skill_name(UINT8 skill_id) {
+const char *battle_skill_runtime_name(UINT8 skill_id) BANKED {
     switch (skill_id) {
         case SKILL_POWER_STRIKE: return "パワー";
         case SKILL_HEAL_SIMPLE: return "ヒール";
@@ -81,6 +76,26 @@ static const char *runtime_skill_name(UINT8 skill_id) {
         case SKILL_MAGIC_REVIVE: return "リバイブ";
         case SKILL_MAGIC_BARRIER: return "バリア";
         case SKILL_MAGIC_METEOR: return "メテオ";
+        case SKILL_SWORD_MOON: return "ムーン";
+        case SKILL_SWORD_COMET: return "コメット";
+        case SKILL_STAFF_NOVA: return "ノヴァ";
+        case SKILL_STAFF_SPIRIT: return "スピリット";
+        case SKILL_BOW_STORM: return "ストーム";
+        case SKILL_BOW_STARFALL: return "スター";
+        case SKILL_FIST_METEOR: return "メテオ拳";
+        case SKILL_FIST_AURA: return "オーラ";
+        case SKILL_TOOL_RAIL: return "レール";
+        case SKILL_TOOL_NOVA_BOMB: return "ノヴァボム";
+        case SKILL_MAGIC_FREEZE: return "フリーズ";
+        case SKILL_MAGIC_PLASMA: return "プラズマ";
+        case SKILL_MAGIC_TORNADO: return "トルネド";
+        case SKILL_MAGIC_GAIA: return "ガイア";
+        case SKILL_MAGIC_HOLY_RAY: return "ホーリィ";
+        case SKILL_MAGIC_ABYSS: return "アビス";
+        case SKILL_MAGIC_CURE_ALL: return "キュアオル";
+        case SKILL_MAGIC_ACCEL: return "アクセル";
+        case SKILL_MAGIC_FLARE: return "フレアII";
+        case SKILL_MAGIC_GRAND_CROSS: return "グランド";
         default: return "なし";
     }
 }
@@ -117,14 +132,13 @@ static void draw_skill_window(void) {
         idx = (UINT8)(skill_page_top + row);
         if (idx < skill_count) {
             jp_put_bkg_text(9u, (UINT8)(12u + row), (idx == skill_cursor) ? ">" : " ");
-            jp_put_bkg_text(10u, (UINT8)(12u + row), runtime_skill_name(skill_ids[idx]));
+            jp_put_bkg_text(10u, (UINT8)(12u + row), battle_skill_runtime_name(skill_ids[idx]));
         }
     }
     jp_put_bkg_text(9u, 16u, "Aけってい Bもどる");
 }
 
 static void build_skill_list(UINT8 party_turn_slot, UINT8 magic_mode) {
-    UINT8 member_id;
     UINT8 i;
     UINT8 count;
     UINT8 sid;
@@ -133,32 +147,15 @@ static void build_skill_list(UINT8 party_turn_slot, UINT8 magic_mode) {
     list_magic_mode = magic_mode;
     for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) skill_ids[i] = SKILL_NONE;
 
-    member_id = party_get_active_member_id(party_turn_slot);
-    if (magic_mode) {
-        if (member_id == PARTY_MEMBER_PRIEST) {
-            add_skill_choice(SKILL_HEAL_SIMPLE);
-            add_skill_choice(SKILL_MAGIC_HEAL_PLUS);
-            add_skill_choice(SKILL_MAGIC_BARRIER);
-        }
-        if (member_id == PARTY_MEMBER_MAGE) {
-            add_skill_choice(SKILL_FIRE);
-            add_skill_choice(SKILL_MAGIC_FLAME);
-            add_skill_choice(SKILL_MAGIC_BLIZZARD);
-            add_skill_choice(SKILL_MAGIC_THUNDER);
-        }
-        count = player_get_skill_count();
-        for (i = 0u; i < count; i++) {
-            sid = player_get_skill_at(i);
-            if (runtime_is_magic(sid)) add_skill_choice(sid);
-        }
-    } else {
-        count = player_get_skill_count();
-        for (i = 0u; i < count; i++) {
-            sid = player_get_skill_at(i);
-            if (!runtime_is_magic(sid)) add_skill_choice(sid);
-        }
-        if (skill_count == 0u) add_skill_choice(SKILL_POWER_STRIKE);
+    count = party_get_learned_skill_count(party_turn_slot, magic_mode);
+    for (i = 0u; i < count; i++) {
+        sid = party_get_learned_skill_at(party_turn_slot, i, magic_mode);
+        if (sid != SKILL_NONE) add_skill_choice(sid);
     }
+
+    if (!magic_mode && skill_count == 0u) add_skill_choice(SKILL_POWER_STRIKE);
+    if ( magic_mode && skill_count == 0u) add_skill_choice(SKILL_HEAL_SIMPLE);
+
     skill_cursor = 0u;
     skill_page_top = 0u;
 }

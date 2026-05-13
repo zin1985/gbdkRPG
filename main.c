@@ -161,7 +161,7 @@ typedef struct GrowthResult {
 #define MENU_OBJECTIVE 3u
 #define MENU_COUNT 4u
 
-#define SAFE_DUPLICATE_FIRST_ACTOR_FRAME 0
+#define SAFE_DUPLICATE_FIRST_ACTOR_FRAME 1
 
 typedef enum GameMode {
     MODE_MAP = 0,
@@ -188,10 +188,6 @@ typedef enum CommandType {
     CMD_RUN,
     CMD_COUNT
 } CommandType;
-
-typedef struct PlayerSkillSet {
-    UINT8 slots[PLAYER_SKILL_SLOT_COUNT];
-} PlayerSkillSet;
 
 typedef enum Direction {
     DIR_DOWN = 0,
@@ -247,7 +243,6 @@ UINT8 last_growth_type;
 GrowthResult last_growth;
 UINT8 battle_enemy_rank;
 static UINT8 cave_boss_battle_pending;
-static PlayerSkillSet player_skills;
 static SaveSnapshot save_snapshot_work;
 
 static UINT8 prev_keys;
@@ -349,9 +344,6 @@ static void start_move(Direction dir);
 static void update_player_movement(void);
 static void map_input(void);
 static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defender);
-UINT8 player_get_skill_slot(UINT8 slot);
-UINT8 player_get_skill_count(void);
-UINT8 player_get_skill_at(UINT8 index);
 static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
 static void draw_battle_enemy_names(void);
 static void draw_battle_message_area(void);
@@ -1133,53 +1125,6 @@ static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defende
     return clamp_damage_i16(damage);
 }
 
-UINT8 player_get_skill_slot(UINT8 slot) {
-    if (slot >= PLAYER_SKILL_SLOT_COUNT) return SKILL_NONE;
-    return player_skills.slots[slot];
-}
-
-UINT8 player_get_skill_count(void) {
-    UINT8 i;
-    UINT8 count = 0u;
-    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
-        if (player_skills.slots[i] != SKILL_NONE) count++;
-    }
-    return count;
-}
-
-UINT8 player_get_skill_at(UINT8 index) {
-    UINT8 i;
-    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
-        if (player_skills.slots[i] != SKILL_NONE) {
-            if (index == 0u) return player_skills.slots[i];
-            index--;
-        }
-    }
-    return SKILL_NONE;
-}
-
-static UINT8 player_has_skill(UINT8 skill_id) {
-    UINT8 i;
-    if (skill_id == SKILL_NONE) return 1u;
-    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
-        if (player_skills.slots[i] == skill_id) return 1u;
-    }
-    return 0u;
-}
-
-static UINT8 player_add_skill(UINT8 skill_id) {
-    UINT8 i;
-    if (skill_id == SKILL_NONE) return 0u;
-    if (player_has_skill(skill_id)) return 0u;
-    for (i = 0u; i < PLAYER_SKILL_SLOT_COUNT; i++) {
-        if (player_skills.slots[i] == SKILL_NONE) {
-            player_skills.slots[i] = skill_id;
-            return 1u;
-        }
-    }
-    return 0u;
-}
-
 static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
     jp_draw_bkg_frame(BATTLE_BG_X(x0), y0, w, h);
 }
@@ -1822,8 +1767,9 @@ static void player_attack(void) {
         UINT8 spark_skill;
         if (party_try_spark_skill(battle_party_turn_slot, random_u8(), &spark_skill)) {
             UINT16 spark_dmg;
-            player_add_skill(spark_skill);
+            party_add_learned_skill(battle_party_turn_slot, spark_skill);
             battle_show_message("ひらめいた!");
+            battle_show_message(battle_skill_runtime_name(spark_skill));
             spark_dmg = battle_skill_runtime_calc_damage(spark_skill, actor.attack, actor.skill_power, actor.magic_mastery, enemy_battle.defense);
             if (spark_dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
             else enemy_battle.hp = (UINT16)(enemy_battle.hp - spark_dmg);
@@ -1877,8 +1823,9 @@ static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
             UINT8 spark_magic;
             if (party_try_spark_magic(battle_party_turn_slot, random_u8(), &spark_magic)) {
                 UINT16 spark_heal;
-                player_add_skill(spark_magic);
+                party_add_learned_skill(battle_party_turn_slot, spark_magic);
                 battle_show_message("まほうを ひらめいた!");
+                battle_show_message(battle_skill_runtime_name(spark_magic));
                 if (battle_skill_runtime_kind(spark_magic) == BATTLE_SKILL_KIND_HEAL) {
                     spark_heal = battle_skill_runtime_calc_heal(spark_magic, actor.skill_power, actor.magic_mastery);
                     battle_heal_actor_slot(ally_slot, spark_heal);
@@ -1919,8 +1866,9 @@ static void player_use_skill_on_target(UINT8 skill_id, UINT8 ally_slot) {
         UINT8 spark_magic;
         if (party_try_spark_magic(battle_party_turn_slot, random_u8(), &spark_magic)) {
             UINT16 spark_dmg;
-            player_add_skill(spark_magic);
+            party_add_learned_skill(battle_party_turn_slot, spark_magic);
             battle_show_message("まほうを ひらめいた!");
+            battle_show_message(battle_skill_runtime_name(spark_magic));
             spark_dmg = battle_skill_runtime_calc_damage(spark_magic, actor.attack, actor.skill_power, actor.magic_mastery, enemy_battle.defense);
             if (spark_dmg >= enemy_battle.hp) enemy_battle.hp = 0u;
             else enemy_battle.hp = (UINT16)(enemy_battle.hp - spark_dmg);
@@ -2233,14 +2181,6 @@ static void init_game(void) {
     player_skill_power_stat = 8u;
     player_heal_power_stat = 10u;
     player_agility_stat = 8u;
-    {
-        UINT8 si;
-        for (si = 0u; si < PLAYER_SKILL_SLOT_COUNT; si++) player_skills.slots[si] = SKILL_NONE;
-    }
-    player_add_skill(SKILL_POWER_STRIKE);
-    player_add_skill(SKILL_HEAL_SIMPLE);
-    player_add_skill(SKILL_FIRE);
-    player_add_skill(SKILL_GUARD_BREAK);
     player_moving = 0u;
     player_vx = 0;
     player_vy = 0;
