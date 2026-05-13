@@ -49,7 +49,13 @@ BANKREF_EXTERN(sprite_data_bank)
 #define SCREEN_PX_W 160u
 #define SCREEN_PX_H 144u
 
-#define PLAYER_SPRITE_BASE 0u
+/* rpg233: keep the field player away from OAM 0-15.
+ * Battle enemies and several legacy UI paths aggressively reuse/hide OAM 0-23.
+ * On field return this could leave only one quarter of the player visible on
+ * some emulators/flash carts.  Use a later, field-only OAM slot and reset the
+ * four player OBJ attributes every frame.
+ */
+#define PLAYER_SPRITE_BASE 16u
 #define NPC0_SPRITE_BASE   4u
 #define ENEMY0_SPRITE_BASE 8u
 
@@ -543,6 +549,20 @@ static void draw_object_map(void) {
 }
 static void set_player_frame(Direction dir, UINT8 frame) {
     UINT8 base;
+
+    /* rpg233:
+     * Make the field player renderer self-contained.
+     * If battle left OBJ size/properties in a different state, the player
+     * could be reduced to a single visible 8x8 quarter.  Force 8x8 mode and
+     * clear priority/palette/flip flags for all four player OAM entries before
+     * assigning the 2x2 frame tiles.
+     */
+    SPRITES_8x8;
+    set_sprite_prop(PLAYER_SPRITE_BASE + 0u, 0u);
+    set_sprite_prop(PLAYER_SPRITE_BASE + 1u, 0u);
+    set_sprite_prop(PLAYER_SPRITE_BASE + 2u, 0u);
+    set_sprite_prop(PLAYER_SPRITE_BASE + 3u, 0u);
+
     base = (UINT8)(((UINT8)dir * 2u + frame) * 4u);
     set_sprite_tile(PLAYER_SPRITE_BASE + 0u, PLAYER_TILE_BASE + base + 0u);
     set_sprite_tile(PLAYER_SPRITE_BASE + 1u, PLAYER_TILE_BASE + base + 1u);
