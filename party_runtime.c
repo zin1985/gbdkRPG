@@ -1834,83 +1834,74 @@ static UINT8 party_apply_equip_choice(PartyMemberRuntime *member, UINT8 slot, UI
     return 1u;
 }
 
-static void party_draw_equip_popup(PartyMemberRuntime *member, UINT8 slot_cursor, UINT8 item_cursor, const UINT8 *items, UINT8 item_count) BANKED {
-    UINT8 i;
-    UINT8 y;
-    UINT8 start;
-    UINT8 idx;
-    (void)member;
-    jp_draw_bkg_frame(10u, 3u, 10u, 10u);
-    party_put_field_text(11u, 4u, 8u, (slot_cursor == PARTY_EQUIP_SLOT_WEAPON) ? "武器" : (slot_cursor == PARTY_EQUIP_SLOT_ARMOR) ? "防具" : "装飾");
-    start = (UINT8)((item_cursor / PARTY_EQUIP_POPUP_ROWS) * PARTY_EQUIP_POPUP_ROWS);
-    if (start > 0u) jp_put_bkg_text(18u, 5u, "▲");
-    else jp_put_bkg_text(18u, 5u, " ");
-    if ((UINT8)(start + PARTY_EQUIP_POPUP_ROWS) < item_count) jp_put_bkg_text(18u, 12u, "▼");
-    else jp_put_bkg_text(18u, 12u, " ");
-    y = 6u;
-    for (i = 0u; i < 6u; i++, y++) {
-        idx = (UINT8)(start + i);
-        if (idx < item_count) {
-            jp_put_bkg_text(11u, y, (idx == item_cursor) ? ">" : " ");
-            ui_put_icon(12u, y, ui_icon_tile_for_item(items[idx]));
-            party_put_field_text(13u, y, 6u, party_equipment_name(items[idx]));
-        } else {
-            party_put_field_text(11u, y, 8u, "");
-        }
-    }
+static const char *party_equip_slot_name(UINT8 slot) BANKED {
+    if (slot == PARTY_EQUIP_SLOT_WEAPON) return "ぶき";
+    if (slot == PARTY_EQUIP_SLOT_ARMOR) return "よろい";
+    return "かざり";
 }
 
-
+/* rpg246:
+ * Equipment UI was freezing before the screen appeared on some builds.
+ * Keep this screen text-only and redraw whole page on input.
+ * This avoids icon tile reload, popup overlay, and cursor-only partial updates.
+ */
 static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 choosing, UINT8 item_cursor, const UINT8 *items, UINT8 item_count, const char *message) BANKED {
     PartyMemberRuntime *member;
+    UINT8 i;
+    UINT8 idx;
+    UINT8 start;
+    UINT8 y;
 
     member = party_get_active_member(active_slot);
     party_ui_clear();
-    jp_draw_bkg_frame(0u, 0u, 20u, 15u);
-    jp_draw_bkg_frame(0u, 15u, 20u, 3u);
+    jp_draw_bkg_frame(0u, 0u, 20u, 18u);
     jp_put_bkg_text(1u, 1u, "そうび");
     jp_put_bkg_text(13u, 1u, "< >");
+
     if (member == 0) {
-        jp_put_bkg_text(2u, 4u, "なかま なし");
+        jp_put_bkg_text(2u, 4u, "なかまなし");
         party_put_field_text(1u, 16u, 18u, message);
         return;
     }
+
     party_put_field_text(1u, 3u, 10u, member->name);
-    jp_put_bkg_text(1u, 5u, (slot_cursor == PARTY_EQUIP_SLOT_WEAPON) ? ">" : " "); jp_put_bkg_text(2u, 5u, "武器"); ui_put_icon(6u, 5u, ui_icon_tile_for_item(member->weapon_id)); party_put_field_text(8u, 5u, 8u, party_equipment_name(member->weapon_id));
-    jp_put_bkg_text(1u, 6u, (slot_cursor == PARTY_EQUIP_SLOT_ARMOR) ? ">" : " "); jp_put_bkg_text(2u, 6u, "防具"); ui_put_icon(6u, 6u, ui_icon_tile_for_item(member->armor_id)); party_put_field_text(8u, 6u, 8u, party_equipment_name(member->armor_id));
-    jp_put_bkg_text(1u, 7u, (slot_cursor == PARTY_EQUIP_SLOT_ACC) ? ">" : " "); jp_put_bkg_text(2u, 7u, "装飾"); ui_put_icon(6u, 7u, ui_icon_tile_for_item(member->accessory_id)); party_put_field_text(8u, 7u, 8u, party_equipment_name(member->accessory_id));
-    jp_put_bkg_text(1u, 9u,  "ぶき"); ui_put_icon(6u, 9u, ui_icon_tile_for_weapon_type(party_equipped_weapon_type(member))); party_put_field_text(8u, 9u, 5u, party_weapon_type_name(party_equipped_weapon_type(member)));
-    jp_put_bkg_text(1u, 10u, "こうげき+"); party_put_u8(10u,10u, party_equipment_attack(member));
-    jp_put_bkg_text(1u, 11u, "まもり+"); party_put_u8(10u,11u, party_equipment_defense(member));
-    jp_put_bkg_text(1u, 12u, "おもさ");  party_put_u8(8u,12u, party_equipment_weight(member));
+
+    jp_put_bkg_text(1u, 5u, (slot_cursor == PARTY_EQUIP_SLOT_WEAPON && choosing == 0u) ? ">" : " ");
+    jp_put_bkg_text(2u, 5u, "ぶき");
+    party_put_field_text(7u, 5u, 11u, party_equipment_name(member->weapon_id));
+
+    jp_put_bkg_text(1u, 6u, (slot_cursor == PARTY_EQUIP_SLOT_ARMOR && choosing == 0u) ? ">" : " ");
+    jp_put_bkg_text(2u, 6u, "よろい");
+    party_put_field_text(7u, 6u, 11u, party_equipment_name(member->armor_id));
+
+    jp_put_bkg_text(1u, 7u, (slot_cursor == PARTY_EQUIP_SLOT_ACC && choosing == 0u) ? ">" : " ");
+    jp_put_bkg_text(2u, 7u, "かざり");
+    party_put_field_text(7u, 7u, 11u, party_equipment_name(member->accessory_id));
+
+    if (choosing != 0u) {
+        jp_put_bkg_text(1u, 9u, party_equip_slot_name(slot_cursor));
+        jp_put_bkg_text(6u, 9u, "をえらぶ");
+        start = (UINT8)((item_cursor / PARTY_EQUIP_POPUP_ROWS) * PARTY_EQUIP_POPUP_ROWS);
+        y = 10u;
+        for (i = 0u; i < PARTY_EQUIP_POPUP_ROWS; i++, y++) {
+            idx = (UINT8)(start + i);
+            if (idx < item_count) {
+                jp_put_bkg_text(1u, y, (idx == item_cursor) ? ">" : " ");
+                party_put_field_text(3u, y, 14u, party_equipment_name(items[idx]));
+            }
+        }
+    } else {
+        jp_put_bkg_text(1u, 9u, "しゅるい");
+        party_put_field_text(8u, 9u, 8u, party_weapon_type_name(party_equipped_weapon_type(member)));
+        jp_put_bkg_text(1u, 10u, "こうげき");
+        party_put_u8(10u, 10u, party_equipment_attack(member));
+        jp_put_bkg_text(1u, 11u, "まもり");
+        party_put_u8(10u, 11u, party_equipment_defense(member));
+        jp_put_bkg_text(1u, 12u, "おもさ");
+        party_put_u8(10u, 12u, party_equipment_weight(member));
+    }
+
     party_put_field_text(1u, 16u, 18u, message);
-    if (choosing != 0u) party_draw_equip_popup(member, slot_cursor, item_cursor, items, item_count);
-}
-
-static void party_update_equip_slot_cursor(UINT8 slot_cursor) BANKED {
-    jp_put_bkg_text(1u, 5u, (slot_cursor == PARTY_EQUIP_SLOT_WEAPON) ? ">" : " ");
-    jp_put_bkg_text(1u, 6u, (slot_cursor == PARTY_EQUIP_SLOT_ARMOR) ? ">" : " ");
-    jp_put_bkg_text(1u, 7u, (slot_cursor == PARTY_EQUIP_SLOT_ACC) ? ">" : " ");
-}
-
-static UINT8 party_equip_page_start(UINT8 item_cursor) BANKED {
-    return (UINT8)((item_cursor / PARTY_EQUIP_POPUP_ROWS) * PARTY_EQUIP_POPUP_ROWS);
-}
-
-static void party_update_equip_popup_cursor(UINT8 old_item_cursor, UINT8 item_cursor) BANKED {
-    UINT8 old_start;
-    UINT8 start;
-    UINT8 old_y;
-    UINT8 new_y;
-
-    old_start = party_equip_page_start(old_item_cursor);
-    start = party_equip_page_start(item_cursor);
-    if (old_start != start) return;
-
-    old_y = (UINT8)(6u + (old_item_cursor - start));
-    new_y = (UINT8)(6u + (item_cursor - start));
-    jp_put_bkg_text(11u, old_y, " ");
-    jp_put_bkg_text(11u, new_y, ">");
 }
 
 static UINT8 party_equip_cursor_down(UINT8 item_cursor, UINT8 item_count) BANKED {
@@ -1935,7 +1926,6 @@ void party_menu_show_equip_loop(void) BANKED {
     UINT8 item_count;
     const char *message;
     PartyMemberRuntime *member;
-    UINT8 redraw_page;
 
     slot = 0u;
     slot_cursor = PARTY_EQUIP_SLOT_WEAPON;
@@ -1943,34 +1933,33 @@ void party_menu_show_equip_loop(void) BANKED {
     item_cursor = 0u;
     item_count = 0u;
     message = "えらぶ  もどる";
-    for (old_item_cursor = 0u; old_item_cursor < PARTY_EQUIP_CANDIDATE_MAX; old_item_cursor++) party_equip_choices[old_item_cursor] = ITEM_NONE;
+
+    for (old_item_cursor = 0u; old_item_cursor < PARTY_EQUIP_CANDIDATE_MAX; old_item_cursor++) {
+        party_equip_choices[old_item_cursor] = ITEM_NONE;
+    }
+
     HIDE_WIN;
     SHOW_BKG;
-    SPRITES_8x8;
-    ui_icons_load();
     audio_waitpadup();
     party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, party_equip_choices, item_count, message);
+
     while (1) {
         keys = party_wait_menu_keys(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START);
         member = party_get_active_member(slot);
-        redraw_page = 0u;
+
         if (choosing == 0u) {
             if (keys & J_UP) {
                 if (slot_cursor == 0u) slot_cursor = PARTY_EQUIP_SLOT_ACC;
                 else slot_cursor--;
-                party_update_equip_slot_cursor(slot_cursor);
             } else if (keys & J_DOWN) {
                 slot_cursor++;
                 if (slot_cursor > PARTY_EQUIP_SLOT_ACC) slot_cursor = PARTY_EQUIP_SLOT_WEAPON;
-                party_update_equip_slot_cursor(slot_cursor);
             } else if (keys & J_LEFT) {
                 if (slot == 0u) slot = PARTY_ACTIVE_COUNT - 1u;
                 else slot--;
-                redraw_page = 1u;
             } else if (keys & J_RIGHT) {
                 slot++;
                 if (slot >= PARTY_ACTIVE_COUNT) slot = 0u;
-                redraw_page = 1u;
             } else if (keys & (J_B | J_START)) {
                 break;
             } else if (keys & J_A) {
@@ -1978,45 +1967,26 @@ void party_menu_show_equip_loop(void) BANKED {
                 item_cursor = 0u;
                 choosing = 1u;
                 message = "そうび  やめる";
-                redraw_page = 1u;
             }
         } else {
             if (keys & J_UP) {
-                old_item_cursor = item_cursor;
                 item_cursor = party_equip_cursor_up(item_cursor, item_count);
-                if (old_item_cursor != item_cursor) {
-                    if (party_equip_page_start(old_item_cursor) != party_equip_page_start(item_cursor)) {
-                        party_draw_equip_popup(member, slot_cursor, item_cursor, party_equip_choices, item_count);
-                    } else {
-                        party_update_equip_popup_cursor(old_item_cursor, item_cursor);
-                    }
-                }
             } else if (keys & J_DOWN) {
-                old_item_cursor = item_cursor;
                 item_cursor = party_equip_cursor_down(item_cursor, item_count);
-                if (old_item_cursor != item_cursor) {
-                    if (party_equip_page_start(old_item_cursor) != party_equip_page_start(item_cursor)) {
-                        party_draw_equip_popup(member, slot_cursor, item_cursor, party_equip_choices, item_count);
-                    } else {
-                        party_update_equip_popup_cursor(old_item_cursor, item_cursor);
-                    }
-                }
             } else if (keys & J_B) {
                 choosing = 0u;
                 message = "えらぶ  もどる";
-                redraw_page = 1u;
             } else if (keys & J_A) {
                 if (party_apply_equip_choice(member, slot_cursor, party_equip_choices[item_cursor])) message = "そうびしました";
                 else message = "そうびできません";
                 choosing = 0u;
-                redraw_page = 1u;
             }
         }
-        if (redraw_page != 0u) {
-            party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, party_equip_choices, item_count, message);
-        }
+
+        party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, party_equip_choices, item_count, message);
     }
 }
+
 
 void party_save_copy_to(PartySaveState *dst) BANKED {
     UINT8 i;

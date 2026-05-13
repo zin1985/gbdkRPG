@@ -1,4 +1,4 @@
-* WARNING: Area _CODE_7  at 74000 -> 78c9e extends past end of memory region at 77fff (Overflow by 3231 bytes)
+* WARNING: Area _CODE_7  at 74000 -> 789cc extends past end of memory region at 77fff (Overflow by 2509 bytes)
 
 Bank         Range                Size     Used  Used%     Free  Free% 
 --------     ----------------  -------  -------  -----  -------  -----

@@ -1,0 +1,16 @@
+rpg246_equip_screen_safe_text
+
+Fix target:
+- Equipment screen stopped opening / crashed before transition.
+
+Changes:
+- Replaced icon/popup-based equipment UI with a text-only safe equipment UI.
+- Removed equip-screen ui_icons_load() / ui_put_icon() usage.
+- Removed popup overlay and cursor-only partial update helpers.
+- Redraws whole equip page on input for stability.
+- Keeps equipment selection and equipment apply behavior.
+- Keeps rpg245 all-target damage and spark changes.
+
+Expected:
+- Equipment screen should open again.
+- If this fixes it, later we can re-add icons carefully after Bank/VRAM safety is stable.
