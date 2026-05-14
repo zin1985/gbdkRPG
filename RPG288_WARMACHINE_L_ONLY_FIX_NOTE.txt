@@ -1,0 +1,6 @@
+Warmachine sprite target correction.
+- Restored M-size warmachine art: battle_enemy_tiles_warmachine from the nagai-tea baseline.
+- Kept the L-size warmachine replacement art: battle_enemy_tiles_warmachine_l.
+- Golem L art remains unchanged.
+- Purpose: user confirmed M-size warmachine was replaced; only L-size warmachine should use the new art.
+- Static check: L-size warmachine differs from baseline = True.
