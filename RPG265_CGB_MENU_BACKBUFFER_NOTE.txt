@@ -1,0 +1,47 @@
+rpg265 CGB menu/store/status backbuffer update
+=============================================
+
+Purpose
+-------
+Speed up the CGB menu flow and reduce color-attribute bleed from the field map.
+
+Changes
+-------
+1. Main menu palette attribute reset
+   - menu_runtime.c now clears the CGB BG attribute map to palette 0 whenever the menu frame is drawn.
+   - This prevents grass/water/road attributes from remaining under the menu.
+
+2. Shop palette attribute reset
+   - shop_runtime.c now clears the shop screen BG attribute map to palette 0 in shop_clear().
+   - Item shops, weapon shops, inns, revive UI, and nearby shop sub-screens inherit a clean menu palette.
+
+3. Inventory pre-render/cache
+   - inventory_precache_field_menu() now renders the first item page into a WRAM tilemap cache while the cursor is still on the main menu.
+   - Opening the item menu can commit the cached tilemap instead of redrawing from scratch.
+   - After page 1 is shown, the next page is rendered into the same cache in the background.
+   - On page changes, if the target page is cached, it is committed immediately.
+   - The OBJ cursor, quantity-only updates, and item-name tile cache from rpg264 are preserved.
+
+4. Status pre-render/cache
+   - party_status_precache_initial() now builds a WRAM tilemap cache for the first status page.
+   - Opening the status screen can commit that cached page.
+   - After the current status page is displayed, the next status page is prepared in the same cache.
+   - Sprite/OAM side effects are suppressed during offscreen cache rendering, then restored when committing the page.
+
+5. WRAM cache policy
+   - Uses one 20x18 tilemap cache for inventory and one 20x18 tilemap cache for status.
+   - Does not use SVBK/manual additional WRAM bank switching yet. That remains risky in normal GBDK C because stack/runtime may live in switchable WRAM.
+
+Build notes
+-----------
+- Makefile forces recompilation of inventory.c, menu_runtime.c, shop_runtime.c, and party_runtime.c to avoid stale fast-build .rel files.
+- No new source files were added.
+- Output remains rpg263_backbuffer_banked_gbc.gbc with -Wm-yC.
+
+Validation points
+-----------------
+- Main menu background should no longer inherit field color blocks.
+- Shop screens should no longer inherit field color blocks.
+- Item menu first open should feel faster after moving cursor to もちもの once.
+- Moving from item page 1 to page 2 should be faster because page 2 is prepared after page 1 is shown.
+- Status screen first open should feel faster after the main menu cursor has precached つよさ.

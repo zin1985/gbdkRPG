@@ -1,0 +1,30 @@
+# build cache / outputs
+*.gb
+*.gbc
+*.map
+*.noi
+*.sym
+*.lst
+*.asm
+*.ihx
+*.lk
+*.adb
+*.log
+dangerous_warnings.log
+warning_keywords.log
+romusage_danger.log
+precheck_output.log
+compile_output.log
+romusage_output.log
+
+# PHP/build generated docs
+docs/
+*.md
+CHECK_*
+BUILD_NOT_RUN_*
+*.diff
+*.patch
+*.bak*
+*.pre*
+*.old
+*~

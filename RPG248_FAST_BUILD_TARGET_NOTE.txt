@@ -1,0 +1,21 @@
+rpg248_add_fast_build_target
+
+Added project-side fast build support.
+
+Usage:
+- make fast
+  Incremental fast build. Reuses existing .rel files in the fixed PHP workspace.
+  Skips prebank_check and romusage.
+- make safe
+  Clean + strict build + prebank_check + romusage.
+- ./build_fast.sh
+  Wrapper for make fast.
+- ./build_safe.sh
+  Wrapper for make safe.
+- ./build.sh
+  Safe default wrapper.
+
+Important:
+- First fast build is still slow because .rel cache does not exist yet.
+- Second and later fast builds should be faster if the fixed workspace preserves .rel files.
+- If headers change heavily, run make safe once.

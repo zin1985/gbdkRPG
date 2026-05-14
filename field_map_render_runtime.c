@@ -1,6 +1,8 @@
 #pragma bank 19
 
 #include <gb/gb.h>
+#include <gb/hardware.h>
+#include <gb/cgb.h>
 #include "field_map_render_runtime.h"
 #include "field_feature_runtime.h"
 #include "map_data.h"
@@ -73,11 +75,118 @@ BANKREF_EXTERN(sprite_data_bank)
 #define FOREST_BG_X 6u
 #define FOREST_BG_Y 5u
 
-static UINT8 renderer_area_dangerous(UINT8 area) BANKED {
+
+/* rpg264 CGB color pass:
+ * Keep all new color work in this already-banked renderer so Bank 0 does not grow.
+ * - BG/OBJ palette initialization is performed lazily from bank 19.
+ * - BG attribute bytes are written through VRAM bank 1 (VBK_ATTRIBUTES).
+ * - Tile pattern data remains in VRAM bank 0 for now.
+ */
+#ifndef VBK_TILES
+#define VBK_TILES 0u
+#endif
+#ifndef VBK_ATTRIBUTES
+#define VBK_ATTRIBUTES 1u
+#endif
+
+#define CGB_PAL_AUTOINC 0x80u
+#define CGB_RGB5(r, g, b) ((UINT16)((r) | ((UINT16)(g) << 5) | ((UINT16)(b) << 10)))
+
+#define CGB_ATTR_ROAD   0u
+#define CGB_ATTR_GRASS  1u
+#define CGB_ATTR_WALL   2u
+#define CGB_ATTR_WATER  3u
+#define CGB_ATTR_TOWN   4u
+#define CGB_ATTR_FOREST 5u
+#define CGB_ATTR_CHEST  6u
+#define CGB_ATTR_DARK   7u
+
+static UINT8 cgb_field_palette_ready;
+
+static const UINT16 cgb_bg_palettes[8u * 4u] = {
+    /* 0 road / UI neutral */
+    CGB_RGB5(31,31,28), CGB_RGB5(23,22,18), CGB_RGB5(13,13,12), CGB_RGB5(2,2,2),
+    /* 1 grass */
+    CGB_RGB5(30,31,24), CGB_RGB5(18,27,13), CGB_RGB5(8,18,7), CGB_RGB5(2,5,2),
+    /* 2 wall / stone */
+    CGB_RGB5(30,29,24), CGB_RGB5(22,19,14), CGB_RGB5(13,11,9), CGB_RGB5(3,3,3),
+    /* 3 water / pit */
+    CGB_RGB5(25,30,31), CGB_RGB5(11,21,30), CGB_RGB5(5,10,20), CGB_RGB5(1,2,6),
+    /* 4 town / marker */
+    CGB_RGB5(31,29,20), CGB_RGB5(29,19,9), CGB_RGB5(18,8,5), CGB_RGB5(4,2,1),
+    /* 5 forest */
+    CGB_RGB5(28,31,22), CGB_RGB5(12,24,9), CGB_RGB5(4,13,4), CGB_RGB5(1,4,1),
+    /* 6 chest / item */
+    CGB_RGB5(31,30,18), CGB_RGB5(30,22,5), CGB_RGB5(18,10,2), CGB_RGB5(4,2,0),
+    /* 7 dark dungeon */
+    CGB_RGB5(24,24,27), CGB_RGB5(14,14,18), CGB_RGB5(7,7,11), CGB_RGB5(1,1,3)
+};
+
+static const UINT16 cgb_obj_palette0[4u] = {
+    CGB_RGB5(31,31,31), CGB_RGB5(23,23,20), CGB_RGB5(11,10,9), CGB_RGB5(0,0,0)
+};
+
+static void cgb_field_init_palettes_once(void) {
+    UINT8 i;
+    UINT16 c;
+
+    if (cgb_field_palette_ready) return;
+    cgb_field_palette_ready = 1u;
+
+    /* rpg264: CGB-only build. Switch CPU to double speed once,
+     * before heavy menu/list preparation. VRAM bandwidth rules remain,
+     * but JP text decoding and item page building get lighter. */
+    cpu_fast();
+
+    BCPS_REG = CGB_PAL_AUTOINC;
+    for (i = 0u; i < (UINT8)(8u * 4u); i++) {
+        c = cgb_bg_palettes[i];
+        BCPD_REG = (UINT8)c;
+        BCPD_REG = (UINT8)(c >> 8);
+    }
+
+    OCPS_REG = CGB_PAL_AUTOINC;
+    for (i = 0u; i < 4u; i++) {
+        c = cgb_obj_palette0[i];
+        OCPD_REG = (UINT8)c;
+        OCPD_REG = (UINT8)(c >> 8);
+    }
+}
+
+static UINT8 cgb_attr_for_tile(UINT8 area, UINT8 tile) {
+    if (tile >= MAP_TILE_FOREST_TL && tile <= MAP_TILE_FOREST_BR) return CGB_ATTR_FOREST;
+    if (tile >= MAP_TILE_CHEST_TL && tile <= MAP_TILE_CHEST_BR) return CGB_ATTR_CHEST;
+    if (tile >= MAP_TILE_TOWN_TL && tile <= MAP_TILE_TOWN_BR) return CGB_ATTR_TOWN;
+    if (tile >= MAP_TILE_DUNGEON_PIT_TL && tile <= MAP_TILE_DUNGEON_PIT_BR) return CGB_ATTR_WATER;
+    if (tile >= MAP_TILE_DUNGEON_WALL_TL && tile <= MAP_TILE_DUNGEON_WALL_BR) return CGB_ATTR_DARK;
+    if (tile >= MAP_TILE_WALL_TL && tile <= MAP_TILE_WALL_BR) return CGB_ATTR_WALL;
+    if (tile >= MAP_TILE_CAP_TL && tile <= MAP_TILE_CAP_BR) return CGB_ATTR_WALL;
+
+    if (area == AREA_FIELD || area == AREA_FIELD_EAST || area == AREA_PORT) return CGB_ATTR_GRASS;
+    if (area == AREA_DUNGEON || area == AREA_RUINS || area == AREA_TOWER || area == AREA_CAVE_1 || area == AREA_CAVE_2 || area == AREA_CAVE_3 || area == AREA_CAVE_4) return CGB_ATTR_DARK;
+    return CGB_ATTR_ROAD;
+}
+
+static void cgb_apply_bg_attributes(UINT8 area, const UINT8 *bg) {
+    UINT8 x;
+    UINT8 y;
+    static UINT8 attr_row[BG_DRAW_W];
+
+    VBK_REG = VBK_ATTRIBUTES;
+    for (y = 0u; y < BG_DRAW_H; y++) {
+        for (x = 0u; x < BG_DRAW_W; x++) {
+            attr_row[x] = cgb_attr_for_tile(area, bg[((UINT16)y * (UINT16)BG_DRAW_W) + x]);
+        }
+        set_bkg_tiles(0u, y, BG_DRAW_W, 1u, attr_row);
+    }
+    VBK_REG = VBK_TILES;
+}
+
+static UINT8 renderer_area_dangerous(UINT8 area) {
     return (UINT8)(area == AREA_DUNGEON || area == AREA_RUINS || area == AREA_TOWER || area == AREA_CAVE_1 || area == AREA_CAVE_2 || area == AREA_CAVE_3 || area == AREA_CAVE_4);
 }
 
-static void renderer_select_metatile(UINT8 area, UINT8 kind, UINT8 *tl, UINT8 *tr, UINT8 *bl, UINT8 *br) BANKED {
+static void renderer_select_metatile(UINT8 area, UINT8 kind, UINT8 *tl, UINT8 *tr, UINT8 *bl, UINT8 *br) {
     UINT8 area_dangerous;
 
     area_dangerous = renderer_area_dangerous(area);
@@ -210,5 +319,7 @@ void field_map_render_runtime_draw(UINT8 area) BANKED {
         map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
     }
 
+    cgb_field_init_palettes_once();
     set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
+    cgb_apply_bg_attributes(area, bg);
 }

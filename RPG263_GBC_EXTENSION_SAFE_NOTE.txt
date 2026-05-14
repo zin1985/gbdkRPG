@@ -1,0 +1,17 @@
+RPG263 GBC extension-safe output版
+
+目的:
+- PHPビルドやダウンロード処理で .gbc を成果物として扱えるようにする。
+- ただしBank 0を増やさず、画面が白く飛びやすいCGB専用モード化は行わない。
+
+変更内容:
+- Makefile: override OUT := rpg263_backbuffer_banked_gbc.gbc
+- Makefile: -Wm-yC / -Wm-yc は付けず、元のGB互換ヘッダのまま .gbc 拡張子で出力
+- Makefile: .gbcでも .map を拾えるよう MAP = $(basename $(OUT)).map を追加
+- Makefile: fast/safe のリンク失敗時にも compile_output.log を表示するよう修正
+- Makefile/build.bat: cleanで *.gbc も削除
+- build.bat: 出力名を rpg263_backbuffer_banked_gbc.gbc に変更
+
+注意:
+この版は「GBC拡張子出力」優先の安全版です。
+真のGBC専用ヘッダ(-Wm-yC)やGBC互換ヘッダ(-Wm-yc)は、現在のBank 0余裕が少ない状態では白画面/Bank 0 overflow確認とセットで段階導入してください。

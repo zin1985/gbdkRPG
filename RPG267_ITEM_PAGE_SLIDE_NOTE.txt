@@ -1,0 +1,24 @@
+rpg267: Item page slide transition prototype
+
+Implemented:
+- Item page changes now use an upward slide animation.
+- During the animation, the next/previous page is streamed into the off-screen
+  BG map rows (18-31, then 0-3 after those rows are no longer visible).
+- The animation advances by 8 pixels per frame for 18 frames, so the page rises
+  from the bottom instead of blocking on a full redraw.
+- The current cursor OBJ is hidden during the slide and restored when the final
+  page is committed normally.
+- CGB menu attributes are kept on palette 0 for streamed rows.
+
+Design note:
+- This is deliberately applied only to item page-to-page transitions.
+- Menu -> item/status/equip transitions remain instant for now. Sliding the
+  entire main menu into the destination screen should be added after this page
+  slide is confirmed stable, because the main menu, item screen, and status
+  screen share the dynamic Japanese glyph cache.
+
+Known limitation:
+- The Japanese font system still uses a shared dynamic BG tile cache. This
+  prototype spreads the glyph work across the transition to hide wait time, but
+  the final page is still committed normally at the end to guarantee a clean
+  stable screen.

@@ -1,0 +1,21 @@
+rpg263 true CGB color Bank0 final trim
+
+目的:
+- 前回版では Bank 0 が 0x3fa6 -> 0x4001 まで伸び、実質 2 bytes だけ Bank 1 に跨っていた。
+- そのため dangerous warning check で build failed になっていた。
+
+対応:
+- main.c の calc_attack_damage() から到達不能だった PLAYER_HP_MP_MAX 上限チェックを削除。
+- Fighter.attack は UINT8 のため、attack * 2 - defense の最大は 510 程度で、PLAYER_HP_MP_MAX(999) を超えない。
+- SDCC も該当箇所を unreachable code と警告していたため、機能影響のない削減。
+
+維持:
+- .gbc 出力固定
+- -Wm-yC の GBC専用ヘッダ
+- BG/OBJ palette 0 を含む CGBパレット初期化
+- VBK_REG = VBK_ATTRIBUTES によるVRAM Bank 1属性マップ書き込み
+- 草/道/壁/水/町/森/宝箱/ダンジョン系の属性色分け
+
+未対応:
+- CGB追加WRAMの本格利用は未実装。
+  GBDKではSVBK_REG切替は慎重な扱いが必要なため、表示安定後の別ステップとする。

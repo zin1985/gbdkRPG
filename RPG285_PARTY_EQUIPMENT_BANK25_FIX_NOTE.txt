@@ -1,0 +1,5 @@
+Fix for linker multiple-write warning at Bank 27.
+- party_equipment_runtime.c was moved from bank 27 to existing bank 25.
+- This avoids the 0x6c000 overlap warning and the 'Possible overflow from Bank 0 into Bank 27' linker warning.
+- Bank 25 previously had enough free space, and this helper is small.
+- Warmachine M/L sprite replacement and party_runtime bank split are preserved.

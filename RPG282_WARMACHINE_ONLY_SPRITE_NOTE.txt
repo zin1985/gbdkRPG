@@ -1,0 +1,2 @@
+Replaced only battle_enemy_tiles_warmachine_l with the user-provided image converted to 96x32 BG tiles.
+Golem art remains original. Note: any enemy that reuses the warmachine L image slot will also show the replacement art.

@@ -67,3 +67,12 @@
 #define ROM_BANK_BATTLE_STATUS_UI_CONCRETE 23u
 
 #endif
+
+/* rpg282 concrete split: move party runtime out of overfull bank 7. */
+#define ROM_BANK_PARTY_RUNTIME_CONCRETE 26u
+
+/* rpg283 concrete split: equipment definition/data helpers moved out of party runtime. */
+#define ROM_BANK_PARTY_EQUIPMENT_RUNTIME_CONCRETE 25u
+
+/* rpg287 concrete split: field item application helper moved out of party runtime. */
+#define ROM_BANK_PARTY_ITEM_RUNTIME_CONCRETE 25u

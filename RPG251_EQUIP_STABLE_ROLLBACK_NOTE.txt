@@ -1,0 +1,28 @@
+rpg251_equip_stable_rollback
+
+Reason:
+- rpg250 rebuilt the equipment UI toward the original rich UI level.
+- After that, selecting equipment from the menu froze again.
+- User confirmed the lightweight equipment screen itself was OK before rpg250.
+
+Action:
+- Roll back equipment UI to the confirmed-working lightweight rpg249 version.
+- Keep the bottom text fix from rpg249.
+- Keep project-side fast build target from rpg248/rpg249.
+- Keep battle/spark/all-target changes already present in rpg249 lineage.
+
+Current equipment UI policy:
+- Stable text-only equipment screen.
+- No equip-screen icon VRAM reload.
+- No equip-screen icon drawing.
+- No candidate popup comparison window.
+- No partial cursor update.
+- Japanese-only bottom hints.
+
+Next recommended step:
+- If richer equipment UI is needed, rebuild it in a separate bank/file or add features one by one:
+  1. add stat display only
+  2. add candidate window only
+  3. add comparison only
+  4. add icons last
+  Always build/test after each step.

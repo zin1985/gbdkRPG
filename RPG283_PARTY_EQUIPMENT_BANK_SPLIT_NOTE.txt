@@ -1,0 +1,7 @@
+Fix for safe build romusage overflow after warmachine sprite replacement.
+- Previous fix moved party_runtime.c from bank 7 to bank 26, but party_runtime.c itself still exceeded one 16KB ROM bank by 1617 bytes.
+- Split equipment definition table and lookup helpers into party_equipment_runtime.c in bank 27.
+- party_runtime.c remains in bank 26 but is smaller.
+- Added party_equipment_runtime.c to Makefile/build.bat SRCS.
+- Cleaned duplicate FORCE_SPRITES_RECOMPILE recipe warning.
+- Warmachine M and L sprite replacement is preserved.

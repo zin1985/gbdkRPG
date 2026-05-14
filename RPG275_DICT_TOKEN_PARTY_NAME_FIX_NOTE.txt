@@ -1,0 +1,11 @@
+RPG275 dictionary token pass compile fix
+
+Fixes party_runtime.c compile errors caused by removing the PartyMemberRuntime.name field while several party/battle/status APIs still use member->name.
+
+Changes:
+- Restored const char *name in PartyMemberRuntime.
+- Kept equipment/item names dictionary-based through menu_text_dict.
+- Removed unused temporary variable from inventory.c to reduce warnings.
+
+Reason:
+The dictionary-token optimization should not remove party member names yet. Party names are still used by battle and status display. This patch keeps the item/equipment name compression while preserving party name runtime compatibility.

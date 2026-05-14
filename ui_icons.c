@@ -111,5 +111,9 @@ UINT8 ui_icon_tile_for_weapon_type(UINT8 weapon_type) BANKED {
 }
 
 void ui_put_icon(UINT8 x, UINT8 y, UINT8 icon_tile) BANKED {
-    set_bkg_tiles(x, y, 1u, 1u, &icon_tile);
+    if (jp_bkg_buffer_is_active()) {
+        jp_bkg_buffer_put_tile(x, y, icon_tile);
+    } else {
+        set_bkg_tiles(x, y, 1u, 1u, &icon_tile);
+    }
 }

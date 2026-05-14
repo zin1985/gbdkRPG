@@ -29,6 +29,7 @@
 #include "battle_reward_runtime.h"
 #include "battle_command_ui_runtime.h"
 #include "battle_status_ui_runtime.h"
+#include "cgb_fx_runtime.h"
 
 BANKREF_EXTERN(sprite_data_bank)
 
@@ -128,6 +129,9 @@ BANKREF_EXTERN(sprite_data_bank)
 #define BATTLE_BG_SHIFT_X 0u
 #define BATTLE_BG_SCROLL_X 0u
 #define BATTLE_BG_X(x) ((UINT8)(x))
+#define draw_bkg_box(x0, y0, w, h) jp_draw_bkg_frame(BATTLE_BG_X(x0), (y0), (w), (h))
+#define battle_bkg_clear_area(x0, y0, w, h) jp_bkg_clear_area(BATTLE_BG_X(x0), (y0), (w), (h))
+#define battle_put_bkg_text(col, row, text) jp_put_bkg_text(BATTLE_BG_X(col), (row), (text))
 #define BATTLE_BG_Y(y) ((UINT8)(y))
 
 #define BATTLE_DIRTY_NONE      0x00u
@@ -325,7 +329,6 @@ static UINT8 update_camera_for_player(void);
 static void revive_enemy_actor(void);
 static void prompt_enemy_revive_choice(void);
 static void open_main_menu(void);
-static void draw_object_map(void);
 static UINT8 current_collision16_at(UINT8 tx, UINT8 ty);
 static UINT8 current_object16_at(UINT8 tx, UINT8 ty);
 static void set_player_frame(Direction dir, UINT8 frame);
@@ -355,11 +358,9 @@ static void start_move(Direction dir);
 static void update_player_movement(void);
 static void map_input(void);
 static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defender);
-static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
 static void draw_battle_enemy_names(void);
 static void draw_battle_message_area(void);
 static void battle_prepare_first_command_ui(void);
-static void hide_battle_enemy_sprites(void);
 static void battle_enter_render_once(void);
 static void battle_update_dirty(void);
 static void battle_set_message_dirty(const char *text);
@@ -539,14 +540,10 @@ static void open_main_menu(void) {
     defeated = check_event_flag(FLAG_ENEMY_DEFEATED);
     menu_runtime_open(defeated);
 
-    hide_battle_enemy_sprites();
     restore_field_vram_state();
     audio_play_music(field_feature_music_track(current_area));
 }
 
-static void draw_object_map(void) {
-    field_map_render_runtime_draw(current_area);
-}
 static void set_player_frame(Direction dir, UINT8 frame) {
     UINT8 base;
 
@@ -687,7 +684,7 @@ static void restore_field_vram_state(void) {
     hide_all_sprites_safe();
 
     
-    draw_object_map();
+    field_map_render_runtime_draw(current_area);
     apply_camera_scroll();
     jp_init();
     init_map_sprites();
@@ -702,7 +699,7 @@ static void load_map_mode(void) {
     HIDE_WIN;
     hide_all_sprites_safe();
     snap_camera_to_player();
-    draw_object_map();
+    field_map_render_runtime_draw(current_area);
     apply_camera_scroll();
     init_map_sprites();
     DISPLAY_ON;
@@ -786,7 +783,7 @@ static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir) {
 
     snap_camera_to_player();
     
-    draw_object_map();
+    field_map_render_runtime_draw(current_area);
     apply_camera_scroll();
     draw_all_actors();
 }
@@ -808,7 +805,7 @@ void enter_itil_tower_marker(void) {
     itil_tower_start();
     change_area_marker(MSG_NONE_LOCAL, AREA_TOWER, AUDIO_TRACK_DUNGEON, 2u, 13u, DIR_UP, MSG_NONE_LOCAL);
     itil_tower_show_floor_banner();
-    draw_object_map();
+    field_map_render_runtime_draw(current_area);
     apply_camera_scroll();
     draw_all_actors();
 }
@@ -821,7 +818,7 @@ void advance_itil_tower_marker(void) {
     UINT8 reward;
     if (!itil_tower_can_advance()) {
         itil_tower_show_need_answer();
-        draw_object_map();
+        field_map_render_runtime_draw(current_area);
         apply_camera_scroll();
         draw_all_actors();
         return;
@@ -835,7 +832,7 @@ void advance_itil_tower_marker(void) {
     itil_tower_next_floor();
     warp_player_to_tile(2u, 13u, DIR_UP);
     itil_tower_show_floor_banner();
-    draw_object_map();
+    field_map_render_runtime_draw(current_area);
     apply_camera_scroll();
     draw_all_actors();
 }
@@ -896,7 +893,7 @@ static void inspect_map_event(UINT8 event_id) {
             set_event_flag(flag_id);
             inventory_add(ITEM_POTION, 1u);
             message_show(MSG_TREASURE_FOUND);
-            draw_object_map();
+            field_map_render_runtime_draw(current_area);
             draw_all_actors();
         }
     } else if (event_id == MAP_EVENT_CAVE_BOSS) {
@@ -934,7 +931,7 @@ static void inspect_map_event(UINT8 event_id) {
             itil_tower_show_wrong_exit();
             leave_itil_tower_marker();
         } else {
-            draw_object_map();
+            field_map_render_runtime_draw(current_area);
             apply_camera_scroll();
             draw_all_actors();
         }
@@ -1083,7 +1080,7 @@ static void update_player_movement(void) {
 static void field_overlay_hide(void) {
     if (!map_overlay_visible) return;
     map_overlay_visible = 0u;
-    draw_object_map();
+    field_map_render_runtime_draw(current_area);
     apply_camera_scroll();
     draw_all_actors();
 }
@@ -1144,36 +1141,15 @@ static void map_input(void) {
     prev_keys = keys;
 }
 
-static UINT16 clamp_damage_i16(INT16 damage) {
-    if (damage < 1) {
-        return 1u;
-    }
-    if ((UINT16)damage > PLAYER_HP_MP_MAX) {
-        return PLAYER_HP_MP_MAX;
-    }
-    return (UINT16)damage;
-}
-
 static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defender) {
     INT16 damage;
 
     damage = (INT16)((UINT16)attacker->attack * 2u);
     damage -= (INT16)defender->defense;
-
-    return clamp_damage_i16(damage);
+    if (damage < 1) return 1u;
+    return (UINT16)damage;
 }
 
-static void draw_bkg_box(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
-    jp_draw_bkg_frame(BATTLE_BG_X(x0), y0, w, h);
-}
-
-static void battle_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
-    jp_bkg_clear_area(BATTLE_BG_X(x0), y0, w, h);
-}
-
-static void battle_put_bkg_text(UINT8 col, UINT8 row, const char *text) {
-    jp_put_bkg_text(BATTLE_BG_X(col), row, text);
-}
 
 static char battle_enemy_name_lines[3][20];
 
@@ -1226,14 +1202,6 @@ static void draw_battle_enemy_names(void) {
     }
 }
 
-static void hide_battle_enemy_sprites(void) {
-    UINT8 i;
-
-    
-    for (i = 0u; i < 24u; i++) {
-        move_sprite(i, 0u, 0u);
-    }
-}
 
 static void hide_all_sprites_safe(void) {
     UINT8 i;
@@ -1268,8 +1236,6 @@ static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
 
     (void)hide_first;
 
-    
-    hide_battle_enemy_sprites();
 
     for (i = 0u; i < BATTLE_MAX_ENEMY_COUNT; i++) {
         alive_flags[i] = (UINT8)((i < battle_enemy_count && enemy_battles[i].hp > 0u) ? 1u : 0u);
@@ -1311,14 +1277,6 @@ static UINT8 battle_ensure_selected_alive(void) {
         return 1u;
     }
     return battle_select_first_alive();
-}
-
-static void draw_battle_frame(void) {
-    
-    battle_hide_window_and_reset_scroll();
-    battle_status_ui_runtime_clear_full();
-    battle_status_ui_runtime_draw_party_status_box();
-    draw_battle_message_area();
 }
 
 static void draw_battle_message_area(void) {
@@ -1506,7 +1464,10 @@ static void battle_enter_render_once(void) {
     set_banked_sprite_data(BATTLE_CURSOR_TILE, 2u, battle_cursor_tiles, BANK(sprite_data_bank));
     set_sprite_tile(BATTLE_CURSOR_SPRITE, BATTLE_CURSOR_TILE);
 
-    draw_battle_frame();
+    battle_hide_window_and_reset_scroll();
+    battle_status_ui_runtime_clear_full();
+    battle_status_ui_runtime_draw_party_status_box();
+    draw_battle_message_area();
     battle_place_party_icons();
     battle_refresh_enemy_sprites_compact(1u);
     battle_move_command_cursor_obj();
@@ -1560,26 +1521,10 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
 }
 
 static void battle_start_effect(void) {
-    UINT8 i;
-
-    
     HIDE_WIN;
     SHOW_BKG;
     SHOW_SPRITES;
-
-    for (i = 0u; i < 3u; i++) {
-        BGP_REG = 0x1Bu;
-        OBP0_REG = 0x1Bu;
-        OBP1_REG = 0x1Bu;
-        audio_wait_vbl();
-        audio_wait_vbl();
-
-        BGP_REG = 0xE4u;
-        OBP0_REG = 0xE4u;
-        OBP1_REG = 0xE4u;
-        audio_wait_vbl();
-        audio_wait_vbl();
-    }
+    cgb_fx_battle_start_flash();
 }
 
 static void enter_battle_screen(void) {

@@ -1,0 +1,20 @@
+rpg252_equip_bank_split_fix
+
+Fix target:
+- Equipment still freezes even after rolling back to lightweight UI.
+- That means the cause is likely Bank7 pressure/corruption, not just rich equipment drawing.
+
+Changes:
+- Moved equipment screen loop/drawing to equip_runtime.c, bank 24.
+- menu_runtime.c now calls equip_runtime_show_loop().
+- party_runtime.c no longer owns the equipment UI loop.
+- party_runtime.c now exposes small bridge APIs:
+  - party_equip_get_slot_item()
+  - party_equip_get_item_name()
+  - party_equip_build_candidates()
+  - party_equip_apply_choice()
+- This should reduce Bank7 pressure and isolate equipment screen execution.
+
+Notes:
+- Equipment UI is still lightweight/stable text-only.
+- If this works, richer UI can be rebuilt in equip_runtime.c instead of party_runtime.c.

@@ -1,0 +1,62 @@
+# RPG264 GBC true color pass / Bank0-safe CGB mode
+
+## 目的
+rpg263 の `.gbc` 出力安定版を、実際に CGB モードで動かし、GBC の色・VRAM bank 1 の恩恵を受ける段階へ進める。
+
+## 対応したこと
+
+### 1. GBC専用ヘッダを復帰
+`Makefile` / `build.bat` に `-Wm-yC` を戻した。
+これにより、拡張子だけ `.gbc` ではなく、ROMヘッダ上も CGB only として起動する。
+
+### 2. Bank 0 増加を避ける構成
+前回の白画面対策では `main.c` から `cgb_runtime_init()` を呼んだため、Bank 0 に banked-call 周りが増えて overflow した。
+今回は既に banked 化されている `field_map_render_runtime.c` 内に CGB 初期化と属性設定を統合した。
+
+`main.c` 側では以下の軽量化も実施。
+- `draw_object_map()` の Bank 0 ブリッジ関数を削除し、既存の banked renderer を直接呼ぶように変更
+- `clamp_damage_i16()` を `calc_attack_damage()` 内に統合
+- `draw_battle_frame()` を呼び出し箇所へ統合
+
+狙いは、CGB対応コードを追加しつつ Bank 0 の増加を避けること。
+
+### 3. BG/OBJパレット初期化
+`field_map_render_runtime.c` に以下を追加。
+- BG palette 0〜7 の直接初期化
+- OBJ palette 0 の直接初期化
+- `set_bkg_palette()` / `set_sprite_palette()` は使わず、`BCPS_REG` / `BCPD_REG` / `OCPS_REG` / `OCPD_REG` へ直接書き込み
+
+これにより、CGB library 関数追加による Bank 0 増加を避ける。
+
+### 4. マップ属性で色分け
+`VBK_REG = VBK_ATTRIBUTES` に切り替えて、背景属性マップを VRAM bank 1 に書き込むようにした。
+
+現在の割り当ては概略以下。
+- 道 / UI系: palette 0
+- 草地: palette 1
+- 壁 / 石: palette 2
+- 水 / 穴 / 港系: palette 3
+- 町 / 出入口: palette 4
+- 森: palette 5
+- 宝箱: palette 6
+- ダンジョン / 遺跡系: palette 7
+
+### 5. VRAM Bank 1 の使用
+BG属性マップ書き込み時に `VBK_REG = VBK_ATTRIBUTES` を使用しているため、GBCの VRAM bank 1 を使用している。
+タイルパターン自体はまだ VRAM bank 0 のまま。
+
+## 追加WRAMについて
+GBCの追加WRAM bank切替（`SVBK_REG`）は、GBDK/SDCCでは公式に安全サポートされていない。
+特にスタックや通常変数が D000-DFFF 側にある状態で `SVBK_REG` を切り替えると、復帰不能なクラッシュにつながる可能性がある。
+
+そのため今回のZIPでは、追加WRAM bankの直接使用は入れていない。
+まずは CGBヘッダ / パレット / VRAM bank 1属性マップまでを安全に進める。
+追加WRAMを使う場合は、次段階で以下が必要。
+- スタック位置の明示移動
+- 割り込み停止区間の設計
+- WRAMX専用アクセスAPIの作成
+- 通常変数・スタックと衝突しないことの検証
+
+## 注意
+CGB属性は背景マップに対して付くため、メッセージウィンドウやメニューを重ねた時に下地の属性色が残る可能性がある。
+その場合は次段階で、ウィンドウ描画時に該当範囲の属性を palette 0 に戻す処理を追加する。

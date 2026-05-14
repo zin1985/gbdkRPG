@@ -1,0 +1,44 @@
+# RPG266 CGB UI stability fix
+
+## Fixed / changed
+
+- Title/load screen was white in true CGB mode:
+  - save_runtime.c now initializes CGB UI palette 0 before drawing title/save screens.
+  - save screens also clear BG attribute map to palette 0.
+
+- Inn/shop screen was white:
+  - shop_clear() now calls DISPLAY_ON after clearing/drawing the shop frame.
+  - Shop screen attributes remain palette 0.
+
+- Battle transition had no visible palette flash in CGB mode:
+  - Added cgb_fx_runtime.c/h.
+  - battle_start_effect() now uses CGB palette-memory flash instead of DMG BGP/OBP register-only flash.
+
+- Battle screen inherited field color attributes:
+  - battle_status_ui_runtime_clear_full() now clears the full 32x32 BG attribute map to palette 0.
+
+- Hovering menu item / opening first item page caused mojibake:
+  - Disabled hidden Japanese tilemap pre-render while the top menu is visible.
+  - The JP font system uses a shared dynamic BG tile cache; off-screen Japanese rendering can evict visible glyph tiles.
+  - Inventory now builds the selected page into the backbuffer and commits it immediately.
+
+- Field character sprites remained visible on item screen:
+  - Inventory screen now moves all 40 OAM slots off-screen before enabling the OBJ cursor.
+
+- Equipment hover freeze:
+  - Menu destination pre-cache is now a safe no-op, so equip_runtime_precache() is not called just by hovering.
+
+## About next/previous page backbuffering
+
+The requested next/previous page hidden rendering was intentionally not kept as true tilemap pre-rendering in this build.
+Reason: Japanese glyphs are dynamically assigned to BG tiles. Rendering page 2 off-screen can evict or rewrite tile graphics used by page 1, causing the visible page to corrupt.
+
+Safe retained optimizations:
+- Full page build uses backbuffer + immediate commit.
+- Cursor movement is OBJ-only.
+- Quantity updates remain partial.
+- Destination hover no longer corrupts text.
+
+Future safe direction:
+- Add a pinned/fixed item-menu glyph set, or a dedicated menu-font tile range, before re-enabling true next/prev tilemap caching.
+- Additional WRAM/SVBK use should be kept as a manual data cache only; do not call GBDK drawing/font functions while SVBK is switched.

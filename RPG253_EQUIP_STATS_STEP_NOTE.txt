@@ -1,0 +1,20 @@
+rpg253_equip_stats_step
+
+Based on:
+- rpg252_equip_bank_split_fix, confirmed no freeze.
+
+Step 1 of restoring equipment UI:
+- Restored only current equipment status display in equip_runtime.c:
+  - weapon type
+  - attack
+  - defense
+  - weight
+
+Still not restored:
+- candidate popup window
+- candidate comparison
+- icons
+- partial cursor update
+
+Reason:
+- Add back features one by one after Bank24 split to identify any freeze trigger.

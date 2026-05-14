@@ -1,0 +1,25 @@
+rpg259_backbuffer_ui
+
+Goal:
+- Reduce long white-screen feeling when opening heavy UI screens.
+
+Implemented pseudo backbuffer:
+- Added a 20x18 BG tile backbuffer in WRAM inside jpfont.c.
+- jp_bkg_clear_area(), jp_draw_bkg_frame(), jp_put_bkg_text(), and ui_put_icon()
+  now write into the backbuffer while it is active.
+- jp_bkg_buffer_commit() briefly turns DISPLAY_OFF only while copying the prepared
+  tile map rows to BG VRAM, then DISPLAY_ON.
+- Heavy text glyph preparation happens before commit while the previous screen remains visible.
+
+Applied to:
+- Equipment full redraws.
+  Popup cursor movement remains dirty/direct redraw only, so it does not redraw the whole screen.
+- Inventory full screen/page redraws.
+- Status/parameter page redraws.
+
+Not a true hardware double-buffer:
+- DMG/GB has limited BG tile maps and this project uses direct JP font tile allocation.
+- This is a software tilemap backbuffer, not a second rendered VRAM screen.
+- It should shorten white time substantially, but not eliminate all transition cost.
+
+If any screen appears blank or frame missing, check places that draw only partial areas through the full-screen backbuffer.

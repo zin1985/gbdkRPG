@@ -30,6 +30,10 @@
 #define PARTY_WEAPON_AXE   7u
 #define PARTY_WEAPON_COUNT 8u
 
+#define PARTY_EQUIP_SLOT_WEAPON 0u
+#define PARTY_EQUIP_SLOT_ARMOR  1u
+#define PARTY_EQUIP_SLOT_ACC    2u
+
 typedef struct PartySaveMember {
     UINT16 max_hp;
     UINT16 hp;
@@ -111,8 +115,28 @@ UINT8 party_has_learned_skill(UINT8 active_slot, UINT8 skill_id) BANKED;
 UINT8 party_add_learned_skill(UINT8 active_slot, UINT8 skill_id) BANKED;
 
 UINT8 party_swap_active_with_reserve(UINT8 active_slot, UINT8 reserve_member_id) BANKED;
+void party_status_precache_initial(void) BANKED;
 void party_menu_show_status_loop(void) BANKED;
-void party_menu_show_equip_loop(void) BANKED;
+UINT8 party_equip_get_slot_item(UINT8 active_slot, UINT8 slot) BANKED;
+const char *party_equip_get_item_name(UINT8 item_id) BANKED;
+void party_equip_put_item_name(UINT8 x, UINT8 y, UINT8 width, UINT8 item_id) BANKED;
+void party_equip_put_active_name(UINT8 x, UINT8 y, UINT8 width, UINT8 active_slot) BANKED;
+void party_equip_put_weapon_type_name(UINT8 x, UINT8 y, UINT8 width, UINT8 active_slot) BANKED;
+UINT8 party_equip_get_item_attack_value(UINT8 item_id) BANKED;
+UINT8 party_equip_get_item_defense_value(UINT8 item_id) BANKED;
+UINT8 party_equip_get_item_weight_value(UINT8 item_id) BANKED;
+UINT8 party_equip_get_item_weapon_type(UINT8 item_id) BANKED;
+void party_equip_put_weapon_type_value_name(UINT8 x, UINT8 y, UINT8 width, UINT8 weapon_type) BANKED;
+UINT8 party_equip_get_current_slot_attack_value(UINT8 active_slot, UINT8 slot) BANKED;
+UINT8 party_equip_get_current_slot_defense_value(UINT8 active_slot, UINT8 slot) BANKED;
+UINT8 party_equip_get_current_slot_weight_value(UINT8 active_slot, UINT8 slot) BANKED;
+UINT8 party_equip_get_weapon_type(UINT8 active_slot) BANKED;
+const char *party_equip_get_weapon_type_name(UINT8 active_slot) BANKED;
+UINT8 party_equip_get_attack_value(UINT8 active_slot) BANKED;
+UINT8 party_equip_get_defense_value(UINT8 active_slot) BANKED;
+UINT8 party_equip_get_weight_value(UINT8 active_slot) BANKED;
+UINT8 party_equip_build_candidates(UINT8 active_slot, UINT8 slot, UINT8 *out, UINT8 max_count) BANKED;
+UINT8 party_equip_apply_choice(UINT8 active_slot, UINT8 slot, UINT8 chosen_item) BANKED;
 UINT8 party_use_field_item_on_active(UINT8 item_id, UINT8 active_slot) BANKED;
 UINT8 party_get_last_item_effect_amount(void) BANKED;
 UINT8 party_get_last_item_effect_kind(void) BANKED;

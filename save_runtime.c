@@ -1,6 +1,8 @@
 #pragma bank 5
 
 #include <gb/gb.h>
+#include <gb/hardware.h>
+#include <gb/cgb.h>
 #include "save_runtime.h"
 #include "jpfont.h"
 #include "audio.h"
@@ -14,6 +16,56 @@ BANKREF(save_runtime_bank)
 #define SAVE_HEADER_SIZE 5u
 
 static UINT8 save_cursor;
+
+#ifndef VBK_TILES
+#define VBK_TILES 0u
+#endif
+#ifndef VBK_ATTRIBUTES
+#define VBK_ATTRIBUTES 1u
+#endif
+#define CGB_PAL_AUTOINC 0x80u
+#define CGB_RGB5(r, g, b) ((UINT16)((r) | ((UINT16)(g) << 5) | ((UINT16)(b) << 10)))
+
+static UINT8 save_cgb_palette_ready;
+static const UINT16 save_cgb_ui_bg_pal0[4u] = {
+    CGB_RGB5(31,31,28), CGB_RGB5(23,22,18), CGB_RGB5(13,13,12), CGB_RGB5(2,2,2)
+};
+static const UINT16 save_cgb_ui_obj_pal0[4u] = {
+    CGB_RGB5(31,31,31), CGB_RGB5(23,23,20), CGB_RGB5(11,10,9), CGB_RGB5(0,0,0)
+};
+static UINT8 save_attr_row[20u];
+
+static void save_cgb_init_ui_palette_once(void) BANKED {
+    UINT8 i;
+    UINT16 c;
+    if (save_cgb_palette_ready) return;
+    save_cgb_palette_ready = 1u;
+    if (_cpu == CGB_TYPE) cpu_fast();
+    BCPS_REG = CGB_PAL_AUTOINC;
+    for (i = 0u; i < 4u; i++) {
+        c = save_cgb_ui_bg_pal0[i];
+        BCPD_REG = (UINT8)(c & 0xFFu);
+        BCPD_REG = (UINT8)(c >> 8u);
+    }
+    OCPS_REG = CGB_PAL_AUTOINC;
+    for (i = 0u; i < 4u; i++) {
+        c = save_cgb_ui_obj_pal0[i];
+        OCPD_REG = (UINT8)(c & 0xFFu);
+        OCPD_REG = (UINT8)(c >> 8u);
+    }
+}
+
+static void save_cgb_attr_rect0(UINT8 x, UINT8 y, UINT8 w, UINT8 h) BANKED {
+    UINT8 i;
+    UINT8 yy;
+    if (w == 0u || h == 0u) return;
+    if (w > 20u) w = 20u;
+    for (i = 0u; i < w; i++) save_attr_row[i] = 0u;
+    VBK_REG = VBK_ATTRIBUTES;
+    for (yy = 0u; yy < h; yy++) set_bkg_tiles(x, (UINT8)(y + yy), w, 1u, save_attr_row);
+    VBK_REG = VBK_TILES;
+}
+
 
 
 #define SAVE_DEBUG_BASE 0x1F00u
@@ -191,8 +243,10 @@ static void save_clear_screen(void) BANKED {
     SHOW_BKG;
     HIDE_SPRITES;
     move_bkg(0u, 0u);
+    save_cgb_init_ui_palette_once();
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
+    save_cgb_attr_rect0(0u, 0u, 20u, 18u);
     DISPLAY_ON;
 }
 

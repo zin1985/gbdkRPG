@@ -1,0 +1,5 @@
+Further Bank 26 trim after romusage reported _CODE_26 overflow by 673 bytes.
+- Moved equipment item-name bridge functions and item stat bridge functions out of party_runtime.c into party_equipment_runtime.c.
+- Moved candidate-list construction loop into party_equipment_runtime.c; party_runtime.c now keeps only a small wrapper needing private party state.
+- This should free more than the remaining 673 bytes from Bank 26.
+- Warmachine M/L sprite replacement and Bank 25 equipment table split remain preserved.

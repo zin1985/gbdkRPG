@@ -1,0 +1,24 @@
+rpg263 CGB Bank 0 shrink fix
+
+前回の true CGB color pass は、field_map_render_runtime.c 内の static helper に BANKED を付けたため、
+Bank 0 側に不要な banked-call thunk が増え、Possible overflow from Bank 0 into Bank 1 が発生しました。
+
+今回の修正:
+- field_map_render_runtime.c の static helper から BANKED を削除
+  - cgb_field_init_palettes_once()
+  - cgb_attr_for_tile()
+  - cgb_apply_bg_attributes()
+  - renderer_area_dangerous()
+  - renderer_select_metatile()
+- 外部から呼ぶ field_map_render_runtime_draw(UINT8 area) BANKED は維持
+- -Wm-yC は維持
+- BG/OBJ palette 0 および BG palette 1-7 初期化は維持
+- VBK_REG = VBK_ATTRIBUTES による BG attribute map 書き込みは維持
+- fast build で古い field_map_render_runtime.rel が残らないよう Makefile に強制再コンパイルを追加
+
+意図:
+CGB処理は bank 19 内に閉じ込め、Bank 0 には外部公開関数の最小ブリッジだけ残します。
+
+追加WRAMについて:
+この版ではまだゲーム状態のWRAM bank移動は行っていません。現行の白画面/Bank0対策を優先し、
+まず CGB mode + palette + VRAM bank 1 attribute map の安定化を目的にしています。

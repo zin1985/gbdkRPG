@@ -8,6 +8,9 @@
 #define JP_TILE_BASE    128u
 #define JP_FRAME_BASE   224u
 
+#define JP_BKG_BUFFER_W 20u
+#define JP_BKG_BUFFER_H 18u
+
 #define JP_WIN_X        7u
 #define JP_WIN_Y        112u
 #define JP_WIN_W        20u
@@ -25,6 +28,12 @@ UINT8 jp_put_glyph_utf8(UINT8 col, UINT8 row, const char *p, UINT8 *consumed);
 void jp_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
 void jp_draw_bkg_frame(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h);
 void jp_put_bkg_text(UINT8 col, UINT8 row, const char *text);
+extern UINT8 jp_bkg_buffer_active;
+extern UINT8 jp_bkg_backbuffer[];
+void jp_bkg_buffer_begin(void) BANKED;
+void jp_bkg_buffer_commit(void) BANKED;
+UINT8 jp_bkg_buffer_is_active(void) BANKED;
+void jp_bkg_buffer_put_tile(UINT8 x, UINT8 y, UINT8 tile) BANKED;
 void jp_wait_vbl(UINT8 n);
 
 #endif

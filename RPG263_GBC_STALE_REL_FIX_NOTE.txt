@@ -1,0 +1,18 @@
+rpg263 GBC extension-safe stale .rel fix
+
+原因:
+- 以前のGBC白背景対策版で main.c に cgb_runtime_init() を入れた。
+- その後 cgb_runtime.c を外したが、fast build が古い main.rel を再利用したため、
+  main.rel 内に _cgb_runtime_init 参照だけが残りリンクエラーになった。
+
+対応:
+- main.c から cgb_runtime 関連参照を削除。
+- Makefile に main.rel 強制再コンパイル規則を追加。
+- fast build 開始時に古い main.rel と cgb_runtime.rel を削除。
+- .gbc 拡張子出力は維持。
+- CGBヘッダ指定 -Wm-yC / -Wm-yc は外したまま。
+
+出力:
+- rpg263_backbuffer_banked_gbc.gbc
+
+この版は「GBC専用化」ではなく、まず .gbc ファイルとして安定出力するための版です。

@@ -1,0 +1,20 @@
+RPG276_DICT_TOKEN_IDX_COMPILE_FIX_NOTE
+
+目的:
+- RPG275辞書トークン化版の inventory.c で idx 変数の宣言が不足し、GBDK/SDCC が Undefined identifier 'idx' で停止する問題を修正。
+
+修正内容:
+- inventory_prepare_page_name_cache() に UINT8 idx; を追加。
+- inventory_build_visible_rows_cache() に UINT8 idx; を追加。
+- inventory_draw_page_row_at() に UINT8 idx; を追加。
+
+維持した内容:
+- 道具名・装備名の辞書トークン化。
+- menu_text_dict.c / menu_text_dict.h の追加構成。
+- FF4式の1行クロール。
+- CGBパレット / VRAM Bank 1 属性マップ利用。
+- スライド式ソースのアーカイブ同梱。
+
+確認ポイント:
+- inventory.c の Undefined identifier 'idx' が消えること。
+- 次に party_runtime.c / menu_text_dict.c / Bank0 overflow が出ないか確認すること。

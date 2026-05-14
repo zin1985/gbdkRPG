@@ -1,0 +1,6 @@
+Further Bank 26 trim after _CODE_26 overflow by 306 bytes.
+- Moved field-item application switch from party_runtime.c to party_item_runtime.c in bank 25.
+- party_runtime.c now keeps only a thin wrapper that passes member field pointers.
+- Added party_item_runtime.c/h and Makefile/build.bat SRCS entry.
+- This should free well over 306 bytes from Bank 26.
+- Warmachine M/L sprite replacement remains preserved.

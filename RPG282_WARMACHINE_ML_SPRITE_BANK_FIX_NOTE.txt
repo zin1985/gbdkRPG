@@ -1,0 +1,8 @@
+Warmachine sprite fix:
+- Replaced M-size warmachine art: battle_enemy_tiles_warmachine (32x32 / 16 tiles).
+- Replaced L-size warmachine art: battle_enemy_tiles_warmachine_l (96x32 / 48 tiles).
+- Kept golem L art unchanged.
+- Added assets/warmachine_m_32x32_preview.png and assets/warmachine_l_96x32_preview.png.
+- Moved party_runtime.c from bank 7 to bank 26 because safe build reported _CODE_7 overflow by 1617 bytes.
+- Added sprites.rel forced recompilation for fast builds.
+Expected effect: both M and L warmachine encounters should display the new user-provided monster art.

@@ -1,0 +1,20 @@
+rpg260_backbuffer_inventory_prototype_fix
+
+Fix target:
+- rpg259 build failed in inventory.c:
+  - warning 112: function 'inventory_draw_full_screen_buffered' implicit declaration
+  - error 101: too many parameters
+
+Cause:
+- rpg259 replaced earlier inventory_draw_items_page() calls with
+  inventory_draw_full_screen_buffered(), including calls before that function's
+  definition appears in the file.
+- SDCC/GBDK treated it as an implicit old-style function declaration.
+
+Fix:
+- Added forward declaration near the existing inventory_draw_items_page() prototype:
+  static void inventory_draw_full_screen_buffered(UINT8 cursor_index, UINT8 page_top, const char *message) BANKED;
+
+No behavior changes:
+- Backbuffer implementation from rpg259 is unchanged.
+- Equipment/status/inventory backbuffer behavior is unchanged.

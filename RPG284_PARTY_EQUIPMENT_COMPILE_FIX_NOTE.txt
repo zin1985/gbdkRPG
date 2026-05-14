@@ -1,0 +1,6 @@
+Compile fix after party equipment bank split.
+- Replaced leftover party_find_equipment() call in party_runtime.c with party_equipment_data_exists().
+- Added PARTY_ELEM_* and PARTY_STATUS_* constants to party_equipment_runtime.c.
+- Fixed Makefile FORCE_SPRITES_RECOMPILE recipe duplication/mangled equip target.
+- Added party_equipment_runtime.rel force-recompile target for fast builds.
+- Warmachine M/L sprite replacement remains preserved.

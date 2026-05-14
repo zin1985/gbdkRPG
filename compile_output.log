@@ -3,10 +3,13 @@ audio.c:
 sprites.c:
 dialogue.c:
 jpfont.c:
+jp_backbuffer_runtime.c:
 misakiUTF16.c:
 messages_bank.c:
 messages_runtime.c:
 banked_graphics.c:
+cgb_fx_runtime.c:
+menu_text_dict.c:
 map_data_bank.c:
 map_data_runtime.c:
 font_data_bank.c:
@@ -20,6 +23,8 @@ quest.c:
 inventory.c:
 ui_icons.c:
 party_runtime.c:
+party_equipment_runtime.c:
+party_item_runtime.c:
 actor_runtime.c:
 menu_runtime.c:
 shop_runtime.c:
@@ -44,3 +49,4 @@ sunset_strings_adventure_field_bgm.c:
 peaceful_balanced_town_bgm.c:
 deep_eerie_motif_dungeon_bgm.c:
 boss_hope_despair_7part_finale_soft6_sad7_bgm.c:
+equip_runtime.c:

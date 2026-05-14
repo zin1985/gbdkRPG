@@ -1,0 +1,15 @@
+rpg264 CGB item menu speed pass
+
+Implemented:
+- Switch CGB CPU to double speed once from the banked field renderer by calling cpu_fast() during CGB palette initialization.
+- Item menu cursor is now OBJ/OAM based instead of rewriting the BG '>' cursor on every move.
+- Item menu BG attribute area is reset to palette 0 so map color attributes do not bleed into menus/popups.
+- Item list cursor movement now only moves the cursor sprite and updates the page counter; no list redraw unless page changes.
+- Current page item short names are converted once into 5-tile tile-number rows and reused with set_bkg_tiles()/backbuffer writes.
+- Item quantity drawing clears only the two quantity cells and can update only the used item quantity when the item remains in the list.
+- If a used item reaches zero count, the visible list cache is rebuilt and the page redraws once.
+
+WRAM / CGB extra WRAM note:
+- The item name tile cache uses normal WRAM only: 22 rows x 5 tiles = 110 bytes plus small state.
+- Extra CGB WRAM bank use via SVBK_REG is intentionally not enabled yet. GBDK C stack/runtime can live in switchable WRAM, so direct SVBK switching inside normal C code is risky unless wrapped very carefully with interrupts off and no calls while switched.
+- Recommended future step: add an assembly-only memcpy wrapper for 0xD000 scratch bank access, then use it for large menu/page caches after the current CGB color + item menu behavior is stable.

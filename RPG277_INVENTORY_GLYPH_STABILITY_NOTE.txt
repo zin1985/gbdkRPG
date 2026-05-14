@@ -1,0 +1,22 @@
+RPG277 inventory glyph stability fix
+
+Problem observed:
+- During fast FF4-style one-row inventory scrolling, the first row corrupted when scrolling down.
+- The last row corrupted when scrolling up.
+- The title "もちもの" and footer/help text also decayed over time.
+
+Cause:
+- jpfont uses a dynamic BG glyph cache. Inventory rows were cached as raw BG tile IDs.
+- The previous fast path shifted cached tile rows and built only the incoming row.
+- After enough scrolling, jpfont reused old glyph tiles for new characters, so cached rows still pointed at tile IDs whose glyph data had changed.
+
+Fix:
+- Keep the fixed UI/frame and cursor OBJ behavior.
+- On row-scroll, rebuild only the visible item-list rows (x=1..18, y=3..13), not the full window/UI.
+- Draw title, page counter/arrows and footer/help text LAST so their glyph tiles stay fresh.
+- Reset jpfont's dynamic cache when opening/redrawing the inventory screen, then rebuild visible rows.
+
+Tradeoff:
+- The old one-row-only update was faster but unstable with dynamic Japanese glyph tiles.
+- This version is slightly heavier per scroll, but avoids full UI redraw, DISPLAY_OFF, and visible glyph corruption.
+- A future faster final version should give item/equipment names their own fixed VRAM tile range or precompiled tile-ID dictionary, so scrolling can update only one row without touching jpfont's dynamic cache.

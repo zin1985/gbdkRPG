@@ -1,0 +1,19 @@
+rpg255_equip_icons_popup
+
+Based on rpg254 (stable, no freeze, text fixed).
+
+Restored step 2:
+- item icons on current equipment lines
+- weapon-type icon beside the weapon-type text
+- small popup window for equipment candidates
+- candidate item icons inside the popup
+
+Still intentionally NOT restored:
+- candidate stat comparison
+- partial cursor update helpers
+- old rich overlay logic from party_runtime.c
+
+Safety design:
+- equip UI stays in equip_runtime.c bank 24
+- all equipment/party names are still drawn via party_runtime bridge functions
+- ui_icons_load() is called on equipment screen entry

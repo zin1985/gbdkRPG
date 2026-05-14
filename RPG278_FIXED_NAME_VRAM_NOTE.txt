@@ -1,0 +1,43 @@
+RPG278_FIXED_NAME_VRAM_NOTE
+===========================
+
+Purpose
+-------
+Implement the safer "fixed VRAM tile area for item/equipment names" design for the CGB inventory list.
+
+What changed
+------------
+- Item-list names are no longer stored as jpfont dynamic-cache tile IDs.
+- Each visible item-name cell is rendered into a fixed slot in CGB VRAM bank 1.
+- BG map cells for item names only are marked with attribute bit 3 (0x08), selecting VRAM bank 1.
+- Title/footer/help text remains on the normal jpfont dynamic tile cache in VRAM bank 0.
+- Because item names and footer/title glyphs no longer share the same dynamic tile IDs, fast scrolling should stop corrupting:
+  - the top row when scrolling down quickly,
+  - the bottom row when scrolling up quickly,
+  - the title "もちもの",
+  - the lower help/description text.
+
+Scrolling behavior
+------------------
+- Restored the fast FF4-style one-row crawl.
+- On down-scroll, ten rows are reused and only the incoming bottom row is rebuilt.
+- On up-scroll, ten rows are reused and only the incoming top row is rebuilt.
+- The row cache is now a small ring buffer, so no full item-list rebuild is needed for every row movement.
+
+CGB VRAM usage
+--------------
+- VRAM bank 0: ordinary BG tile IDs, frame, icons, counters, jpfont title/footer.
+- VRAM bank 1: fixed item/equipment name glyph slots used by the inventory list.
+- Attribute map: item-name cells are set to 0x08 after the menu/list area is reset to palette 0.
+
+Equipment-name note
+-------------------
+- Equipment item names already share the same item/equipment dictionary path.
+- This pass connects the fixed VRAM name renderer to the inventory list first, where the corruption and scroll cost were worst.
+- The same helper pattern can be lifted into equip_runtime.c for the equipment candidate popup if that screen still shows text decay during rapid selection.
+
+Safety note
+-----------
+- No DISPLAY_OFF path was added for row scrolling.
+- Old off-screen dynamic name prefetch was disabled because it would overwrite visible fixed slots.
+- The older window-slide source archive remains in the ZIP if it existed in the input project.

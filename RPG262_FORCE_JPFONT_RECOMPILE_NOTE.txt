@@ -1,0 +1,13 @@
+rpg262_force_jpfont_recompile
+
+Purpose:
+- rpg261's jpfont.c Bank0 trim did not affect the fast build because make reused stale jpfont.rel.
+- The build log had [FAST] copied changed files but did not show [CC] jpfont.c.
+- This package makes a harmless jpfont.c content change so the fixed build.php v4 can copy/touch it and force recompilation.
+
+Important:
+- Install build_fast_safe_workspace_v4_touch_changed.php as build.php first.
+- Then upload/build this rpg262 zip with fast mode.
+- Expected log should include:
+  [CC] jpfont.c
+- If using the older build.php, run safe build once or delete jpfont.rel manually.

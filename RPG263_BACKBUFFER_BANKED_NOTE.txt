@@ -1,0 +1,22 @@
+rpg263_backbuffer_banked
+
+Fix target:
+- rpg262 safe build still overflowed Bank0.
+- Cause: backbuffer implementation was inside jpfont.c, which is effectively Bank0/nonbanked.
+
+Change:
+- Moved backbuffer runtime functions and WRAM buffer storage to jp_backbuffer_runtime.c bank 25.
+- jpfont.c now keeps only a tiny helper that writes to the external WRAM buffer when active.
+- Public API remains the same:
+  - jp_bkg_buffer_begin()
+  - jp_bkg_buffer_commit()
+  - jp_bkg_buffer_is_active()
+  - jp_bkg_buffer_put_tile()
+
+Expected:
+- Bank0 should shrink because begin/commit/is_active/put_tile implementation moved out of jpfont.c.
+- Backbuffer behavior for equipment / inventory / status should remain.
+
+Important:
+- Header changed, so fast build will likely clean rel cache once.
+- Check safe build for Bank0 overflow.

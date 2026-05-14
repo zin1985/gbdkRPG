@@ -250,13 +250,21 @@ UINT8 jp_put_glyph_utf8(UINT8 col, UINT8 row, const char *p, UINT8 *consumed) {
     return tile;
 }
 
+static void jp_bkg_put_tile_buffered(UINT8 x, UINT8 y, UINT8 tile) {
+    if (jp_bkg_buffer_active) {
+        jp_bkg_backbuffer[((UINT16)y * JP_BKG_BUFFER_W) + x] = tile;
+    } else {
+        set_bkg_tiles(x, y, 1u, 1u, &tile);
+    }
+}
+
 void jp_bkg_clear_area(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
     UINT8 x;
     UINT8 y;
     unsigned char blank = JP_FRAME_BASE + 0u;
     for (y = 0u; y < h; y++) {
         for (x = 0u; x < w; x++) {
-            set_bkg_tiles((UINT8)(x0 + x), (UINT8)(y0 + y), 1u, 1u, &blank);
+            jp_bkg_put_tile_buffered((UINT8)(x0 + x), (UINT8)(y0 + y), blank);
             jp_audio_busy_tick();
         }
     }
@@ -280,7 +288,7 @@ void jp_draw_bkg_frame(UINT8 x0, UINT8 y0, UINT8 w, UINT8 h) {
             else if (x == (UINT8)(w - 1u)) t = JP_FRAME_BASE + 2u;
             else if (y == (UINT8)(h - 1u)) t = JP_FRAME_BASE + 7u;
             else if (x == 0u) t = JP_FRAME_BASE + 8u;
-            set_bkg_tiles((UINT8)(x0 + x), (UINT8)(y0 + y), 1u, 1u, &t);
+            jp_bkg_put_tile_buffered((UINT8)(x0 + x), (UINT8)(y0 + y), t);
             jp_audio_busy_tick();
         }
     }
@@ -300,7 +308,7 @@ void jp_put_bkg_text(UINT8 col, UINT8 row, const char *text) {
             continue;
         }
         tile = jp_get_tile_for_utf8(p, &consumed);
-        set_bkg_tiles(x, row, 1u, 1u, &tile);
+        jp_bkg_put_tile_buffered(x, row, tile);
         jp_audio_busy_tick();
         p += (consumed == 0u) ? 1 : consumed;
         x++;

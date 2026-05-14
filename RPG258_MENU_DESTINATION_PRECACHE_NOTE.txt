@@ -1,0 +1,30 @@
+rpg258_menu_destination_precache
+
+Goal:
+- Cache destination screen data before the player presses A on the main menu.
+- Make status/parameter, item list, and equipment selection open more quickly.
+
+Added:
+1. Status / parameter
+   - party_status_precache_initial()
+   - preloads icons and snapshots the first active fighter.
+   - party_menu_show_status_loop() reuses the cached fighter for the first draw.
+
+2. Item list
+   - inventory_precache_field_menu()
+   - preloads UI icons and rebuilds the visible item cache only when inventory changed.
+   - inventory_add/remove/copy/clear invalidate the cache.
+
+3. Equipment
+   - equip_runtime_precache()
+   - preloads UI icons and prebuilds the initial weapon candidate list.
+   - equip_runtime_show_loop() reuses the cached candidate list when opening the initial weapon selector.
+
+4. Main menu
+   - menu_precache_destination(cursor)
+   - called when the cursor rests on status/items/equip and again just before opening.
+   - This shifts some preparation cost before transition.
+
+Limits:
+- GB has no true off-screen BG buffer here; screen drawing still happens on transition.
+- This caches data, icons, and candidate lists, not a hidden rendered screen.

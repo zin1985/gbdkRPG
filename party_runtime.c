@@ -1,15 +1,19 @@
-#pragma bank 7
+#pragma bank 26
 
 #include <gb/gb.h>
+#include <gb/hardware.h>
 #include "party_runtime.h"
 #include "skill_defs.h"
 #include "inventory.h"
+#include "menu_text_dict.h"
 #include "jpfont.h"
 #include "audio.h"
 #include "ui_icons.h"
 #include "banked_graphics.h"
 #include "sprites.h"
 #include "battle_skill_runtime.h"
+#include "party_equipment_runtime.h"
+#include "party_item_runtime.h"
 
 BANKREF_EXTERN(sprite_data_bank)
 
@@ -85,94 +89,7 @@ BANKREF(party_runtime_bank)
 #define PARTY_EQUIP_SLOT_ARMOR  1u
 #define PARTY_EQUIP_SLOT_ACC    2u
 
-/* rpg116: equipment seed. Kept in bank 7, not in Bank 0.
- * Item IDs are defined in inventory.h so inventory, equipment and menu pages
- * share the same small numeric IDs.
- */
-typedef struct PartyEquipmentDef {
-    UINT8 item_id;
-    UINT8 slot;
-    UINT8 weapon_type;
-    UINT8 attack;
-    UINT8 defense;
-    UINT8 skill;
-    UINT8 heal;
-    UINT8 agility;
-    UINT8 weight;
-    UINT8 element_resist;
-    UINT8 status_resist;
-    const char *name;
-} PartyEquipmentDef;
-
-static const PartyEquipmentDef party_equipment_defs[] = {
-    { ITEM_WOOD_SWORD,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 2u, 0u, 0u, 0u, 0u, 1u, 0u, 0u, "木のけん" },
-    { ITEM_IRON_SWORD,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 4u, 0u, 0u, 0u, 0u, 3u, 0u, 0u, "鉄のけん" },
-    { ITEM_OAK_STAFF,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_STAFF, 1u, 0u, 0u, 2u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "木のつえ" },
-    { ITEM_MAGE_STAFF,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_STAFF, 1u, 0u, 3u, 1u, 0u, 1u, PARTY_ELEM_FIRE | PARTY_ELEM_ICE, 0u, "まどうのつえ" },
-    { ITEM_SHORT_BOW,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   3u, 0u, 0u, 0u, 1u, 1u, PARTY_ELEM_THUNDER, 0u, "短いゆみ" },
-    { ITEM_GLOVES,        PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_GLOVE, 2u, 0u, 1u, 0u, 2u, 0u, 0u, 0u, "けいこ手甲" },
-    { ITEM_TOOL_KIT,      PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_TOOL,  1u, 0u, 2u, 0u, 0u, 1u, 0u, 0u, "道具キット" },
-    { ITEM_CLOTH_ARMOR,   PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 1u, 0u, 0u, 0u, 1u, 0u, 0u, "ぬののふく" },
-    { ITEM_LEATHER_ARMOR, PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 2u, 0u, 0u, 0u, 2u, 0u, 0u, "かわよろい" },
-    { ITEM_IRON_ARMOR,    PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 4u, 0u, 0u, 0u, 5u, 0u, 0u, "鉄よろい" },
-    { ITEM_CHARM,         PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 1u, 1u, 0u, 0u, PARTY_ELEM_LIGHT, PARTY_STATUS_SLEEP, "おまもり" },
-    { ITEM_FEATHER,       PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 2u, 0u, 0u, 0u, "はね飾り" },
-    { ITEM_DEBUG_NO_ENCOUNT, PARTY_EQUIP_SLOT_ACC, PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, "退魔のすず" },
-    { ITEM_DEBUG_ESCAPE,  PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 2u, 0u, 0u, 0u, "はやあしリング" },
-
-    /* rpg182: additional equipment pool. */
-    { ITEM_COPPER_SWORD,  PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 3u, 0u, 0u, 0u, 0u, 2u, 0u, 0u, "銅のけん" },
-    { ITEM_STEEL_SWORD,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 5u, 0u, 0u, 0u, 0u, 4u, 0u, 0u, "鋼のけん" },
-    { ITEM_SILVER_SWORD,  PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 6u, 0u, 1u, 0u, 0u, 3u, PARTY_ELEM_LIGHT, 0u, "銀のけん" },
-    { ITEM_FLAME_SWORD,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 7u, 0u, 1u, 0u, 0u, 4u, PARTY_ELEM_FIRE, 0u, "炎のけん" },
-    { ITEM_ICE_SWORD,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 7u, 0u, 1u, 0u, 0u, 4u, PARTY_ELEM_ICE, 0u, "氷のけん" },
-    { ITEM_DRAGON_SWORD,  PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 9u, 1u, 2u, 0u, 0u, 5u, PARTY_ELEM_FIRE, 0u, "竜のけん" },
-    { ITEM_WILLOW_STAFF,  PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_STAFF, 1u, 0u, 0u, 3u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "柳のつえ" },
-    { ITEM_SAGE_STAFF,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_STAFF, 2u, 0u, 2u, 3u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "賢者つえ" },
-    { ITEM_THUNDER_STAFF, PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_STAFF, 2u, 0u, 4u, 1u, 0u, 2u, PARTY_ELEM_THUNDER, 0u, "雷のつえ" },
-    { ITEM_MOON_STAFF,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_STAFF, 2u, 0u, 3u, 4u, 0u, 1u, PARTY_ELEM_LIGHT, PARTY_STATUS_SLEEP, "月のつえ" },
-    { ITEM_SHADOW_STAFF,  PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_STAFF, 3u, 0u, 5u, 0u, 0u, 2u, PARTY_ELEM_DARK, 0u, "影のつえ" },
-    { ITEM_LONG_BOW,      PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   4u, 0u, 0u, 0u, 1u, 2u, 0u, 0u, "長いゆみ" },
-    { ITEM_STEEL_BOW,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   5u, 0u, 0u, 0u, 1u, 3u, 0u, 0u, "鋼のゆみ" },
-    { ITEM_HUNTER_BOW,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   5u, 0u, 1u, 0u, 2u, 2u, 0u, 0u, "狩人ゆみ" },
-    { ITEM_THUNDER_BOW,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   6u, 0u, 1u, 0u, 2u, 3u, PARTY_ELEM_THUNDER, 0u, "雷のゆみ" },
-    { ITEM_STAR_BOW,      PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_BOW,   7u, 0u, 2u, 1u, 3u, 2u, PARTY_ELEM_LIGHT, 0u, "星のゆみ" },
-    { ITEM_BRONZE_SPEAR,  PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SPEAR, 4u, 0u, 0u, 0u, 1u, 2u, 0u, 0u, "青銅のやり" },
-    { ITEM_STEEL_SPEAR,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SPEAR, 6u, 0u, 1u, 0u, 1u, 3u, 0u, 0u, "鋼のやり" },
-    { ITEM_DRAGON_SPEAR,  PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SPEAR, 8u, 0u, 2u, 0u, 1u, 4u, PARTY_ELEM_THUNDER, 0u, "竜槍" },
-    { ITEM_HAND_AXE,      PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_AXE,   5u, 0u, 0u, 0u, 0u, 3u, 0u, 0u, "手おの" },
-    { ITEM_BATTLE_AXE,    PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_AXE,   7u, 0u, 1u, 0u, 0u, 4u, 0u, 0u, "戦おの" },
-    { ITEM_GREAT_AXE,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_AXE,   9u, 0u, 2u, 0u, 0u, 5u, PARTY_ELEM_FIRE, 0u, "大おの" },
-    { ITEM_IRON_GLOVES,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_GLOVE, 3u, 0u, 1u, 0u, 2u, 1u, 0u, 0u, "鉄手甲" },
-    { ITEM_BEAST_CLAWS,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_GLOVE, 4u, 0u, 2u, 0u, 3u, 1u, 0u, 0u, "獣の爪" },
-    { ITEM_POWER_KNUCKLE, PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_GLOVE, 6u, 0u, 2u, 0u, 1u, 2u, 0u, 0u, "力手甲" },
-    { ITEM_MONK_FIST,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_GLOVE, 5u, 0u, 3u, 1u, 4u, 0u, PARTY_ELEM_LIGHT, 0u, "僧の拳" },
-    { ITEM_ALCHEMY_KIT,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_TOOL,  2u, 0u, 3u, 0u, 0u, 1u, 0u, 0u, "錬金具" },
-    { ITEM_TRAP_TOOL,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_TOOL,  3u, 0u, 2u, 0u, 1u, 1u, 0u, 0u, "罠道具" },
-    { ITEM_BOMB_TOOL,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_TOOL,  5u, 0u, 3u, 0u, 0u, 2u, PARTY_ELEM_FIRE, 0u, "爆弾具" },
-    { ITEM_GEAR_TOOL,     PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_TOOL,  4u, 0u, 4u, 0u, 1u, 2u, PARTY_ELEM_THUNDER, 0u, "歯車具" },
-    { ITEM_TRAVEL_CLOTH,  PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 1u, 0u, 0u, 1u, 0u, 0u, 0u, "旅の服" },
-    { ITEM_MAGE_ROBE,     PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 2u, 2u, 2u, 0u, 1u, PARTY_ELEM_ICE, 0u, "魔法ローブ" },
-    { ITEM_BATTLE_CLOTH,  PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  1u, 3u, 1u, 0u, 1u, 1u, 0u, 0u, "戦い服" },
-    { ITEM_CHAIN_MAIL,    PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 5u, 0u, 0u, 0u, 4u, 0u, 0u, "鎖かたびら" },
-    { ITEM_STEEL_ARMOR,   PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 6u, 0u, 0u, 0u, 6u, 0u, 0u, "鋼よろい" },
-    { ITEM_SILVER_ARMOR,  PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 6u, 1u, 1u, 0u, 4u, PARTY_ELEM_LIGHT, 0u, "銀よろい" },
-    { ITEM_DRAGON_ARMOR,  PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 8u, 1u, 0u, 0u, 7u, PARTY_ELEM_FIRE, 0u, "竜よろい" },
-    { ITEM_QUICK_BOOTS,   PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 3u, 0u, 0u, 0u, "早足くつ" },
-    { ITEM_POWER_RING,    PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  2u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, "力の指輪" },
-    { ITEM_GUARD_RING,    PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 2u, 0u, 0u, 0u, 0u, 0u, 0u, "守り指輪" },
-    { ITEM_FOCUS_RING,    PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 2u, 0u, 1u, 0u, 0u, 0u, "集中指輪" },
-    { ITEM_LUCKY_COIN,    PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 0u, 0u, 1u, 0u, 0u, 0u, "幸運コイン" },
-    { ITEM_DRAGON_SCALE,  PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  1u, 2u, 1u, 0u, 0u, 0u, PARTY_ELEM_FIRE, 0u, "竜のうろこ" },
-    { ITEM_SLEEP_GUARD,   PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 1u, 0u, 0u, 0u, 0u, 0u, PARTY_STATUS_SLEEP, "眠り守り" },
-    { ITEM_POISON_GUARD,  PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 1u, 0u, 0u, 0u, 0u, 0u, PARTY_STATUS_POISON, "毒守り" },
-    { ITEM_LIGHT_MEDAL,   PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 1u, 1u, 0u, 0u, PARTY_ELEM_LIGHT, 0u, "光メダル" },
-    { ITEM_DARK_MEDAL,    PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  1u, 0u, 1u, 0u, 0u, 0u, PARTY_ELEM_DARK, 0u, "闇メダル" },
-    { ITEM_ITIL_SWORD,   PARTY_EQUIP_SLOT_WEAPON, PARTY_WEAPON_SWORD, 100u, 0u, 0u, 0u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "アイティルの剣" },
-    { ITEM_ITIL_ARMOR,   PARTY_EQUIP_SLOT_ARMOR,  PARTY_WEAPON_NONE,  0u, 100u, 0u, 0u, 0u, 1u, PARTY_ELEM_LIGHT, 0u, "アイティルの鎧" },
-    { ITEM_ITIL_CREST,   PARTY_EQUIP_SLOT_ACC,    PARTY_WEAPON_NONE,  0u, 0u, 100u, 0u, 0u, 0u, PARTY_ELEM_LIGHT, 0u, "アイティルの紋章" }
-};
-#define PARTY_EQUIPMENT_DEF_COUNT ((UINT8)(sizeof(party_equipment_defs) / sizeof(party_equipment_defs[0])))
+/* rpg282: equipment definition table moved to party_equipment_runtime.c (bank 27). */
 
 
 #define PARTY_ACTION_NONE   0u
@@ -480,106 +397,63 @@ UINT8 party_debug_escape_accessory_equipped(void) BANKED {
     return 0u;
 }
 
-static const PartyEquipmentDef *party_find_equipment(UINT8 item_id) BANKED {
-    UINT8 i;
-
-    if (item_id == ITEM_NONE) return 0;
-    for (i = 0u; i < PARTY_EQUIPMENT_DEF_COUNT; i++) {
-        if (party_equipment_defs[i].item_id == item_id) return &party_equipment_defs[i];
-    }
-    return 0;
-}
-
 static const char *party_equipment_name(UINT8 item_id) BANKED {
-    const PartyEquipmentDef *eq;
-
-    eq = party_find_equipment(item_id);
-    if (eq == 0) return "なし";
-    return eq->name;
+    if (!party_equipment_data_exists(item_id)) return "なし";
+    return menu_dict_item_name(item_id);
 }
 
 static UINT8 party_equipped_weapon_type(PartyMemberRuntime *member) BANKED {
-    const PartyEquipmentDef *eq;
-
+    UINT8 wt;
     if (member == 0) return PARTY_WEAPON_NONE;
-    eq = party_find_equipment(member->weapon_id);
-    if (eq == 0) return member->weapon_type;
-    return eq->weapon_type;
+    wt = party_equipment_data_weapon_type(member->weapon_id);
+    if (wt == PARTY_WEAPON_NONE) return member->weapon_type;
+    return wt;
 }
 
 static UINT8 party_equipment_attack(PartyMemberRuntime *member) BANKED {
-    const PartyEquipmentDef *eq;
-
     if (member == 0) return 0u;
-    eq = party_find_equipment(member->weapon_id);
-    if (eq == 0) return 0u;
-    return eq->attack;
+    return party_equipment_data_attack(member->weapon_id);
 }
 
 static UINT8 party_equipment_defense(PartyMemberRuntime *member) BANKED {
     UINT8 v;
-    const PartyEquipmentDef *eq;
-
     if (member == 0) return 0u;
-    v = 0u;
-    eq = party_find_equipment(member->armor_id);
-    if (eq != 0) v = (UINT8)(v + eq->defense);
-    eq = party_find_equipment(member->accessory_id);
-    if (eq != 0) v = (UINT8)(v + eq->defense);
+    v = party_equipment_data_defense(member->armor_id);
+    v = (UINT8)(v + party_equipment_data_defense(member->accessory_id));
     return v;
 }
 
 static UINT8 party_equipment_skill(PartyMemberRuntime *member) BANKED {
     UINT8 v;
-    const PartyEquipmentDef *eq;
-
     if (member == 0) return 0u;
-    v = 0u;
-    eq = party_find_equipment(member->weapon_id);
-    if (eq != 0) v = (UINT8)(v + eq->skill);
-    eq = party_find_equipment(member->accessory_id);
-    if (eq != 0) v = (UINT8)(v + eq->skill);
+    v = party_equipment_data_skill(member->weapon_id);
+    v = (UINT8)(v + party_equipment_data_skill(member->accessory_id));
     return v;
 }
 
 static UINT8 party_equipment_heal(PartyMemberRuntime *member) BANKED {
     UINT8 v;
-    const PartyEquipmentDef *eq;
-
     if (member == 0) return 0u;
-    v = 0u;
-    eq = party_find_equipment(member->weapon_id);
-    if (eq != 0) v = (UINT8)(v + eq->heal);
-    eq = party_find_equipment(member->accessory_id);
-    if (eq != 0) v = (UINT8)(v + eq->heal);
+    v = party_equipment_data_heal(member->weapon_id);
+    v = (UINT8)(v + party_equipment_data_heal(member->accessory_id));
     return v;
 }
 
 static UINT8 party_equipment_agility(PartyMemberRuntime *member) BANKED {
     UINT8 v;
-    const PartyEquipmentDef *eq;
-
     if (member == 0) return 0u;
-    v = 0u;
-    eq = party_find_equipment(member->weapon_id);
-    if (eq != 0) v = (UINT8)(v + eq->agility);
-    eq = party_find_equipment(member->accessory_id);
-    if (eq != 0) v = (UINT8)(v + eq->agility);
+    v = party_equipment_data_agility(member->weapon_id);
+    v = (UINT8)(v + party_equipment_data_agility(member->accessory_id));
     return v;
 }
 
 static UINT8 party_equipment_weight(PartyMemberRuntime *member) BANKED {
     UINT8 v;
-    const PartyEquipmentDef *eq;
-
     if (member == 0) return 0u;
     v = member->equip_weight;
-    eq = party_find_equipment(member->weapon_id);
-    if (eq != 0) v = (UINT8)(v + eq->weight);
-    eq = party_find_equipment(member->armor_id);
-    if (eq != 0) v = (UINT8)(v + eq->weight);
-    eq = party_find_equipment(member->accessory_id);
-    if (eq != 0) v = (UINT8)(v + eq->weight);
+    v = (UINT8)(v + party_equipment_data_weight(member->weapon_id));
+    v = (UINT8)(v + party_equipment_data_weight(member->armor_id));
+    v = (UINT8)(v + party_equipment_data_weight(member->accessory_id));
     return v;
 }
 
@@ -1310,24 +1184,6 @@ static void party_put_u8(UINT8 x, UINT8 y, UINT8 value) BANKED {
 static UINT8 party_last_item_effect_amount;
 static UINT8 party_last_item_effect_kind;
 
-static UINT8 party_item_random_gain(UINT8 max_gain) BANKED {
-    UINT8 r;
-    r = (UINT8)(DIV_REG ^ LY_REG ^ party_last_item_effect_amount);
-    r = (UINT8)((r % max_gain) + 1u);
-    return r;
-}
-
-static UINT8 party_apply_u8_gain(UINT8 *value, UINT8 max_value, UINT8 max_gain) BANKED {
-    UINT8 gain;
-    if (*value >= max_value) return 0u;
-    gain = party_item_random_gain(max_gain);
-    if ((UINT8)(max_value - *value) < gain) gain = (UINT8)(max_value - *value);
-    *value = (UINT8)(*value + gain);
-    party_last_item_effect_amount = gain;
-    party_last_item_effect_kind = PARTY_ITEM_EFFECT_UP;
-    return 1u;
-}
-
 
 static UINT8 party_wait_menu_keys(UINT8 mask) BANKED {
     static UINT8 last_keys;
@@ -1414,9 +1270,6 @@ static void party_put_u16(UINT8 x, UINT8 y, UINT16 value) BANKED {
 
 UINT8 party_use_field_item_on_active(UINT8 item_id, UINT8 active_slot) BANKED {
     PartyMemberRuntime *member;
-    UINT16 before;
-    UINT16 after;
-    UINT16 heal;
 
     party_last_item_effect_amount = 0u;
     party_last_item_effect_kind = PARTY_ITEM_EFFECT_NONE;
@@ -1424,94 +1277,19 @@ UINT8 party_use_field_item_on_active(UINT8 item_id, UINT8 active_slot) BANKED {
     member = party_get_active_member(active_slot);
     if (member == 0) return 0u;
 
-    switch (item_id) {
-        case ITEM_HERB:
-        case ITEM_MEDICINE:
-            if (member->hp >= member->max_hp) return 0u;
-            before = member->hp;
-            heal = (item_id == ITEM_MEDICINE) ? (UINT16)(28u + party_item_random_gain(12u)) : (UINT16)(18u + party_item_random_gain(12u));
-            after = (UINT16)(member->hp + heal);
-            member->hp = (after > member->max_hp) ? member->max_hp : after;
-            party_last_item_effect_amount = (UINT8)(member->hp - before);
-            party_last_item_effect_kind = PARTY_ITEM_EFFECT_HP;
-            return 1u;
-        case ITEM_POTION:
-        case ITEM_HIGH_POTION:
-            if (member->hp >= member->max_hp) return 0u;
-            before = member->hp;
-            heal = (item_id == ITEM_HIGH_POTION) ? (UINT16)(75u + party_item_random_gain(30u)) : (UINT16)(48u + party_item_random_gain(20u));
-            after = (UINT16)(member->hp + heal);
-            member->hp = (after > member->max_hp) ? member->max_hp : after;
-            party_last_item_effect_amount = (UINT8)(member->hp - before);
-            party_last_item_effect_kind = PARTY_ITEM_EFFECT_HP;
-            return 1u;
-        case ITEM_ELIXIR:
-        case ITEM_FULL_HERB:
-        case ITEM_TENT:
-            if (member->hp >= member->max_hp && member->mp >= member->max_mp) return 0u;
-            before = member->hp;
-            member->hp = member->max_hp;
-            party_last_item_effect_amount = (UINT8)(member->hp - before);
-            party_last_item_effect_kind = PARTY_ITEM_EFFECT_HP;
-            if (item_id != ITEM_FULL_HERB) {
-                before = member->mp;
-                member->mp = member->max_mp;
-                if (party_last_item_effect_amount == 0u) {
-                    party_last_item_effect_amount = (UINT8)(member->mp - before);
-                    party_last_item_effect_kind = PARTY_ITEM_EFFECT_MP;
-                }
-            }
-            return 1u;
-        case ITEM_MANA_HERB:
-        case ITEM_MANA_DROP:
-        case ITEM_MANA_BOTTLE:
-            if (member->mp >= member->max_mp) return 0u;
-            before = member->mp;
-            heal = (item_id == ITEM_MANA_BOTTLE) ? (UINT16)(20u + party_item_random_gain(10u)) : (UINT16)(8u + party_item_random_gain(6u));
-            after = (UINT16)(member->mp + heal);
-            member->mp = (after > member->max_mp) ? member->max_mp : after;
-            party_last_item_effect_amount = (UINT8)(member->mp - before);
-            party_last_item_effect_kind = PARTY_ITEM_EFFECT_MP;
-            return 1u;
-        case ITEM_ANTIDOTE:
-        case ITEM_POISON_GUARD:
-            if ((member->status_flags & PARTY_STATUS_POISON) == 0u) return 0u;
-            member->status_flags &= (UINT8)~PARTY_STATUS_POISON;
-            return 1u;
-        case ITEM_WAKE_HERB:
-        case ITEM_SLEEP_GUARD:
-            if ((member->status_flags & PARTY_STATUS_SLEEP) == 0u) return 0u;
-            member->status_flags &= (UINT8)~PARTY_STATUS_SLEEP;
-            return 1u;
-        case ITEM_EYE_DROP:
-            if ((member->status_flags & PARTY_STATUS_BLIND) == 0u) return 0u;
-            member->status_flags &= (UINT8)~PARTY_STATUS_BLIND;
-            return 1u;
-        case ITEM_PANACEA:
-            if (member->status_flags == 0u) return 0u;
-            member->status_flags = 0u;
-            return 1u;
-        case ITEM_BARRIER_SEED:
-        case ITEM_GUARD_SEED:
-            return party_apply_u8_gain(&member->defense, 99u, 3u);
-        case ITEM_POWER_SEED:
-            return party_apply_u8_gain(&member->attack, 99u, 3u);
-        case ITEM_SPEED_SEED:
-            return party_apply_u8_gain(&member->agility, 99u, 3u);
-        case ITEM_FOCUS_TEA:
-            return party_apply_u8_gain(&member->focus, PARTY_FOCUS_MAX, 3u);
-        case ITEM_MORALE_MEAT:
-            return party_apply_u8_gain(&member->morale, PARTY_MORALE_MAX, 3u);
-        case ITEM_REVIVE_STONE:
-            if (member->hp != 0u) return 0u;
-            member->hp = (UINT16)(member->max_hp >> 1u);
-            if (member->hp == 0u) member->hp = 1u;
-            party_last_item_effect_amount = (UINT8)(member->hp > 255u ? 255u : member->hp);
-            party_last_item_effect_kind = PARTY_ITEM_EFFECT_REV;
-            return 1u;
-        default:
-            return 0u;
-    }
+    return party_item_runtime_apply(
+        item_id,
+        &member->hp, member->max_hp,
+        &member->mp, member->max_mp,
+        &member->status_flags,
+        &member->defense,
+        &member->attack,
+        &member->agility,
+        &member->focus,
+        &member->morale,
+        &party_last_item_effect_amount,
+        &party_last_item_effect_kind
+    );
 }
 
 UINT8 party_get_last_item_effect_amount(void) BANKED {
@@ -1599,17 +1377,79 @@ static void party_draw_status_skill_names(PartyMemberRuntime *member, UINT8 page
     }
 }
 
-static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
+static PartyBattleFighter party_status_cached_fighter;
+static UINT8 party_status_cache_valid;
+static UINT8 party_status_cache_slot;
+
+#ifndef VBK_TILES
+#define VBK_TILES 0u
+#endif
+#ifndef VBK_ATTRIBUTES
+#define VBK_ATTRIBUTES 1u
+#endif
+#define PARTY_STATUS_SCREEN_CACHE_TILES ((UINT16)JP_BKG_BUFFER_W * (UINT16)JP_BKG_BUFFER_H)
+static UINT8 party_status_screen_cache[JP_BKG_BUFFER_W * JP_BKG_BUFFER_H];
+static UINT8 party_status_screen_cache_valid;
+static UINT8 party_status_screen_cache_slot;
+static UINT8 party_status_screen_cache_page;
+static UINT8 party_status_attr_row[20u];
+
+static void party_status_attr_rect0(UINT8 x, UINT8 y, UINT8 w, UINT8 h);
+static void party_status_invalidate_screen_cache(void);
+static void party_status_build_screen_cache(UINT8 active_slot, UINT8 page);
+
+void party_status_precache_initial(void) BANKED {
+    /* rpg266: lightweight only. Hidden Japanese pre-rendering can evict the
+     * visible menu glyph tiles, so avoid building a tilemap while another
+     * screen is shown. */
+    ui_icons_load();
+    party_get_active_fighter(0u, &party_status_cached_fighter);
+    party_status_cache_slot = 0u;
+    party_status_cache_valid = 1u;
+    party_status_invalidate_screen_cache();
+}
+
+static void party_status_attr_rect0(UINT8 x, UINT8 y, UINT8 w, UINT8 h) {
+    UINT8 i;
+    UINT8 yy;
+    if (w == 0u || h == 0u) return;
+    if (w > 20u) w = 20u;
+    for (i = 0u; i < w; i++) party_status_attr_row[i] = 0u;
+    VBK_REG = VBK_ATTRIBUTES;
+    for (yy = 0u; yy < h; yy++) {
+        set_bkg_tiles(x, (UINT8)(y + yy), w, 1u, party_status_attr_row);
+    }
+    VBK_REG = VBK_TILES;
+}
+
+static void party_status_invalidate_screen_cache(void) {
+    party_status_screen_cache_valid = 0u;
+}
+
+static void party_status_copy_backbuffer_to_cache(void) {
+    UINT16 i;
+    for (i = 0u; i < PARTY_STATUS_SCREEN_CACHE_TILES; i++) {
+        party_status_screen_cache[i] = jp_bkg_backbuffer[i];
+    }
+}
+
+static void party_status_render_to_backbuffer(UINT8 active_slot, UINT8 page, UINT8 oam_enabled) {
     PartyBattleFighter f;
     PartyMemberRuntime *member;
     UINT8 page_count;
 
-    party_get_active_fighter(active_slot, &f);
+    jp_bkg_buffer_begin();
+    if (party_status_cache_valid != 0u && party_status_cache_slot == active_slot) {
+        f = party_status_cached_fighter;
+    } else {
+        party_get_active_fighter(active_slot, &f);
+    }
+    party_status_cache_valid = 0u;
     member = party_get_active_member(active_slot);
     page_count = party_status_page_count(member);
     if (page >= page_count) page = (UINT8)(page_count - 1u);
 
-    party_hide_all_oam_sprites();
+    if (oam_enabled != 0u) party_hide_all_oam_sprites();
     party_ui_clear();
     jp_draw_bkg_frame(0u, 0u, 20u, 15u);
     jp_draw_bkg_frame(0u, 15u, 20u, 3u);
@@ -1619,7 +1459,7 @@ static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
     party_put_field_text(1u, 2u, 10u, f.name);
 
     if (page == 0u) {
-        party_status_show_sprite(member);
+        if (oam_enabled != 0u) party_status_show_sprite(member);
         jp_put_bkg_text(1u, 3u, "HP"); party_put_u16(6u, 3u, f.hp); jp_put_bkg_text(9u, 3u, "/"); party_put_u16(11u, 3u, f.max_hp);
         jp_put_bkg_text(1u, 4u, "MP"); party_put_u16(6u, 4u, f.mp); jp_put_bkg_text(9u, 4u, "/"); party_put_u16(11u, 4u, f.max_mp);
         jp_put_bkg_text(1u, 5u, "ちから"); party_put_u8(12u, 5u, f.attack);
@@ -1635,7 +1475,7 @@ static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
             jp_put_bkg_text(10u,12u, "ひろう"); party_put_u8(17u,12u, member->fatigue);
         }
     } else if (page == 1u) {
-        party_status_hide_sprite();
+        if (oam_enabled != 0u) party_status_hide_sprite();
         jp_put_bkg_text(1u, 4u, "じゅくれん");
         if (member != 0) {
             party_put_mastery_icon_value(2u, 6u, ui_icon_tile_for_weapon_type(PARTY_WEAPON_SWORD), member->weapon_mastery[PARTY_WEAPON_SWORD]);
@@ -1648,10 +1488,59 @@ static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
             party_put_mastery_icon_value(8u, 10u, ui_icon_tile_for_magic_mastery(), member->magic_mastery);
         }
     } else {
-        party_status_hide_sprite();
+        if (oam_enabled != 0u) party_status_hide_sprite();
         party_draw_status_skill_names(member, page);
     }
     jp_put_bkg_text(1u,16u, "< >仲間 上下ページ B戻る");
+}
+
+static void party_status_build_screen_cache(UINT8 active_slot, UINT8 page) {
+    UINT8 prev_active;
+    UINT8 page_count;
+
+    page_count = party_status_page_count(party_get_active_member(active_slot));
+    if (page_count == 0u) return;
+    if (page >= page_count) page = (UINT8)(page_count - 1u);
+    prev_active = jp_bkg_buffer_active;
+    party_status_render_to_backbuffer(active_slot, page, 0u);
+    party_status_copy_backbuffer_to_cache();
+    jp_bkg_buffer_active = prev_active;
+    party_status_screen_cache_slot = active_slot;
+    party_status_screen_cache_page = page;
+    party_status_screen_cache_valid = 1u;
+}
+
+static UINT8 party_status_commit_screen_cache(UINT8 active_slot, UINT8 page) {
+    PartyMemberRuntime *member;
+    if (party_status_screen_cache_valid == 0u) return 0u;
+    if (party_status_screen_cache_slot != active_slot || party_status_screen_cache_page != page) return 0u;
+    /* rpg276: commit cached parameter page without blanking the LCD.
+     * The whole frame is static, so avoiding DISPLAY_OFF keeps status page
+     * changes closer to the quiet FF4-style menu feel. */
+    set_bkg_tiles(0u, 0u, JP_BKG_BUFFER_W, JP_BKG_BUFFER_H, party_status_screen_cache);
+    party_status_attr_rect0(0u, 0u, 20u, 18u);
+    party_hide_all_oam_sprites();
+    member = party_get_active_member(active_slot);
+    if (page == 0u) party_status_show_sprite(member);
+    else party_status_hide_sprite();
+    return 1u;
+}
+
+static void party_status_precache_next_page(UINT8 active_slot, UINT8 page) {
+    (void)active_slot;
+    (void)page;
+    party_status_invalidate_screen_cache();
+}
+
+static void party_draw_status_page(UINT8 active_slot, UINT8 page) BANKED {
+    if (party_status_commit_screen_cache(active_slot, page) != 0u) {
+        party_status_precache_next_page(active_slot, page);
+        return;
+    }
+    party_status_render_to_backbuffer(active_slot, page, 1u);
+    jp_bkg_buffer_commit();
+    party_status_attr_rect0(0u, 0u, 20u, 18u);
+    party_status_precache_next_page(active_slot, page);
 }
 
 void party_menu_show_heal_skill_loop(void) BANKED {
@@ -1756,7 +1645,7 @@ void party_menu_show_status_loop(void) BANKED {
 
     slot = 0u;
     page = 0u;
-    ui_icons_load();
+    if (party_status_cache_valid == 0u) party_status_precache_initial();
     party_draw_status_page(slot, page);
     while (1) {
         keys = party_wait_menu_keys(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START);
@@ -1797,33 +1686,91 @@ static void party_member_set_slot_item(PartyMemberRuntime *member, UINT8 slot, U
     member->weapon_type = party_equipped_weapon_type(member);
 }
 
-#define PARTY_EQUIP_CANDIDATE_MAX 48u
-static UINT8 party_equip_choices[PARTY_EQUIP_CANDIDATE_MAX];
-
-static UINT8 party_build_equip_candidates(PartyMemberRuntime *member, UINT8 slot, UINT8 *out) BANKED {
-    UINT8 count;
-    UINT8 i;
-    UINT8 current;
-    const PartyEquipmentDef *eq;
-
-    if (out == 0) return 0u;
-    count = 0u;
-    out[count++] = ITEM_NONE;
-    current = party_member_slot_item(member, slot);
-    if (current != ITEM_NONE) out[count++] = current;
-    for (i = 0u; i < PARTY_EQUIPMENT_DEF_COUNT && count < PARTY_EQUIP_CANDIDATE_MAX; i++) {
-        eq = &party_equipment_defs[i];
-        if (eq->slot != slot) continue;
-        if (eq->item_id == current) continue;
-        if (inventory_get_count(eq->item_id) == 0u) continue;
-        out[count++] = eq->item_id;
-    }
-    return count;
+/* rpg252:
+ * Equipment screen moved out of party_runtime.c to equip_runtime.c.
+ * These small bridge APIs keep party data private while trimming Bank7.
+ */
+UINT8 party_equip_get_slot_item(UINT8 active_slot, UINT8 slot) BANKED {
+    return party_member_slot_item(party_get_active_member(active_slot), slot);
 }
 
-static UINT8 party_apply_equip_choice(PartyMemberRuntime *member, UINT8 slot, UINT8 chosen_item) BANKED {
-    UINT8 old_item;
+void party_equip_put_active_name(UINT8 x, UINT8 y, UINT8 width, UINT8 active_slot) BANKED {
+    PartyMemberRuntime *member;
+    member = party_get_active_member(active_slot);
+    if (member == 0) {
+        party_put_field_text(x, y, width, "なし");
+        return;
+    }
+    party_put_field_text(x, y, width, member->name);
+}
 
+void party_equip_put_weapon_type_name(UINT8 x, UINT8 y, UINT8 width, UINT8 active_slot) BANKED {
+    party_put_field_text(x, y, width, party_weapon_type_name(party_equip_get_weapon_type(active_slot)));
+}
+
+UINT8 party_equip_get_current_slot_attack_value(UINT8 active_slot, UINT8 slot) BANKED {
+    PartyMemberRuntime *member;
+    UINT8 item_id;
+
+    member = party_get_active_member(active_slot);
+    if (member == 0) return 0u;
+    item_id = party_member_slot_item(member, slot);
+    if (slot == PARTY_EQUIP_SLOT_WEAPON) return party_equipment_data_attack(item_id);
+    return party_equipment_attack(member);
+}
+
+UINT8 party_equip_get_current_slot_defense_value(UINT8 active_slot, UINT8 slot) BANKED {
+    PartyMemberRuntime *member;
+    UINT8 item_id;
+
+    member = party_get_active_member(active_slot);
+    if (member == 0) return 0u;
+    item_id = party_member_slot_item(member, slot);
+    if (slot == PARTY_EQUIP_SLOT_WEAPON) return party_equipment_defense(member);
+    return party_equipment_data_defense(item_id);
+}
+
+UINT8 party_equip_get_current_slot_weight_value(UINT8 active_slot, UINT8 slot) BANKED {
+    PartyMemberRuntime *member;
+    UINT8 item_id;
+
+    member = party_get_active_member(active_slot);
+    if (member == 0) return 0u;
+    item_id = party_member_slot_item(member, slot);
+    return party_equipment_data_weight(item_id);
+}
+
+UINT8 party_equip_get_weapon_type(UINT8 active_slot) BANKED {
+    return party_equipped_weapon_type(party_get_active_member(active_slot));
+}
+
+const char *party_equip_get_weapon_type_name(UINT8 active_slot) BANKED {
+    return party_weapon_type_name(party_equip_get_weapon_type(active_slot));
+}
+
+UINT8 party_equip_get_attack_value(UINT8 active_slot) BANKED {
+    return party_equipment_attack(party_get_active_member(active_slot));
+}
+
+UINT8 party_equip_get_defense_value(UINT8 active_slot) BANKED {
+    return party_equipment_defense(party_get_active_member(active_slot));
+}
+
+UINT8 party_equip_get_weight_value(UINT8 active_slot) BANKED {
+    return party_equipment_weight(party_get_active_member(active_slot));
+}
+
+UINT8 party_equip_build_candidates(UINT8 active_slot, UINT8 slot, UINT8 *out, UINT8 max_count) BANKED {
+    PartyMemberRuntime *member;
+    member = party_get_active_member(active_slot);
+    return party_equipment_build_candidates(party_member_slot_item(member, slot), slot, out, max_count);
+}
+
+UINT8 party_equip_apply_choice(UINT8 active_slot, UINT8 slot, UINT8 chosen_item) BANKED {
+    UINT8 old_item;
+    PartyMemberRuntime *member;
+
+    member = party_get_active_member(active_slot);
     if (member == 0) return 0u;
     old_item = party_member_slot_item(member, slot);
     if (old_item == chosen_item) return 1u;
@@ -1832,159 +1779,6 @@ static UINT8 party_apply_equip_choice(PartyMemberRuntime *member, UINT8 slot, UI
     if (old_item != ITEM_NONE) inventory_add(old_item, 1u);
     party_member_set_slot_item(member, slot, chosen_item);
     return 1u;
-}
-
-static const char *party_equip_slot_name(UINT8 slot) BANKED {
-    if (slot == PARTY_EQUIP_SLOT_WEAPON) return "ぶき";
-    if (slot == PARTY_EQUIP_SLOT_ARMOR) return "よろい";
-    return "かざり";
-}
-
-/* rpg246:
- * Equipment UI was freezing before the screen appeared on some builds.
- * Keep this screen text-only and redraw whole page on input.
- * This avoids icon tile reload, popup overlay, and cursor-only partial updates.
- */
-static void party_draw_equip_page(UINT8 active_slot, UINT8 slot_cursor, UINT8 choosing, UINT8 item_cursor, const UINT8 *items, UINT8 item_count, const char *message) BANKED {
-    PartyMemberRuntime *member;
-    UINT8 i;
-    UINT8 idx;
-    UINT8 start;
-    UINT8 y;
-
-    member = party_get_active_member(active_slot);
-    party_ui_clear();
-    jp_draw_bkg_frame(0u, 0u, 20u, 18u);
-    jp_put_bkg_text(1u, 1u, "そうび");
-    jp_put_bkg_text(13u, 1u, "< >");
-
-    if (member == 0) {
-        jp_put_bkg_text(2u, 4u, "なかまなし");
-        party_put_field_text(1u, 16u, 18u, message);
-        return;
-    }
-
-    party_put_field_text(1u, 3u, 10u, member->name);
-
-    jp_put_bkg_text(1u, 5u, (slot_cursor == PARTY_EQUIP_SLOT_WEAPON && choosing == 0u) ? ">" : " ");
-    jp_put_bkg_text(2u, 5u, "ぶき");
-    party_put_field_text(7u, 5u, 11u, party_equipment_name(member->weapon_id));
-
-    jp_put_bkg_text(1u, 6u, (slot_cursor == PARTY_EQUIP_SLOT_ARMOR && choosing == 0u) ? ">" : " ");
-    jp_put_bkg_text(2u, 6u, "よろい");
-    party_put_field_text(7u, 6u, 11u, party_equipment_name(member->armor_id));
-
-    jp_put_bkg_text(1u, 7u, (slot_cursor == PARTY_EQUIP_SLOT_ACC && choosing == 0u) ? ">" : " ");
-    jp_put_bkg_text(2u, 7u, "かざり");
-    party_put_field_text(7u, 7u, 11u, party_equipment_name(member->accessory_id));
-
-    if (choosing != 0u) {
-        jp_put_bkg_text(1u, 9u, party_equip_slot_name(slot_cursor));
-        jp_put_bkg_text(6u, 9u, "をえらぶ");
-        start = (UINT8)((item_cursor / PARTY_EQUIP_POPUP_ROWS) * PARTY_EQUIP_POPUP_ROWS);
-        y = 10u;
-        for (i = 0u; i < PARTY_EQUIP_POPUP_ROWS; i++, y++) {
-            idx = (UINT8)(start + i);
-            if (idx < item_count) {
-                jp_put_bkg_text(1u, y, (idx == item_cursor) ? ">" : " ");
-                party_put_field_text(3u, y, 14u, party_equipment_name(items[idx]));
-            }
-        }
-    } else {
-        jp_put_bkg_text(1u, 9u, "しゅるい");
-        party_put_field_text(8u, 9u, 8u, party_weapon_type_name(party_equipped_weapon_type(member)));
-        jp_put_bkg_text(1u, 10u, "こうげき");
-        party_put_u8(10u, 10u, party_equipment_attack(member));
-        jp_put_bkg_text(1u, 11u, "まもり");
-        party_put_u8(10u, 11u, party_equipment_defense(member));
-        jp_put_bkg_text(1u, 12u, "おもさ");
-        party_put_u8(10u, 12u, party_equipment_weight(member));
-    }
-
-    party_put_field_text(1u, 16u, 18u, message);
-}
-
-static UINT8 party_equip_cursor_down(UINT8 item_cursor, UINT8 item_count) BANKED {
-    if (item_count == 0u) return 0u;
-    if ((UINT8)(item_cursor + 1u) < item_count) return (UINT8)(item_cursor + 1u);
-    return item_cursor;
-}
-
-static UINT8 party_equip_cursor_up(UINT8 item_cursor, UINT8 item_count) BANKED {
-    if (item_count == 0u) return 0u;
-    if (item_cursor > 0u) return (UINT8)(item_cursor - 1u);
-    return item_cursor;
-}
-
-void party_menu_show_equip_loop(void) BANKED {
-    UINT8 keys;
-    UINT8 slot;
-    UINT8 slot_cursor;
-    UINT8 choosing;
-    UINT8 item_cursor;
-    UINT8 old_item_cursor;
-    UINT8 item_count;
-    const char *message;
-    PartyMemberRuntime *member;
-
-    slot = 0u;
-    slot_cursor = PARTY_EQUIP_SLOT_WEAPON;
-    choosing = 0u;
-    item_cursor = 0u;
-    item_count = 0u;
-    message = "えらぶ  もどる";
-
-    for (old_item_cursor = 0u; old_item_cursor < PARTY_EQUIP_CANDIDATE_MAX; old_item_cursor++) {
-        party_equip_choices[old_item_cursor] = ITEM_NONE;
-    }
-
-    HIDE_WIN;
-    SHOW_BKG;
-    audio_waitpadup();
-    party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, party_equip_choices, item_count, message);
-
-    while (1) {
-        keys = party_wait_menu_keys(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START);
-        member = party_get_active_member(slot);
-
-        if (choosing == 0u) {
-            if (keys & J_UP) {
-                if (slot_cursor == 0u) slot_cursor = PARTY_EQUIP_SLOT_ACC;
-                else slot_cursor--;
-            } else if (keys & J_DOWN) {
-                slot_cursor++;
-                if (slot_cursor > PARTY_EQUIP_SLOT_ACC) slot_cursor = PARTY_EQUIP_SLOT_WEAPON;
-            } else if (keys & J_LEFT) {
-                if (slot == 0u) slot = PARTY_ACTIVE_COUNT - 1u;
-                else slot--;
-            } else if (keys & J_RIGHT) {
-                slot++;
-                if (slot >= PARTY_ACTIVE_COUNT) slot = 0u;
-            } else if (keys & (J_B | J_START)) {
-                break;
-            } else if (keys & J_A) {
-                item_count = party_build_equip_candidates(member, slot_cursor, party_equip_choices);
-                item_cursor = 0u;
-                choosing = 1u;
-                message = "そうび  やめる";
-            }
-        } else {
-            if (keys & J_UP) {
-                item_cursor = party_equip_cursor_up(item_cursor, item_count);
-            } else if (keys & J_DOWN) {
-                item_cursor = party_equip_cursor_down(item_cursor, item_count);
-            } else if (keys & J_B) {
-                choosing = 0u;
-                message = "えらぶ  もどる";
-            } else if (keys & J_A) {
-                if (party_apply_equip_choice(member, slot_cursor, party_equip_choices[item_cursor])) message = "そうびしました";
-                else message = "そうびできません";
-                choosing = 0u;
-            }
-        }
-
-        party_draw_equip_page(slot, slot_cursor, choosing, item_cursor, party_equip_choices, item_count, message);
-    }
 }
 
 

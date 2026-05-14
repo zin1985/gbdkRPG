@@ -1,0 +1,14 @@
+RPG280_NAGAI_TEA_ITEM_NOTE
+
+Implemented recovery item: 長井茶.
+
+Changes:
+- inventory.h: added ITEM_NAGAI_TEA = 114.
+- inventory.c: seeded 3 copies by default; added to field/battle usable lists; added to battle auto-use priority and kana sort rank.
+- menu_text_dict.c: added dictionary name 長井茶.
+- party_runtime.c: added HP recovery effect, approx 60-79 HP.
+- shop_runtime.c: regular/strong item shops now sell 長井茶 for 55G; shop list size expanded to 4 entries, equipment shops padded to 4 entries.
+
+Notes:
+- 長/井/茶 are already present in the existing usable font list.
+- No Bank 0 tables were added; item name lives in the banked menu dictionary.

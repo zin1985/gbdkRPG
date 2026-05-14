@@ -1,13 +1,38 @@
 #pragma bank 5
 
 #include <gb/gb.h>
+#include <gb/hardware.h>
 #include "menu_runtime.h"
 #include "audio.h"
 #include "jpfont.h"
+#include "menu_text_dict.h"
 #include "inventory.h"
 #include "party_runtime.h"
+#include "equip_runtime.h"
 
 BANKREF(menu_runtime_bank)
+
+#ifndef VBK_TILES
+#define VBK_TILES 0u
+#endif
+#ifndef VBK_ATTRIBUTES
+#define VBK_ATTRIBUTES 1u
+#endif
+
+static UINT8 menu_attr_row[20u];
+
+static void menu_attr_rect0(UINT8 x, UINT8 y, UINT8 w, UINT8 h) {
+    UINT8 i;
+    UINT8 yy;
+    if (w == 0u || h == 0u) return;
+    if (w > 20u) w = 20u;
+    for (i = 0u; i < w; i++) menu_attr_row[i] = 0u;
+    VBK_REG = VBK_ATTRIBUTES;
+    for (yy = 0u; yy < h; yy++) {
+        set_bkg_tiles(x, (UINT8)(y + yy), w, 1u, menu_attr_row);
+    }
+    VBK_REG = VBK_TILES;
+}
 
 #define MENU_STATUS    0u
 #define MENU_ITEM      1u
@@ -19,6 +44,27 @@ BANKREF(menu_runtime_bank)
 static void menu_screen_clear(void) {
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
+    menu_attr_rect0(0u, 0u, 20u, 18u);
+}
+
+static void menu_slide_out_up(void) {
+    UINT8 i;
+    for (i = 0u; i < 18u; i++) {
+        audio_wait_vbl();
+        move_bkg(0u, (UINT8)((UINT8)(i + 1u) * 8u));
+    }
+    audio_wait_vbl();
+    move_bkg(0u, 0u);
+}
+
+static void menu_slide_in_down(void) {
+    UINT8 i;
+    move_bkg(0u, 144u);
+    for (i = 18u; i > 0u; i--) {
+        audio_wait_vbl();
+        move_bkg(0u, (UINT8)((UINT8)(i - 1u) * 8u));
+    }
+    move_bkg(0u, 0u);
 }
 
 
@@ -96,15 +142,27 @@ static UINT8 menu_wait_keys(UINT8 mask) BANKED {
     }
 }
 
+static void menu_precache_destination(UINT8 cursor) BANKED {
+    /* rpg266:
+     * Do not render destination screens while the top menu is still visible.
+     * The JP font system uses a shared dynamic BG tile cache; hidden Japanese
+     * pre-rendering can evict glyph tiles that the visible menu is using,
+     * causing mojibake or freezes when hovering items/equipment.
+     * Destination screens now build after selection, then keep their own
+     * safe cursor/difference updates.
+     */
+    (void)cursor;
+}
+
 static void menu_draw_static(void) {
     jp_draw_bkg_frame(0u, 0u, 10u, 10u);
     jp_draw_bkg_frame(0u, 15u, 20u, 3u);
-    jp_put_bkg_text(1u, 1u, "メニュー");
-    jp_put_bkg_text(3u, 3u, "つよさ");
-    jp_put_bkg_text(3u, 4u, "もちもの");
-    jp_put_bkg_text(3u, 5u, "そうび");
-    jp_put_bkg_text(3u, 6u, "とくぎ");
-    jp_put_bkg_text(3u, 7u, "もくてき");
+    jp_put_bkg_text(1u, 1u, menu_dict_message(MENU_DICT_MSG_MENU_TITLE));
+    jp_put_bkg_text(3u, 3u, menu_dict_message(MENU_DICT_MSG_MENU_STATUS));
+    jp_put_bkg_text(3u, 4u, menu_dict_message(MENU_DICT_MSG_ITEMS_TITLE));
+    jp_put_bkg_text(3u, 5u, menu_dict_message(MENU_DICT_MSG_MENU_EQUIP));
+    jp_put_bkg_text(3u, 6u, menu_dict_message(MENU_DICT_MSG_BATTLE_SKILL));
+    jp_put_bkg_text(3u, 7u, menu_dict_message(MENU_DICT_MSG_MENU_OBJECTIVE));
     menu_draw_money();
 }
 
@@ -120,7 +178,7 @@ static void menu_show_objective(UINT8 enemy_defeated) {
     menu_screen_clear();
     jp_draw_bkg_frame(0u, 0u, 20u, 15u);
     jp_draw_bkg_frame(0u, 15u, 20u, 3u);
-    jp_put_bkg_text(1u, 1u, "もくてき");
+    jp_put_bkg_text(1u, 1u, menu_dict_message(MENU_DICT_MSG_MENU_OBJECTIVE));
     if (enemy_defeated) {
         jp_put_bkg_text(2u, 4u, "まもの とうばつずみ");
         jp_put_bkg_text(2u, 6u, "NPCに はなすと ふっかつ");
@@ -139,6 +197,7 @@ void menu_runtime_open(UINT8 enemy_defeated) BANKED {
     menu_draw_static();
     menu_draw_cursor(cursor);
     DISPLAY_ON;
+    menu_precache_destination(cursor);
 
     while (1) {
         keys = menu_wait_keys(J_UP | J_DOWN | J_A | J_B | J_START);
@@ -147,19 +206,23 @@ void menu_runtime_open(UINT8 enemy_defeated) BANKED {
             if (cursor == 0u) cursor = MENU_COUNT - 1u;
             else cursor--;
             menu_draw_cursor(cursor);
+            menu_precache_destination(cursor);
         } else if (keys & J_DOWN) {
             cursor++;
             if (cursor >= MENU_COUNT) cursor = 0u;
             menu_draw_cursor(cursor);
+            menu_precache_destination(cursor);
         } else if (keys & (J_B | J_START)) {
             break;
         } else if (keys & J_A) {
+            menu_precache_destination(cursor);
+            /* rpg271: no whole-window slide for classic RPG menu transitions. */
             if (cursor == MENU_STATUS) {
                 party_menu_show_status_loop();
             } else if (cursor == MENU_ITEM) {
                 inventory_menu_show_items_loop();
             } else if (cursor == MENU_EQUIP) {
-                party_menu_show_equip_loop();
+                equip_runtime_show_loop();
             } else if (cursor == MENU_SKILL) {
                 party_menu_show_heal_skill_loop();
             } else {
@@ -170,6 +233,7 @@ void menu_runtime_open(UINT8 enemy_defeated) BANKED {
             menu_screen_clear();
             menu_draw_static();
             menu_draw_cursor(cursor);
+            /* rpg271: destination/menu redraw is instant-buffered, no slide-back. */
         }
     }
 }

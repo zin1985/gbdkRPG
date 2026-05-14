@@ -1,0 +1,16 @@
+rpg261_backbuffer_bank0_trim
+
+Fix target:
+- rpg260 compiled, but linker emitted Multiple write / Possible overflow from Bank 0 into Bank 1.
+- Cause is likely the new jpfont.c backbuffer code added to non-banked / Bank0 area.
+
+Trimmed:
+- Simplified jp_bkg_buffer_begin(); removed full 20x18 buffer initialization loop.
+  Full-screen UI users already clear the screen through jp_bkg_clear_area().
+- Simplified jp_bkg_buffer_commit(); one rectangular set_bkg_tiles() call instead of row loop.
+- Consolidated repeated 'if buffer active else set_bkg_tiles' blocks into one helper.
+
+Kept:
+- Backbuffer API.
+- Equipment/inventory/status backbuffer behavior.
+- ui_icons backbuffer awareness.

@@ -108,6 +108,7 @@
 #define ITEM_HAND_AXE     111u
 #define ITEM_BATTLE_AXE   112u
 #define ITEM_GREAT_AXE    113u
+#define ITEM_NAGAI_TEA    114u
 
 void inventory_clear(void) BANKED;
 void inventory_seed_defaults(void) BANKED;
@@ -117,6 +118,7 @@ UINT8 inventory_add(UINT8 item_id, UINT8 amount) BANKED;
 UINT8 inventory_remove(UINT8 item_id, UINT8 amount) BANKED;
 void inventory_copy_to(UINT8 *dst) BANKED;
 void inventory_copy_from(const UINT8 *src) BANKED;
+void inventory_precache_field_menu(void) BANKED;
 void inventory_menu_show_items_loop(void) BANKED;
 UINT16 inventory_get_money(void) BANKED;
 void inventory_add_money(UINT16 amount) BANKED;

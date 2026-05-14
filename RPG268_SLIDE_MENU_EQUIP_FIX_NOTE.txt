@@ -1,0 +1,32 @@
+RPG268 slide/menu/equipment fix notes
+====================================
+
+Changes applied:
+
+1. Inventory page slide reverse direction
+   - Moving to the next page keeps the previous behavior: current page scrolls up and the next page rises from below.
+   - Moving to the previous page now uses reverse scroll: previous page comes down from above.
+
+2. Avoid white blank after item page scroll
+   - Removed DISPLAY_OFF from the slide finalization path.
+   - After the animation, the canonical page layout is redrawn directly with the display kept on.
+   - This prioritizes no white blink over perfectly hidden redraw.
+
+3. Menu transition animation
+   - Entering a submenu slides the top menu upward.
+   - Returning from a submenu redraws the menu and slides it back down.
+   - This is intentionally screen-level animation first, not a full pre-rendered submenu transition, to avoid JP dynamic glyph cache corruption.
+
+4. Equipment freeze mitigation
+   - Equipment screen no longer uses the generic full-screen JP backbuffer commit path that calls DISPLAY_OFF.
+   - Equipment now draws directly and resets its CGB BG attribute map to palette 0.
+   - Equipment popup also resets its attribute area to palette 0.
+   - Equipment entry now hides field/menu sprites.
+   - If no equipment candidates exist, it shows a message instead of entering an empty candidate popup.
+
+5. Fast build cache safety
+   - equip_runtime.rel is forced to recompile so old cached code is not reused.
+
+Known conservative choices:
+- True double-buffered Japanese page pre-render is still avoided because the dynamic JP glyph cache can evict visible glyphs and cause mojibake.
+- The final direct redraw after item slide may cause minor tile redraw shimmer, but it avoids the white blank screen.

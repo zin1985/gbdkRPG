@@ -4,6 +4,7 @@
 #include "bank_ids.h"
 #include "battle_command_ui_runtime.h"
 #include "jpfont.h"
+#include "menu_text_dict.h"
 
 BANKREF(battle_command_ui_runtime)
 
@@ -18,12 +19,12 @@ BANKREF(battle_command_ui_runtime)
 
 void battle_command_ui_runtime_draw(void) BANKED {
     jp_draw_bkg_frame(9u, 13u, 11u, 5u);
-    jp_put_bkg_text(11u, 14u, "こうげき");
-    jp_put_bkg_text(16u, 14u, "まほう");
-    jp_put_bkg_text(11u, 15u, "とくぎ");
-    jp_put_bkg_text(16u, 15u, "どうぐ");
-    jp_put_bkg_text(11u, 16u, "ぼうぎょ");
-    jp_put_bkg_text(16u, 16u, "にげる");
+    jp_put_bkg_text(11u, 14u, menu_dict_message(MENU_DICT_MSG_BATTLE_ATTACK));
+    jp_put_bkg_text(16u, 14u, menu_dict_message(MENU_DICT_MSG_BATTLE_MAGIC));
+    jp_put_bkg_text(11u, 15u, menu_dict_message(MENU_DICT_MSG_BATTLE_SKILL));
+    jp_put_bkg_text(16u, 15u, menu_dict_message(MENU_DICT_MSG_ITEM_KIND));
+    jp_put_bkg_text(11u, 16u, menu_dict_message(MENU_DICT_MSG_BATTLE_DEFENSE));
+    jp_put_bkg_text(16u, 16u, menu_dict_message(MENU_DICT_MSG_BATTLE_ESCAPE));
 }
 
 void battle_command_ui_runtime_move_cursor(UINT8 menu_index) BANKED {

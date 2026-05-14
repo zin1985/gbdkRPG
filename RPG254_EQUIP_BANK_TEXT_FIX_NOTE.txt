@@ -1,0 +1,19 @@
+rpg254_equip_bank_text_fix
+
+Fix target:
+- Equipment screen did not freeze, but equipment names / party name text were corrupted.
+- The screen showed box glyphs and leftover text like 'なしました'.
+
+Cause:
+- equip_runtime.c is Bank24, while equipment/party name strings live in party_runtime.c Bank7.
+- Returning const char* across banks and drawing it in Bank24 reads the same ROM address from the wrong bank.
+- Shorter names also left old text fragments.
+
+Fix:
+- Added party_runtime drawing bridge functions:
+  - party_equip_put_item_name()
+  - party_equip_put_active_name()
+  - party_equip_put_weapon_type_name()
+- equip_runtime.c no longer draws party/equipment string pointers directly.
+- Fixed-width drawing clears name fields before writing.
+- Stats step from rpg253 is preserved.

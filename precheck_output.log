@@ -1,12 +1,12 @@
 ===== prebank_check.py =====
-main.c bytes: 72738
+main.c bytes: 71920
 [OK] no direct set_bkg_data() call found in main.c code
 [OK] no direct set_sprite_data() call found in main.c code
 [OK] no static const char[] message definitions found in main.c code
 [OK] message_show() is referenced
 [OK] map data arrays are not defined in main.c code
 [OK] jpfont.c is non-banked again
-[OK] jpfont.h public APIs are non-banked
+[WARN] jpfont.h may still expose BANKED jpfont APIs
 [OK] font_data_bank.c is bank 6
 [OK] misakiUTF16.c uses font data wrappers
 [OK] font_data_bank.c owns raw Misaki tables in bank 6

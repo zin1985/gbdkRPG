@@ -1,0 +1,14 @@
+rpg247_equip_entry_minimal_fix
+
+Fix target:
+- Selecting equipment from the menu freezes.
+
+Changes:
+- Replaced equipment screen with a minimal text-only version.
+- Removed equipment popup overlay / icon drawing / partial cursor update.
+- Equipment loop now uses raw joypad edge wait instead of shared repeat-key helper.
+- Explicit DISPLAY_ON on entry.
+- Keeps actual equipment candidate generation and equipment apply behavior.
+- Keeps rpg246/rpg245 battle/spark/all-target changes.
+
+If this still freezes, the cause is likely not drawing but Bank overflow/corruption in party_runtime bank.

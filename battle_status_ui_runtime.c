@@ -1,6 +1,7 @@
 #pragma bank 23
 
 #include <gb/gb.h>
+#include <gb/hardware.h>
 #include "bank_ids.h"
 #include "battle_status_ui_runtime.h"
 #include "jpfont.h"
@@ -11,6 +12,13 @@ BANKREF(battle_status_ui_runtime)
 #define BG_DRAW_W 32u
 #define BG_DRAW_H 32u
 #define PLAYER_HP_MP_MAX 999u
+
+#ifndef VBK_TILES
+#define VBK_TILES 0u
+#endif
+#ifndef VBK_ATTRIBUTES
+#define VBK_ATTRIBUTES 1u
+#endif
 
 static void status_u16_to_dec3(UINT16 value, char *out) BANKED {
     UINT16 hundreds;
@@ -48,6 +56,19 @@ static void status_draw_member(UINT8 slot, UINT8 x) BANKED {
     status_put_u16((UINT8)(x + 2u), 3u, party_get_active_mp(slot));
 }
 
+
+static void battle_status_clear_attr_full(void) BANKED {
+    static UINT8 attr_row[BG_DRAW_W];
+    UINT8 x;
+    UINT8 y;
+    for (x = 0u; x < BG_DRAW_W; x++) attr_row[x] = 0u;
+    VBK_REG = VBK_ATTRIBUTES;
+    for (y = 0u; y < BG_DRAW_H; y++) {
+        set_bkg_tiles(0u, y, BG_DRAW_W, 1u, attr_row);
+    }
+    VBK_REG = VBK_TILES;
+}
+
 void battle_status_ui_runtime_clear_full(void) BANKED {
     static UINT8 bg[BG_DRAW_W * BG_DRAW_H];
     UINT16 i;
@@ -62,6 +83,7 @@ void battle_status_ui_runtime_clear_full(void) BANKED {
     SCX_REG = 0u;
     SCY_REG = 0u;
     set_bkg_tiles(0u, 0u, BG_DRAW_W, BG_DRAW_H, bg);
+    battle_status_clear_attr_full();
 }
 
 void battle_status_ui_runtime_draw_party_status_box(void) BANKED {

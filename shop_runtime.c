@@ -1,8 +1,10 @@
 #pragma bank 5
 
 #include <gb/gb.h>
+#include <gb/hardware.h>
 #include "shop_runtime.h"
 #include "jpfont.h"
+#include "menu_text_dict.h"
 #include "audio.h"
 #include "inventory.h"
 #include "party_runtime.h"
@@ -12,18 +14,42 @@
 
 BANKREF(shop_runtime_bank)
 
+#ifndef VBK_TILES
+#define VBK_TILES 0u
+#endif
+#ifndef VBK_ATTRIBUTES
+#define VBK_ATTRIBUTES 1u
+#endif
+
+static UINT8 shop_attr_row[20u];
+
+static void shop_attr_rect0(UINT8 x, UINT8 y, UINT8 w, UINT8 h) {
+    UINT8 i;
+    UINT8 yy;
+    if (w == 0u || h == 0u) return;
+    if (w > 20u) w = 20u;
+    for (i = 0u; i < w; i++) shop_attr_row[i] = 0u;
+    VBK_REG = VBK_ATTRIBUTES;
+    for (yy = 0u; yy < h; yy++) {
+        set_bkg_tiles(x, (UINT8)(y + yy), w, 1u, shop_attr_row);
+    }
+    VBK_REG = VBK_TILES;
+}
+
 static UINT8 shop_town_pot_opened;
 
-#define SHOP_ITEM_COUNT 3u
+#define SHOP_ITEM_COUNT 4u
 
 static const UINT8 item_shop_ids[SHOP_ITEM_COUNT] = {
     ITEM_POTION,
+    ITEM_NAGAI_TEA,
     ITEM_MANA_HERB,
     ITEM_ANTIDOTE
 };
 
 static const UINT8 item_shop_prices[SHOP_ITEM_COUNT] = {
     20u,
+    55u,
     30u,
     8u
 };
@@ -31,23 +57,27 @@ static const UINT8 item_shop_prices[SHOP_ITEM_COUNT] = {
 static const UINT8 equip_shop_ids[SHOP_ITEM_COUNT] = {
     ITEM_IRON_SWORD,
     ITEM_LEATHER_ARMOR,
-    ITEM_DEBUG_ESCAPE
+    ITEM_DEBUG_ESCAPE,
+    ITEM_CHARM
 };
 
 static const UINT8 equip_shop_prices[SHOP_ITEM_COUNT] = {
     60u,
     45u,
-    1u
+    1u,
+    25u
 };
 
 static const UINT8 strong_item_shop_ids[SHOP_ITEM_COUNT] = {
     ITEM_HIGH_POTION,
+    ITEM_NAGAI_TEA,
     ITEM_MANA_BOTTLE,
     ITEM_REVIVE_STONE
 };
 
 static const UINT8 strong_item_shop_prices[SHOP_ITEM_COUNT] = {
     80u,
+    55u,
     90u,
     180u
 };
@@ -55,12 +85,14 @@ static const UINT8 strong_item_shop_prices[SHOP_ITEM_COUNT] = {
 static const UINT8 strong_equip_shop_ids[SHOP_ITEM_COUNT] = {
     ITEM_SILVER_SWORD,
     ITEM_STEEL_ARMOR,
-    ITEM_POWER_RING
+    ITEM_POWER_RING,
+    ITEM_FOCUS_RING
 };
 
 static const UINT8 strong_equip_shop_prices[SHOP_ITEM_COUNT] = {
     220u,
     180u,
+    160u,
     160u
 };
 
@@ -78,6 +110,7 @@ static void shop_clear(void) BANKED {
     move_bkg(0u, 0u);
     jp_bkg_clear_area(0u, 0u, 20u, 18u);
     jp_draw_bkg_frame(0u, 0u, 20u, 18u);
+    shop_attr_rect0(0u, 0u, 20u, 18u);
     DISPLAY_ON;
 }
 
@@ -113,21 +146,9 @@ static void shop_draw_money(UINT8 y) BANKED {
 }
 
 static const char *shop_item_name(UINT8 item_id) BANKED {
-    switch (item_id) {
-        case ITEM_POTION: return "ポーション";
-        case ITEM_MANA_HERB: return "まほう草";
-        case ITEM_ANTIDOTE: return "どくけし";
-        case ITEM_IRON_SWORD: return "鉄のけん";
-        case ITEM_LEATHER_ARMOR: return "かわよろい";
-        case ITEM_DEBUG_ESCAPE: return "にげあしリング";
-        case ITEM_HIGH_POTION: return "ハイポーション";
-        case ITEM_MANA_BOTTLE: return "まほうびん";
-        case ITEM_REVIVE_STONE: return "ふっかつ石";
-        case ITEM_SILVER_SWORD: return "銀のけん";
-        case ITEM_STEEL_ARMOR: return "はがねよろい";
-        case ITEM_POWER_RING: return "ちからのゆびわ";
-        default: return "?";
-    }
+    /* rpg276: share the item/equipment dictionary with inventory/equipment so
+     * shop names do not duplicate message ROM and use the same cached glyphs. */
+    return menu_dict_item_name(item_id);
 }
 
 static void shop_draw_cursor(UINT8 cursor, UINT8 count) BANKED {
@@ -143,6 +164,49 @@ static void shop_update_cursor(UINT8 old_cursor, UINT8 cursor) BANKED {
     jp_put_bkg_text(1u, (UINT8)(4u + cursor), ">");
 }
 
+
+#define SHOP_REPEAT_DELAY 12u
+#define SHOP_REPEAT_RATE   4u
+
+static UINT8 shop_wait_keys_repeat(UINT8 mask) BANKED {
+    static UINT8 last_keys;
+    static UINT8 repeat_count;
+    UINT8 keys;
+    UINT8 pressed;
+    UINT8 dirs;
+
+    while (1) {
+        keys = (UINT8)(joypad() & mask);
+        pressed = (UINT8)(keys & (UINT8)~last_keys);
+        if (pressed & (UINT8)(J_A | J_B | J_START)) {
+            last_keys = keys;
+            repeat_count = 0u;
+            return (UINT8)(pressed & (UINT8)(J_A | J_B | J_START));
+        }
+
+        dirs = (UINT8)(keys & (UINT8)(J_UP | J_DOWN | J_LEFT | J_RIGHT));
+        if (dirs != 0u) {
+            if (dirs != (UINT8)(last_keys & (UINT8)(J_UP | J_DOWN | J_LEFT | J_RIGHT))) {
+                last_keys = keys;
+                repeat_count = 0u;
+                return dirs;
+            }
+            if (repeat_count < SHOP_REPEAT_DELAY) {
+                repeat_count++;
+            } else {
+                repeat_count = (UINT8)(SHOP_REPEAT_DELAY - SHOP_REPEAT_RATE);
+                last_keys = keys;
+                return dirs;
+            }
+        } else {
+            repeat_count = 0u;
+        }
+
+        last_keys = keys;
+        audio_wait_vbl();
+    }
+}
+
 static void shop_draw_list(UINT8 kind, UINT8 cursor) BANKED {
     const UINT8 *ids;
     const UINT8 *prices;
@@ -154,7 +218,7 @@ static void shop_draw_list(UINT8 kind, UINT8 cursor) BANKED {
     else { ids = (kind == SHOP_KIND_ITEM) ? item_shop_ids : equip_shop_ids; prices = (kind == SHOP_KIND_ITEM) ? item_shop_prices : equip_shop_prices; }
 
     shop_clear();
-    jp_put_bkg_text(1u, 1u, (kind == SHOP_KIND_ITEM || kind == SHOP_KIND_ITEM_STRONG) ? "どうぐや" : "ぶぐや");
+    jp_put_bkg_text(1u, 1u, (kind == SHOP_KIND_ITEM || kind == SHOP_KIND_ITEM_STRONG) ? menu_dict_message(MENU_DICT_MSG_SHOP_ITEM) : menu_dict_message(MENU_DICT_MSG_SHOP_WEAPON));
     shop_draw_money(2u);
 
     for (i = 0u; i < SHOP_ITEM_COUNT; i++) {
@@ -164,8 +228,9 @@ static void shop_draw_list(UINT8 kind, UINT8 cursor) BANKED {
         jp_put_bkg_text(14u, (UINT8)(4u + i), buf);
         jp_put_bkg_text(17u, (UINT8)(4u + i), "G");
     }
-    jp_put_bkg_text(1u, 16u, "A かう  B やめる");
+    jp_put_bkg_text(1u, 16u, menu_dict_message(MENU_DICT_MSG_SHOP_HELP));
     shop_draw_cursor(cursor, SHOP_ITEM_COUNT);
+    DISPLAY_ON;
 }
 
 static void shop_buy_loop(UINT8 kind) BANKED {
@@ -182,8 +247,7 @@ static void shop_buy_loop(UINT8 kind) BANKED {
 
     shop_draw_list(kind, cursor);
     while (1) {
-        keys = audio_waitpad(J_UP | J_DOWN | J_A | J_B | J_START);
-        audio_waitpadup();
+        keys = shop_wait_keys_repeat(J_UP | J_DOWN | J_A | J_B | J_START);
 
         if (keys & J_UP) {
             old_cursor = cursor;
@@ -201,9 +265,9 @@ static void shop_buy_loop(UINT8 kind) BANKED {
             jp_bkg_clear_area(1u, 13u, 18u, 2u);
             if (inventory_spend_money(prices[cursor])) {
                 inventory_add(ids[cursor], 1u);
-                jp_put_bkg_text(1u, 13u, "かった！");
+                jp_put_bkg_text(1u, 13u, menu_dict_message(MENU_DICT_MSG_SHOP_BOUGHT));
             } else {
-                jp_put_bkg_text(1u, 13u, "Gが たりない");
+                jp_put_bkg_text(1u, 13u, menu_dict_message(MENU_DICT_MSG_NO_MONEY));
             }
             shop_draw_money(2u);
         }
@@ -214,10 +278,10 @@ static void shop_inn_loop(void) BANKED {
     UINT8 keys;
 
     shop_clear();
-    jp_put_bkg_text(1u, 1u, "やどや");
+    jp_put_bkg_text(1u, 1u, menu_dict_message(MENU_DICT_MSG_INN_TITLE));
     shop_draw_money(2u);
-    jp_put_bkg_text(2u, 5u, "10Gで とまりますか");
-    jp_put_bkg_text(1u, 16u, "A とまる  B やめる");
+    jp_put_bkg_text(2u, 5u, menu_dict_message(MENU_DICT_MSG_INN_ASK));
+    jp_put_bkg_text(1u, 16u, menu_dict_message(MENU_DICT_MSG_INN_HELP));
 
     keys = audio_waitpad(J_A | J_B | J_START);
     audio_waitpadup();
@@ -225,9 +289,9 @@ static void shop_inn_loop(void) BANKED {
         jp_bkg_clear_area(1u, 12u, 18u, 2u);
         if (inventory_spend_money(10u)) {
             party_heal_all_active();
-            jp_put_bkg_text(1u, 12u, "みんな かいふくした");
+            jp_put_bkg_text(1u, 12u, menu_dict_message(MENU_DICT_MSG_INN_HEALED));
         } else {
-            jp_put_bkg_text(1u, 12u, "Gが たりない");
+            jp_put_bkg_text(1u, 12u, menu_dict_message(MENU_DICT_MSG_NO_MONEY));
         }
         shop_draw_money(2u);
         audio_waitpad(J_A | J_B | J_START);

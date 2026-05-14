@@ -1,0 +1,21 @@
+RPG263 TRUE CGB BANK0 TRIM2 NOTE
+
+Purpose:
+- Resolve the remaining tiny Bank 0 overflow seen with true CGB header (-Wm-yC):
+  write 0x3fa6 -> 0x4001 / Possible overflow from Bank 0 into Bank 1.
+
+Changes:
+- Kept true CGB output:
+  - override OUT := rpg263_backbuffer_banked_gbc.gbc
+  - LINK_FLAGS includes -Wm-yC
+- Removed battle UI wrapper functions from Bank 0 and replaced them with macros:
+  - draw_bkg_box(...)
+  - battle_bkg_clear_area(...)
+  - battle_put_bkg_text(...)
+- Removed the now-unused hide_battle_enemy_sprites() function and its calls.
+  Battle enemies are already BG-rendered in the current backbuffer path, and full sprite hiding remains handled by hide_all_sprites_safe().
+- Kept CGB palette initialization and VRAM bank 1 BG attribute map color assignment in the banked field renderer.
+
+Expected result:
+- Bank 0 should be smaller by more than the 2 bytes needed to clear the previous overflow.
+- Build should keep .gbc output and -Wm-yC true CGB header.

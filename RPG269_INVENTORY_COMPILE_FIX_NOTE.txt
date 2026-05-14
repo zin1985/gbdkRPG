@@ -1,0 +1,7 @@
+RPG269 inventory compile fix
+
+- Restored full inventory.c body after rpg268 slide patch truncation.
+- Kept reverse scroll for previous page.
+- Kept no-DISPLAY_OFF finalization after page slide by adding inventory_draw_full_screen_direct().
+- Kept menu slide / cgb_fx / equip_runtime changes from rpg268 zip.
+- inventory.rel remains force-recompiled by Makefile.

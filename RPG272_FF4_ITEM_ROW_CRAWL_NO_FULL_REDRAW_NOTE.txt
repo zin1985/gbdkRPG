@@ -1,0 +1,49 @@
+RPG272 FF4-style item row crawl, no full UI redraw
+=================================================
+
+Goal
+----
+Change the item list from the dynamic page/window slide prototype to a quieter
+FF4-style list crawl:
+
+- The menu frame, title, message window and overall UI do not move.
+- Entering the item screen still draws the first screen through the existing
+  backbuffer path for a near-instant initial display.
+- During item-list scrolling, only the item-list rows are updated.
+- The top/bottom row movement reuses cached tile rows and builds only the one
+  newly exposed row (= two item entries).
+- The OBJ cursor remains OBJ-only. Normal cursor movement does not redraw BG.
+
+Implementation summary
+----------------------
+- Added a small WRAM row cache:
+  - g_inventory_row_tiles[11][18]
+  - x=1..18, y=3..13 only
+- On first draw, the 11 visible item rows are cached and committed.
+- When scrolling down one row:
+  - cached row 1..10 shift to row 0..9
+  - only the new bottom row is built
+  - only y=3..13 / x=1..18 are committed to BG
+- When scrolling up one row:
+  - cached row 0..9 shift to row 1..10
+  - only the new top row is built
+  - only y=3..13 / x=1..18 are committed to BG
+- Page counter and ▲/▼ indicators are updated as small fixed UI pieces.
+- Quantity updates invalidate the row cache lazily so later scrolling does not
+  revive stale counts.
+
+What this intentionally does NOT do
+-----------------------------------
+- No whole-window upward/downward slide.
+- No DISPLAY_OFF final reload after scrolling.
+- No full item list clear/redraw for normal one-row scrolling.
+- No risky SVBK additional-WRAM switching yet.
+
+Archived source
+---------------
+The previous dynamic window-slide source is kept in:
+
+SOURCE_ARCHIVE_item_slide_no_final_reload.zip
+
+Use that only as a reference. The active inventory.c now follows the quieter
+FF4-style list crawl approach.

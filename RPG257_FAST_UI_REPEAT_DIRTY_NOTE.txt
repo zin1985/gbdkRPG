@@ -1,0 +1,24 @@
+rpg257_fast_ui_repeat_dirty
+
+Based on rpg256, confirmed equipment UI is OK.
+
+Equipment:
+- D-pad hold repeat added.
+- Popup cursor movement still redraws only popup + comparison detail.
+- Crossing popup pages does not redraw the whole equipment screen.
+- Full redraw remains only for open/close/apply/member/slot changes.
+
+Inventory:
+- Existing cursor-only updates preserved.
+- Full item page redraw now uses DISPLAY_OFF/ON to appear at once.
+
+Shop:
+- Shop list initial render now uses bulk DISPLAY_OFF/ON.
+- D-pad hold repeat added.
+- Cursor movement remains cursor-only.
+
+Status:
+- Full status page draw now uses DISPLAY_OFF/ON to appear at once.
+
+Caution:
+- Header changes may require safe build once.

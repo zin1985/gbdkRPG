@@ -1,0 +1,18 @@
+rpg249_equip_bottom_text_fix
+
+Fix target:
+- Minimal equipment screen opens, but the second row from bottom shows garbage characters like boxes / > / H.
+
+Cause:
+- Bottom hint line used ASCII button labels such as A/B.
+- The current Japanese BG font/tile path can render unsupported ASCII as garbage tiles on this screen.
+
+Changes:
+- Added party_equip_put_bottom_message().
+- Clears bottom message row before writing.
+- Replaced button labels with Japanese-only text:
+  - えらぶ もどる
+  - そうび やめる
+  - そうびしました
+  - できません
+- Keeps rpg248 fast build Makefile target.

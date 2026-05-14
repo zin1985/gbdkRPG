@@ -1,0 +1,25 @@
+rpg256_equip_full_popup_dirty
+
+Based on:
+- rpg255_equip_icons_popup, confirmed OK.
+
+Restored:
+- equipment icons
+- weapon type icon
+- candidate popup window
+- candidate item icons
+- candidate stat comparison:
+  - attack
+  - defense
+  - weight
+  - candidate weapon type for weapons
+- popup page movement with left/right
+- reduced redraw while popup is open:
+  - base screen is not fully redrawn on popup cursor movement
+  - only popup window and candidate detail area are redrawn
+
+Kept safe:
+- equipment UI remains in equip_runtime.c Bank24
+- equipment/party names are still drawn via party_runtime bridge functions
+- no old party_runtime equipment UI
+- no partial cursor-only tile poking from the old rich UI

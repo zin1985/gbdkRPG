@@ -1,0 +1,18 @@
+rpg273 FF4-style item crawl tuning / footer mojibake fix
+
+Changes:
+- Item-list repeat input is slightly faster: repeat delay 12 -> 8, repeat rate 4 -> 2.
+- The item window still does not redraw the whole UI during row crawl.
+- Before creating the one incoming row during scroll, the footer/help line is redrawn once to keep its JP glyphs hot in the shared dynamic font cache.
+- Footer CGB attributes are reset to palette 0 whenever the footer is refreshed.
+- Initial item screen footer draw now uses the same protected path.
+
+Why:
+- The Japanese font system uses a shared dynamic BG tile cache (JP tiles 128-223).
+- Long item lists can introduce enough new glyphs to evict the lower help text glyphs.
+- The tilemap still points to those old tile IDs, so the bottom description/help text gradually turns into unrelated characters.
+- Touching the footer just before the new row is generated prevents the footer glyphs from becoming the oldest eviction target.
+
+Remaining limit:
+- True pixel-smooth scrolling of only the list area would require a raster/LYC split scroll or a dedicated window/list layer design.
+- This build stays with the safer FF4-style 1-row crawl and avoids full UI redraws.
