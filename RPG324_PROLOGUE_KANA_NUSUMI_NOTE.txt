@@ -1,0 +1,13 @@
+RPG324 PROLOGUE KANA NUSUMI NOTE
+
+User request:
+- Replace the unsupported kanji 盗み with hiragana.
+
+Changed:
+- save_runtime.c prologue_line5:
+  残された者は秘術を盗み
+  -> 残された者は秘術をぬすみ
+
+Files changed:
+- save_runtime.c
+- Makefile

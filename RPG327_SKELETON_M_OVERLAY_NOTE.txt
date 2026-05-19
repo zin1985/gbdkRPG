@@ -1,0 +1,21 @@
+RPG327 SKELETON M OVERLAY NOTE
+
+User request:
+- Implement the attached enemy as an M-size monster named スケルトン.
+- Use the "32x32 body + protruding parts as OBJ overlay" method.
+
+Implemented:
+- Added new M-size battle enemy art kind 7: スケルトン.
+- Base body is a 32x32 BG sheet (16 tiles) derived from the reference image.
+- Added a 32x8 top overlay strip as 4x 8x16 OBJ sprites to keep the raised axe / top silhouette without increasing M-size BG usage.
+- Overlay OBJ tiles use tile base 46-53 and OAM 31-34.
+- Battle refresh now redraws the overlay after enemy BG redraw.
+- Added スケルトン to the enemy table and added a ruins encounter (AREA_RUINS, area=4) as an occasional random encounter.
+
+Files changed:
+- sprites.h
+- sprites.c
+- main.c
+- battle_data_bank.c
+- battle_data_runtime.c
+- Makefile

@@ -436,6 +436,248 @@ static UINT8 save_runtime_load_select(SaveSnapshot *out) BANKED {
     }
 }
 
+
+static const char prologue_line0[] = "はるかな地より";
+static const char prologue_line1[] = "魔王はあらわれた。";
+static const char prologue_line2[] = "獣も人も姿を変えられ";
+static const char prologue_line3[] = "古き都は灰となった。";
+static const char prologue_line4[] = "その力の源を知る者なく";
+static const char prologue_line5[] = "残された者は秘術をぬすみ";
+static const char prologue_line6[] = "魔法と呼び闇にあらがう。";
+
+static const char * const prologue_lines[] = {
+    prologue_line0,
+    prologue_line1,
+    prologue_line2,
+    prologue_line3,
+    prologue_line4,
+    prologue_line5,
+    prologue_line6
+};
+#define PROLOGUE_LINE_COUNT 7u
+#define PROLOGUE_LINE_SPACING_ROWS 2u
+
+static void save_cgb_write_bg_palette4(UINT8 pal, UINT16 c0, UINT16 c1, UINT16 c2, UINT16 c3) BANKED {
+    if (_cpu != CGB_TYPE) return;
+    BCPS_REG = (UINT8)(CGB_PAL_AUTOINC | (UINT8)(pal << 3));
+    BCPD_REG = (UINT8)(c0 & 0xFFu); BCPD_REG = (UINT8)(c0 >> 8u);
+    BCPD_REG = (UINT8)(c1 & 0xFFu); BCPD_REG = (UINT8)(c1 >> 8u);
+    BCPD_REG = (UINT8)(c2 & 0xFFu); BCPD_REG = (UINT8)(c2 >> 8u);
+    BCPD_REG = (UINT8)(c3 & 0xFFu); BCPD_REG = (UINT8)(c3 >> 8u);
+}
+
+static void save_prologue_init_palettes(void) BANKED {
+    if (_cpu == CGB_TYPE) {
+        cpu_fast();
+        /* White background, black text.  Palettes 1-3 are progressively
+         * lighter text for the fade-in / fade-out bands.  JP glyph pixels
+         * use color3, so fading is done by changing color3 per BG row.
+         */
+        save_cgb_write_bg_palette4(0u, CGB_RGB5(31,31,28), CGB_RGB5(23,23,21), CGB_RGB5(13,13,12), CGB_RGB5(2,2,2));
+        save_cgb_write_bg_palette4(1u, CGB_RGB5(31,31,28), CGB_RGB5(28,28,26), CGB_RGB5(23,23,21), CGB_RGB5(12,12,11));
+        save_cgb_write_bg_palette4(2u, CGB_RGB5(31,31,28), CGB_RGB5(30,30,28), CGB_RGB5(27,27,25), CGB_RGB5(20,20,18));
+        save_cgb_write_bg_palette4(3u, CGB_RGB5(31,31,28), CGB_RGB5(31,31,28), CGB_RGB5(31,31,28), CGB_RGB5(31,31,28));
+    } else {
+        BGP_REG = 0xE4u;
+    }
+}
+
+static UINT8 save_prologue_pixel_attr(INT16 y) BANKED {
+    /* Longer invisible band at the top/bottom.  The line is already drawn
+     * offscreen, so only the palette changes as it enters/exits the view.
+     */
+    if (y < 32 || y > 111) return 3u;
+    if (y < 48 || y > 95) return 2u;
+    if (y < 64 || y > 79) return 1u;
+    return 0u;
+}
+
+static void save_prologue_wait(UINT8 frames) BANKED {
+    while (frames--) audio_wait_vbl();
+}
+
+static void save_prologue_fill_attr_row(UINT8 attr) BANKED {
+    save_attr_row[0] = attr; save_attr_row[1] = attr; save_attr_row[2] = attr; save_attr_row[3] = attr;
+    save_attr_row[4] = attr; save_attr_row[5] = attr; save_attr_row[6] = attr; save_attr_row[7] = attr;
+    save_attr_row[8] = attr; save_attr_row[9] = attr; save_attr_row[10] = attr; save_attr_row[11] = attr;
+    save_attr_row[12] = attr; save_attr_row[13] = attr; save_attr_row[14] = attr; save_attr_row[15] = attr;
+    save_attr_row[16] = attr; save_attr_row[17] = attr; save_attr_row[18] = attr; save_attr_row[19] = attr;
+}
+
+static void save_prologue_set_attr_row(UINT8 y, UINT8 attr) BANKED {
+    if (_cpu != CGB_TYPE) return;
+    save_prologue_fill_attr_row(attr);
+    VBK_REG = VBK_ATTRIBUTES;
+    set_bkg_tiles(0u, y, 20u, 1u, save_attr_row);
+    VBK_REG = VBK_TILES;
+}
+
+static void save_prologue_clear_row(UINT8 y) BANKED {
+    jp_bkg_clear_area(0u, y, 20u, 1u);
+    if (_cpu == CGB_TYPE) save_prologue_set_attr_row(y, 0u);
+}
+
+#define PROLOGUE_START_ROW 18u
+#define PROLOGUE_START_PX  144u
+
+static UINT8 save_prologue_text_cols(const char *s) BANKED {
+    UINT8 i;
+    UINT8 cols;
+    UINT8 c;
+
+    i = 0u;
+    cols = 0u;
+    while (s[i] != '\0') {
+        c = (UINT8)s[i];
+        if ((c & 0x80u) == 0u) {
+            i++;
+        } else if ((c & 0xE0u) == 0xC0u) {
+            i = (UINT8)(i + 2u);
+        } else if ((c & 0xF0u) == 0xE0u) {
+            i = (UINT8)(i + 3u);
+        } else {
+            i++;
+        }
+        cols++;
+    }
+    return cols;
+}
+
+static UINT8 save_prologue_center_x(const char *s) BANKED {
+    UINT8 cols;
+    cols = save_prologue_text_cols(s);
+    if (cols >= 20u) return 0u;
+    return (UINT8)((20u - cols) >> 1u);
+}
+
+static void save_prologue_draw_all_offscreen(void) BANKED {
+    UINT8 i;
+    UINT8 y;
+
+    jp_bkg_clear_area(0u, 0u, 20u, 32u);
+    if (_cpu == CGB_TYPE) save_cgb_attr_rect0(0u, 0u, 20u, 32u);
+
+    /* Draw the whole prologue once into BG rows that are outside the initial
+     * 20x18 visible area.  From here on, motion is SCY-only, so there is no
+     * left-to-right glyph generation or row jitter while the text is visible.
+     */
+    for (i = 0u; i < PROLOGUE_LINE_COUNT; i++) {
+        y = (UINT8)(PROLOGUE_START_ROW + (UINT8)(i * PROLOGUE_LINE_SPACING_ROWS));
+        jp_put_bkg_text(save_prologue_center_x(prologue_lines[i]), y, prologue_lines[i]);
+        save_prologue_set_attr_row(y, 3u);
+    }
+}
+
+static void save_prologue_update_fade(UINT16 scroll) BANKED {
+    UINT8 i;
+    UINT8 y;
+    UINT8 attr;
+    INT16 y_px;
+
+    if (_cpu != CGB_TYPE) return;
+
+    for (i = 0u; i < PROLOGUE_LINE_COUNT; i++) {
+        y = (UINT8)(PROLOGUE_START_ROW + (UINT8)(i * PROLOGUE_LINE_SPACING_ROWS));
+        y_px = (INT16)((INT16)PROLOGUE_START_PX + (INT16)((UINT16)i * 16u) - (INT16)scroll);
+        attr = save_prologue_pixel_attr(y_px);
+        save_prologue_set_attr_row(y, attr);
+    }
+}
+
+static void save_prologue_draw_skip_cursor(UINT8 cursor) BANKED {
+    jp_put_bkg_text(6u, 11u, (cursor == 0u) ? "▶はい" : " はい");
+    jp_put_bkg_text(12u, 11u, (cursor == 1u) ? "▶いいえ" : " いいえ");
+}
+
+static UINT8 save_prologue_confirm_skip(void) BANKED {
+    UINT8 cursor;
+    UINT8 keys;
+    UINT8 prev;
+    UINT8 new_keys;
+
+    cursor = 1u;
+    move_bkg(0u, 0u);
+    jp_bkg_clear_area(0u, 0u, 20u, 18u);
+    if (_cpu == CGB_TYPE) save_cgb_attr_rect0(0u, 0u, 20u, 18u);
+    prev = joypad();
+    jp_draw_bkg_frame(2u, 6u, 16u, 8u);
+    jp_put_bkg_text(4u, 8u, "スキップしますか？");
+    save_prologue_draw_skip_cursor(cursor);
+
+    while (1) {
+        keys = joypad();
+        new_keys = (UINT8)(keys & (UINT8)(~prev));
+        if (new_keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN)) {
+            cursor ^= 1u;
+            save_prologue_draw_skip_cursor(cursor);
+        } else if (new_keys & J_A) {
+            return (UINT8)(cursor == 0u);
+        } else if (new_keys & (J_B | J_START)) {
+            return 0u;
+        }
+        prev = keys;
+        audio_wait_vbl();
+    }
+}
+
+static void save_runtime_play_prologue(void) BANKED {
+    UINT16 scroll;
+    UINT16 max_scroll;
+    UINT8 keys;
+    UINT8 prev;
+    UINT8 new_keys;
+    UINT8 delay;
+    UINT8 step;
+
+    DISPLAY_OFF;
+    HIDE_WIN;
+    SHOW_BKG;
+    HIDE_SPRITES;
+    move_bkg(0u, 0u);
+    save_prologue_init_palettes();
+    save_prologue_draw_all_offscreen();
+    DISPLAY_ON;
+
+    prev = joypad();
+    scroll = 0u;
+    max_scroll = 248u;
+
+    while (scroll < max_scroll) {
+        move_bkg(0u, (UINT8)scroll);
+        save_prologue_update_fade(scroll);
+
+        keys = joypad();
+        new_keys = (UINT8)(keys & (UINT8)(~prev));
+        if (new_keys & J_START) {
+            if (save_prologue_confirm_skip()) break;
+            /* The confirmation window clears the screen, so rebuild the
+             * prologue view at the current scroll position after returning.
+             */
+            save_prologue_init_palettes();
+            save_prologue_draw_all_offscreen();
+        }
+        prev = keys;
+
+        if (keys & J_A) {
+            step = 3u;
+            delay = 1u;
+        } else {
+            step = 1u;
+            delay = 16u;
+        }
+        save_prologue_wait(delay);
+        scroll = (UINT16)(scroll + step);
+    }
+
+    move_bkg(0u, 0u);
+    save_clear_screen();
+    if (_cpu == CGB_TYPE) {
+        save_cgb_attr_rect0(0u, 0u, 20u, 18u);
+        save_cgb_palette_ready = 0u;
+        save_cgb_init_ui_palette_once();
+    }
+}
+
 UINT8 save_runtime_title_load(SaveSnapshot *out) BANKED {
     UINT8 keys;
     UINT8 has_save;
@@ -465,7 +707,10 @@ UINT8 save_runtime_title_load(SaveSnapshot *out) BANKED {
             jp_put_bkg_text(1u, 16u, "A けってい");
             save_draw_cursor(8u, 2u);
         } else if (keys & (J_A | J_START)) {
-            if (save_cursor == 0u) return SAVE_TITLE_NEW;
+            if (save_cursor == 0u) {
+                save_runtime_play_prologue();
+                return SAVE_TITLE_NEW;
+            }
             if (!has_save) {
                 jp_bkg_clear_area(1u, 13u, 18u, 2u);
                 jp_put_bkg_text(2u, 13u, "セーブが ありません");

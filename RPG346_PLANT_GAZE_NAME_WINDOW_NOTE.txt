@@ -1,0 +1,26 @@
+RPG346 PLANT GAZE + NAME WINDOW NOTE
+
+User request:
+- Create a color-variant monster named プラントゲイズ using enemy_sprite_composite_export 4.
+- Extend the battle enemy-name window by 4 blocks and overlap it with the command window/cursor area.
+
+Implemented:
+- Added new M-size enemy: プラントゲイズ.
+  - enemy_id = 13
+  - sprite_kind = 9
+  - HP 56 / ATK 13 / DEF 6 / AGI 9
+- Added battle_enemy_tiles_plant_gaze[] and battle_enemy_overlay_tiles_plant_gaze[] from enemy_sprite_composite_export 4.
+- Added plant gaze color path using the uploaded palette.
+  - Purple variant colors use BG palette 4 and OBJ palette 2.
+  - Plant eye keeps green overlay via OBJ palette 4, so both variants can coexist.
+- Cave encounter 9 now shows プラントゲイズ + うみぼうず.
+- BATTLE_NAME_LEN increased 18 -> 24 so プラントゲイズ is not truncated.
+- Battle enemy-name window extended from width 9 to width 13, overlapping the command window by 4 tiles.
+
+Files changed:
+- sprites.c
+- cgb_fx_runtime.c
+- battle_data_bank.c
+- battle_data.h
+- main.c
+- Makefile

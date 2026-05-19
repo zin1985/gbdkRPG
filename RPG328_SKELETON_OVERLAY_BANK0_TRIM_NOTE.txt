@@ -1,0 +1,25 @@
+RPG328 SKELETON OVERLAY BANK0 TRIM NOTE
+
+Build log showed Bank 0 overflow after rpg327.
+
+Cause:
+- rpg327 added direct calls from main.c to the new battle_enemy_overlay_* BANKED functions.
+- Those banked calls added a small Bank 0 trampoline/call overhead, enough to overflow.
+
+Fix:
+- Removed direct overlay calls from main.c.
+- Removed battle_enemy_overlay_* declarations from sprites.h.
+- Made the overlay helpers static/internal in sprites.c.
+- Integrated overlay loading into the existing BANKED battle_enemy_bg_load_tiles_for_formation().
+- Integrated overlay drawing into the existing BANKED battle_enemy_bg_draw_all_sized().
+- Also fixed skeleton sprite_kind 7 mapping so it loads battle_enemy_tiles_skeleton instead of falling back to slime/bit art.
+
+Result:
+- Bank 0 should shrink compared to rpg327 while preserving the 32x32 BG + top OBJ overlay skeleton behavior.
+
+Files changed:
+- main.c
+- sprites.h
+- sprites.c
+- battle_data_runtime.c
+- Makefile

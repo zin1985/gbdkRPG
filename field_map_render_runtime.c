@@ -130,13 +130,15 @@ static void cgb_field_init_palettes_once(void) {
     UINT8 i;
     UINT16 c;
 
-    if (cgb_field_palette_ready) return;
-    cgb_field_palette_ready = 1u;
-
-    /* rpg264: CGB-only build. Switch CPU to double speed once,
-     * before heavy menu/list preparation. VRAM bandwidth rules remain,
-     * but JP text decoding and item page building get lighter. */
-    cpu_fast();
+    /* Battle/prologue/menu screens overwrite CGB palettes.  The old "once"
+     * guard kept the field palette from being restored after the first battle,
+     * so redraw the palette every time the field map is rebuilt.  Keep the
+     * CPU speed switch guarded, because that only needs to happen once.
+     */
+    if (cgb_field_palette_ready == 0u) {
+        cgb_field_palette_ready = 1u;
+        cpu_fast();
+    }
 
     BCPS_REG = CGB_PAL_AUTOINC;
     for (i = 0u; i < (UINT8)(8u * 4u); i++) {
@@ -155,6 +157,7 @@ static void cgb_field_init_palettes_once(void) {
 
 static UINT8 cgb_attr_for_tile(UINT8 area, UINT8 tile) {
     if (tile >= MAP_TILE_FOREST_TL && tile <= MAP_TILE_FOREST_BR) return CGB_ATTR_FOREST;
+    if ((area == AREA_FIELD || area == AREA_FIELD_EAST || area == AREA_PORT) && ((tile >= MAP_TILE_DUNGEON_WALL_TL && tile <= MAP_TILE_DUNGEON_WALL_BR) || (tile >= MAP_TILE_CHEST_TL && tile <= MAP_TILE_CHEST_BR))) return CGB_ATTR_TOWN;
     if (tile >= MAP_TILE_CHEST_TL && tile <= MAP_TILE_CHEST_BR) return CGB_ATTR_CHEST;
     if (tile >= MAP_TILE_TOWN_TL && tile <= MAP_TILE_TOWN_BR) return CGB_ATTR_TOWN;
     if (tile >= MAP_TILE_DUNGEON_PIT_TL && tile <= MAP_TILE_DUNGEON_PIT_BR) return CGB_ATTR_WATER;
@@ -252,6 +255,11 @@ static void renderer_select_metatile(UINT8 area, UINT8 kind, UINT8 *tl, UINT8 *t
         *tr = MAP_TILE_DUNGEON_WALL_TR;
         *bl = MAP_TILE_DUNGEON_WALL_BL;
         *br = MAP_TILE_DUNGEON_WALL_BR;
+    } else if (kind == 9u) {
+        *tl = MAP_TILE_CHEST_TL;
+        *tr = MAP_TILE_CHEST_TR;
+        *bl = MAP_TILE_CHEST_BL;
+        *br = MAP_TILE_CHEST_BR;
     } else {
         *tl = MAP_TILE_FLOOR;
         *tr = MAP_TILE_FLOOR;
@@ -311,7 +319,7 @@ void field_map_render_runtime_draw(UINT8 area) BANKED {
     set_banked_bkg_data(MAP_TILE_BASE, MAP_GFX_TILE_COUNT, map_gfx_tiles, BANK(sprite_data_bank));
 
     if (area == AREA_PORT || area == AREA_FIELD || area == AREA_FIELD_EAST) {
-        map_load_port_overlay_tiles(MAP_TILE_DUNGEON_PIT_TL, MAP_TILE_CHEST_TL);
+        map_load_port_overlay_tiles(MAP_TILE_DUNGEON_PIT_TL, MAP_TILE_DUNGEON_WALL_TL, MAP_TILE_CHEST_TL);
         map_load_pot_overlay_tiles(MAP_TILE_FOREST_TL);
     } else if (area == AREA_TOWN || area == AREA_EAST_TOWN) {
         map_load_town_sign_overlay_tiles(MAP_TILE_CHEST_TL, MAP_TILE_DUNGEON_PIT_TL);

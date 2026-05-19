@@ -1,0 +1,15 @@
+RPG307 MIMIC BANK0 TRIM NOTE
+
+Problem:
+- rpg306 built far enough to link, but the danger check failed with Possible overflow from Bank 0 into Bank 1.
+- The mimic implementation added duplicate special-battle setup code in main.c and an extra NONBANKED battle_data_load_mimic() bridge, increasing Bank 0.
+
+Fix:
+- Removed the extra NONBANKED battle_data_load_mimic() and battle_data_load_mimic_bank() bridge path.
+- Added a mimic encounter row to encounter_table instead.
+- Reused the existing NONBANKED battle_data_load_random_area() with a special internal area id 12 to load the mimic encounter.
+- Added begin_preloaded_special_battle() in main.c and used it for both cave boss and mimic chest battles, removing duplicated setup code.
+
+Expected result:
+- Same gameplay behavior as rpg306: field chest at (11,14) starts a ミミック battle, then becomes empty after victory.
+- Lower Bank 0 pressure than rpg306.

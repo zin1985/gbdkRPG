@@ -1,0 +1,31 @@
+RPG313 MIMIC PALETTE MATCH REF NOTE
+
+User request:
+- Analyze the reference image and bring the mimic colors closer.
+- Arms should be dark green.
+- The mimic chest rim should be bright yellow.
+- The darker parts of the mimic chest should be red.
+- The tongue should also be red.
+
+What changed:
+- Refined palette 1 to a darker green set for the mimic arms and green loot.
+- Refined palette 2 (mimic) to use bright yellow highlights with red and dark-red tones for the chest and tongue.
+- Adjusted the mimic per-tile attribute map so the side and lower limbs use the green palette, while central chest/tongue tiles use the mimic yellow/red palette.
+- Kept the lower-right colorful treasure accents: blue, green, yellow.
+
+New palette 1 (green arms):
+- CGB_RGB5(31,31,28)
+- CGB_RGB5(19,24,8)
+- CGB_RGB5(9,18,5)
+- CGB_RGB5(2,8,2)
+
+New palette 2 (mimic chest/tongue):
+- CGB_RGB5(31,31,28)
+- CGB_RGB5(30,25,8)
+- CGB_RGB5(22,7,6)
+- CGB_RGB5(9,2,2)
+
+Files changed:
+- cgb_fx_runtime.c
+- sprites.c
+- Makefile

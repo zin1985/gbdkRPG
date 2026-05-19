@@ -1,0 +1,17 @@
+RPG305 BOTTOM RIGHT RUINS PATH NOTE
+
+User request:
+- Asked whether the ruins where ベビー appears are at the lower-right, and requested making that lower-right place reachable too.
+
+What changed:
+- The existing upper-left ruins entrance at (1,2) remains a ruins entrance.
+- The lower-right field marker at (14,14) is now also mapped to MAP_EVENT_RUINS, so entering it sends the player to the ruins area where ベビー encounters are active.
+- Opened the blocked bridge tile at (9,14) in field_west_complex_collision16_map.
+- Changed the matching object tile at (9,14) from sea (kind 6) to floor (kind 0), visually connecting the ITIL tower path to the lower-right marker.
+
+Result:
+- The lower-right ruins marker is reachable from the newly opened lower path.
+- ベビー can be encountered by entering the ruins from the lower-right marker as well.
+
+Note:
+- This reuses the lower-right marker that previously behaved like the port-town entrance. If a separate port entrance is still needed later, add a new marker or relocate the port event.

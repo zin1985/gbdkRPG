@@ -93,5 +93,6 @@ void battle_status_ui_runtime_draw_party_status_box(void) BANKED {
 
     status_draw_member(0u, 1u);
     status_draw_member(1u, 7u);
-    status_draw_member(2u, 14u);
+    /* rpg295: shift the third block one tile left for a cleaner top box. */
+    status_draw_member(2u, 13u);
 }

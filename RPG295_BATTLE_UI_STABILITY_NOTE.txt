@@ -1,0 +1,18 @@
+rpg295 battle UI fixes
+
+1) Top party icons
+- battle_place_party_icons() now forces SPRITES_8x16 before placing the icons.
+- Fix target: the upper party mini-sprites showing only their top half.
+
+2) Top status layout
+- The まほう block in battle_status_ui_runtime_draw_party_status_box() moved
+  left by one tile (x=14 -> x=13).
+
+3) Field player sprite leakage
+- battle_hide_window_and_reset_scroll() now explicitly hides the field-player
+  OBJ slots (PLAYER_SPRITE_BASE + 0..3) whenever battle restores its screen.
+
+4) Top status text changing after battle item selection
+- battle_update_dirty() now redraws the top status box and party icons on every
+  battle UI refresh so shared JP glyph-cache churn from lower message/item text
+  does not leave the top names/labels corrupted.

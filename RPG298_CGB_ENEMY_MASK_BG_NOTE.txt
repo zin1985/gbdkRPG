@@ -1,0 +1,17 @@
+RPG298 CGB ENEMY MASK BG NOTE
+
+Changes:
+- Golem L (144x40) drawing switched from solid 18x5 rectangle placement to masked/sparse tile placement.
+- For each of the 90 golem BG tiles, blank tiles are detected (all 16 bytes zero). Blank tiles now write the normal blank frame tile and default BG attribute instead of the enemy tile/palette.
+- Non-blank tiles keep the golem enemy palette attribute.
+- This removes the visible yellow rectangular background and gives a transparency-like mask effect.
+- Golem position stays at the raised location from RPG297.
+
+Palette change:
+- In cgb_fx_runtime.c, the first color (color 0) of enemy-oriented BG palettes 3, 5, 6, and 7 was changed to the same paper-like background color as palette 0.
+- This prevents the enemy palettes from tinting transparent/background pixels.
+
+Expected effect:
+- Golem body is colored, but surrounding empty area is not tinted yellow.
+- Text drawn around the enemy area should no longer look like it is inside a yellow sprite rectangle.
+- Warmachine/other enemy transparent pixels should also blend with the normal background better.

@@ -1,0 +1,23 @@
+RPG350 FIELD CHEST PLANT PAIR NOTE
+
+User request:
+- Make the field chest spawn a pair: プラントアイ + プラントゲイズ.
+
+Confirmed / implemented:
+- Field event at west field coordinate (3,8) remains MAP_EVENT_PLANT_EYE_CHEST.
+- That event calls battle_data_load_random_area(0u, 7u, ...).
+- battle_data_runtime.c maps area 7..10 to encounter_id = 8 + (seed % 2).
+- seed 0 selects encounter_id 8.
+- battle_data_bank.c encounter 8 is:
+    {2u, {11u, 13u, 0u, 0u, 0u, 0u}}
+  which means:
+    enemy_id 11 = プラントアイ
+    enemy_id 13 = プラントゲイズ
+
+Important:
+- This keeps the debug chest repeatable.
+- No extra Bank 0 branch was added.
+
+Changed files:
+- main.c: added explicit comment documenting the chest pairing.
+- Makefile: output name updated.

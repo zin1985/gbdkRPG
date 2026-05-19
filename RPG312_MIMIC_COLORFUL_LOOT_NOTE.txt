@@ -1,0 +1,19 @@
+RPG312 MIMIC COLORFUL LOOT NOTE
+
+User request:
+- Based on the reference image, make the scattered lower-right loot on the mimic colorful: red, blue, green, yellow.
+
+What changed:
+- Added special M-size draw handling for sprite_kind 6 (mimic) in sprites.c.
+- Instead of filling the entire 4x4 enemy area with one palette, mimic now writes a per-tile attribute map.
+- Most tiles still use the mimic body/chest palette.
+- The lower-right 2x2 tiles are recolored to create a colorful treasure area:
+  - row2 col2: mimic red/brown jewel tone
+  - row2 col3: blue jewel (palette 3)
+  - row3 col2: green jewel (palette 1)
+  - row3 col3: yellow coin/gold (palette 6)
+- No palette definitions were changed in this step; this only changes which existing GBC palettes are used on the mimic's lower-right tiles.
+
+Files changed:
+- sprites.c
+- Makefile

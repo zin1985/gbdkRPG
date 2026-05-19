@@ -1,0 +1,18 @@
+RPG321 PROLOGUE SMOOTHER FAST A NOTE
+
+User request:
+- The mood is good, but the prologue flickers.
+- Make the scroll smoother.
+- Make A-button speed-up faster.
+
+What changed:
+- save_runtime.c prologue rendering was changed to avoid redrawing the whole visible BG area every pixel.
+- Text rows are now redrawn only when the tile-row position changes; per-frame 1-pixel movement is handled by move_bkg()/SCY.
+- Instead of clearing all 20 visible rows every frame, only the old text rows are cleared and the new text rows are drawn on tile-boundary updates.
+- Normal scroll remains smooth and slow: 1 px step with 3-frame wait.
+- Holding A now advances faster: 2 px step with 1-frame wait.
+- Returning from the START skip confirmation now rebuilds the prologue view cleanly at the current scroll position.
+
+Files changed:
+- save_runtime.c
+- Makefile

@@ -1,0 +1,18 @@
+RPG331 REMOVE RANDOM WRAPPER NOTE
+
+Build issue:
+- rpg330 still overflowed Bank 0 by a tiny amount: 0x3ffe -> 0x400a.
+
+Fix:
+- Removed the NONBANKED battle_data_load_random() wrapper from battle_data_runtime.c.
+- Replaced its only call site in main.c with battle_data_load_random_area(seed, 0u, ...).
+- Removed the declaration from battle_data.h.
+
+Rationale:
+- This saves one HOME/NONBANKED function body. The one call site gains only an extra constant argument, so the net Bank 0 usage should drop enough to clear the 11-byte overflow.
+
+Files changed:
+- battle_data.h
+- battle_data_runtime.c
+- main.c
+- Makefile

@@ -1,0 +1,24 @@
+RPG349 EXPORT3 EYE EXPORT4 GAZE TOOL NOTE
+
+User request:
+- Check whether the PHP tool supports per-enemy BG/OBJ palettes.
+- Apply enemy_sprite_composite_export 3.txt to プラントアイ.
+- Apply enemy_sprite_composite_export 4.txt to プラントゲイズ.
+
+Applied:
+- export 3 -> battle_enemy_tiles_plant_eye / battle_enemy_overlay_tiles_plant_eye
+- export 4 -> battle_enemy_tiles_plant_gaze / battle_enemy_overlay_tiles_plant_gaze
+- BG palette slots are kept separate for simultaneous display:
+  - プラントアイ: BG 1 / 3 / 5
+  - プラントゲイズ: BG 4 / 6 / 7
+- OBJ palette slots are kept separate for simultaneous display:
+  - プラントアイ: OBJ 4 leaf / OBJ 3 root
+  - プラントゲイズ: OBJ 2 leaf / OBJ 5 root
+- enemy_sprite_composite_editor.php now recognizes plant_gaze arrays and reads plant_eye / plant_gaze const attr arrays.
+- Default overlay palette suggestions now match the per-kind palette allocation.
+
+Files changed:
+- sprites.c
+- cgb_fx_runtime.c
+- tools/enemy_sprite_composite_editor.php
+- Makefile

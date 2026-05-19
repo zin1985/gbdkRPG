@@ -1,0 +1,20 @@
+RPG353 SPECIAL BATTLE RECURSION FIX NOTE
+
+Issue:
+- RPG352 froze when starting the plant pair chest battle.
+
+Cause:
+- battle_copy_all_enemies_from_data() accidentally called itself recursively instead of looping over enemies.
+- This caused infinite recursion / stack overflow at battle start.
+
+Fix:
+- battle_copy_all_enemies_from_data() now loops over battle_enemy_count and calls battle_copy_enemy_from_data(i).
+- This preserves the intended all-enemy copy behavior for special battles.
+
+Expected result:
+- Field chest battle should start without freezing.
+- The preloaded pair encounter should be copied into both enemy slots.
+
+Files changed:
+- main.c
+- Makefile

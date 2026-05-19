@@ -86,7 +86,7 @@ extern const unsigned char battle_enemy_tiles[48u * 16u];
 #define BATTLE_ENEMY_BG_H 4u
 #define BATTLE_ENEMY_BG_Y 6u
 
-void map_load_port_overlay_tiles(UINT8 sea_first_tile, UINT8 bridge_first_tile) BANKED;
+void map_load_port_overlay_tiles(UINT8 sea_first_tile, UINT8 vbridge_first_tile, UINT8 hbridge_first_tile) BANKED;
 void map_load_pot_overlay_tiles(UINT8 pot_first_tile) BANKED;
 void map_load_town_sign_overlay_tiles(UINT8 item_first_tile, UINT8 sword_first_tile) BANKED;
 void map_load_town_inn_sign_overlay_tiles(UINT8 inn_first_tile) BANKED;

@@ -1,0 +1,19 @@
+RPG332 SKELETON NATIVE OVERLAY PALETTE NOTE
+
+User request:
+- Fix the broken skeleton placement and wrong colors.
+- Do not scale the source image.
+- Convert it directly to sprite art, using OBJ only for the protruding overflow.
+- Make a palette closer to the reference.
+
+Implemented:
+- Rebuilt the skeleton base art from the original 36x35 source without scaling.
+- Base BG uses a direct 32x32 crop from source coordinates x=0..31, y=3..34.
+- Overflow pixels are handled with six 8x16 OBJ overlays at source-native positions:
+  (0,0), (8,0), (16,0), (24,0), (32,0), (32,16).
+- Skeleton base now uses the brown/gold enemy palette (same family as beast) to better match the reference colors.
+- Overlay positioning was rewritten so the pieces align with the base image instead of being drawn in a straight row.
+
+Files changed:
+- sprites.c
+- Makefile

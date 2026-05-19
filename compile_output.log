@@ -1,4 +1,6 @@
 main.c:
+main.c:1563: warning 85: in function init_battle_from_enemy unreferenced local variable : 'i'
+main.c:1619: warning 85: in function init_random_battle_from_field unreferenced local variable : 'i'
 audio.c:
 sprites.c:
 dialogue.c:

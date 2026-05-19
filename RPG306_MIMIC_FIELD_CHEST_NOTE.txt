@@ -1,0 +1,28 @@
+RPG306 MIMIC FIELD CHEST NOTE
+
+User request:
+- Add the attached image as an M-size enemy sprite named ミミック with its own color palette.
+- Place a chest on the field map so that inspecting it starts a battle.
+
+Implemented:
+- Added ミミック as a new M-size enemy in battle_data_bank.c (enemy id 9, sprite_kind 6).
+- Added a dedicated 32x32 mimic sprite array in sprites.c and special handling for sprite_kind 6.
+- Assigned ミミック to CGB palette 2 and updated that palette in cgb_fx_runtime.c to match the reference art.
+- Added battle_data_load_mimic() and battle_data_load_mimic_bank() for a dedicated mimic battle.
+- Added MAP_EVENT_MIMIC_CHEST and FLAG_MIMIC_CHEST.
+- Placed a field chest at tile (11,14) on the west field, near the lower-right ruins route.
+- Interacting with that chest starts a battle with ミミック; after winning once, the chest becomes empty.
+- Since generic chest interaction used object kind 4 first, try_interact() was adjusted to check MAP_EVENT_MIMIC_CHEST before normal chest handling.
+
+Files changed:
+- sprites.c
+- cgb_fx_runtime.c
+- battle_data_bank.c
+- battle_data.h
+- battle_data_runtime.c
+- field_feature_runtime.h
+- field_feature_runtime.c
+- main.c
+- map_data_bank.c
+- Makefile
+- mimic_32x32_preview.png

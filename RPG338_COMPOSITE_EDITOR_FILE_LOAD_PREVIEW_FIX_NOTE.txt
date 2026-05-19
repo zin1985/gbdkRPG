@@ -1,0 +1,20 @@
+RPG338 COMPOSITE EDITOR FILE LOAD PREVIEW FIX NOTE
+
+Issue:
+- In tools/enemy_sprite_composite_editor.php, after loading sprites.c / cgb_fx_runtime.c and selecting a dropdown item, preview could stay blank or show the previous monster.
+- Cause: base_pixel_json / overlay_pixel_json from the previous browser-side preview was posted during file-load / target-change operations and overwrote the newly decoded C array data.
+
+Fix:
+- Added $isLoadAction and ignore pixel edit JSON during load_sprites / load_cgb.
+- JavaScript submit handler now clears pixel JSON when pressing the file-load buttons.
+- Target-change behavior still clears previous edit cache.
+- Added decode status text showing base byte count, overlay byte count, and overlay count.
+- Added warnings when selected arrays decode to 0 bytes.
+- Added fallback default source paths for common deployment layouts:
+  - root/sprites.c
+  - root/src/sprites.c
+  - root/gbdk/_work/current_project/sprites.c
+  - root/gbdk/_work/current_project/src/sprites.c
+
+Main file changed:
+- tools/enemy_sprite_composite_editor.php

@@ -1,0 +1,21 @@
+RPG318 PIXEL EDITOR SML NOTE
+
+User request:
+- Add a 4-color dot/pixel editing function for sprites.
+- Make palette changes by tile dropdown clear in preview behavior.
+- Make all button text black because current button text was hard to see.
+
+Implemented:
+- Updated tools/mimic_palette_editor.php.
+- Added an editable pixel grid for S/M/L sprites.
+- Users can choose color index 0..3 and click individual pixels to edit GB 2bpp dots.
+- Edited pixel data is posted as JSON and converted back into GB 2bpp bytes on submit.
+- Added output textarea for the edited sprite C array.
+- Tile palette dropdowns now update the on-screen preview immediately with JavaScript.
+- Output C code is regenerated when pressing the preview/generate button.
+- Button text color is forced to black, including link-like buttons and file selector button text where supported.
+- Existing S/M/L support remains: S 16x16, M 32x32, L96 96x32, L144 144x40.
+
+Files changed:
+- tools/mimic_palette_editor.php
+- Makefile

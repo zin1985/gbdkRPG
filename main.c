@@ -352,6 +352,7 @@ static INT8 find_talkable_actor(void);
 static void warp_player_to_tile(UINT8 tx, UINT8 ty, Direction dir);
 static void check_step_event(void);
 static void inspect_map_event(UINT8 event_id);
+static void begin_preloaded_special_battle(void);
 static void try_interact(void);
 
 static void start_move(Direction dir);
@@ -380,6 +381,7 @@ static void battle_reset_bg_origin(void);
 static void battle_hide_window_and_reset_scroll(void);
 static void hide_all_sprites_safe(void);
 static void battle_copy_enemy_from_data(UINT8 slot);
+static void battle_copy_all_enemies_from_data(void);
 static UINT8 battle_select_first_alive(void);
 static UINT8 battle_ensure_selected_alive(void);
 static void draw_battle_menu(void);
@@ -881,6 +883,22 @@ static void check_step_event(void) {
     }
 }
 
+static void begin_preloaded_special_battle(void) {
+    game_mode = MODE_BATTLE;
+    player_moving = 0u;
+    current_enemy_index = 0xFFu;
+    if (battle_enemy_count == 0u) battle_enemy_count = 1u;
+    if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
+    battle_copy_all_enemies_from_data();
+    battle_prepare_enemy_rank();
+    battle_target_index = 0u;
+    battle_select_first_alive();
+    menu_index = 0u;
+    battle_guard_flags = 0u;
+    battle_state = BSTATE_PLAYER;
+    enter_battle_screen();
+}
+
 static void inspect_map_event(UINT8 event_id) {
     if (map_event_runtime_apply_transition(event_id, current_area)) {
         return;
@@ -896,24 +914,28 @@ static void inspect_map_event(UINT8 event_id) {
             field_map_render_runtime_draw(current_area);
             draw_all_actors();
         }
+    } else if (event_id == MAP_EVENT_MIMIC_CHEST) {
+        if (check_event_flag(FLAG_MIMIC_CHEST)) {
+            message_show(MSG_TREASURE_EMPTY);
+        } else {
+            set_event_flag(FLAG_MIMIC_CHEST);
+            battle_data_load_random_area(0u, 12u, battle_enemy_data_slots, &battle_enemy_count);
+            begin_preloaded_special_battle();
+        }
+    } else if (event_id == MAP_EVENT_PLANT_EYE_CHEST) {
+        /* debug field chest: use special area 14 to force encounter 8
+         * = プラントアイ + プラントゲイズ.
+         * Do not rely on seed/area random selection here.
+         */
+        battle_data_load_random_area(0u, 14u, battle_enemy_data_slots, &battle_enemy_count);
+        begin_preloaded_special_battle();
     } else if (event_id == MAP_EVENT_CAVE_BOSS) {
         if (check_event_flag(FLAG_CAVE_BOSS)) {
             message_show(MSG_TREASURE_EMPTY);
         } else {
             cave_boss_battle_pending = 1u;
-            game_mode = MODE_BATTLE;
-            player_moving = 0u;
-            current_enemy_index = 0xFFu;
-            battle_data_load_boss(battle_enemy_data_slots, &battle_enemy_count);
-            if (battle_enemy_count == 0u) battle_enemy_count = 1u;
-            battle_copy_enemy_from_data(0u);
-            battle_prepare_enemy_rank();
-            battle_target_index = 0u;
-            battle_select_first_alive();
-            menu_index = 0u;
-            battle_guard_flags = 0u;
-            battle_state = BSTATE_PLAYER;
-            enter_battle_screen();
+            battle_data_load_random_area(0u, 13u, battle_enemy_data_slots, &battle_enemy_count);
+            begin_preloaded_special_battle();
         }
     } else if (event_id == MAP_EVENT_RUIN_LORE) {
         message_show(MSG_RUIN_LORE);
@@ -972,12 +994,15 @@ static void try_interact(void) {
         case DIR_RIGHT: tx++; break;
         default: break;
     }
+    event_id = map_event_at_tile(tx, ty);
+    if (event_id != MAP_EVENT_NONE) {
+        inspect_map_event(event_id);
+        return;
+    }
     if (current_object16_at(tx, ty) == 4u) {
         inspect_map_event(MAP_EVENT_CHEST);
         return;
     }
-    event_id = map_event_at_tile(tx, ty);
-    if (event_id != MAP_EVENT_NONE) inspect_map_event(event_id);
 }
 
 static void start_move(Direction dir) {
@@ -1151,7 +1176,7 @@ static UINT16 calc_attack_damage(const Fighter *attacker, const Fighter *defende
 }
 
 
-static char battle_enemy_name_lines[3][20];
+static char battle_enemy_name_lines[3][24];
 
 static void copy_enemy_line(UINT8 line, const char *name, UINT8 count) {
     UINT8 i;
@@ -1159,12 +1184,12 @@ static void copy_enemy_line(UINT8 line, const char *name, UINT8 count) {
 
     if (line >= 3u) return;
     i = 0u;
-    max = (count >= 2u) ? 16u : 19u;
+    max = (count >= 2u) ? 20u : 23u;
     while (name != 0 && name[i] != '\0' && i < max) {
         battle_enemy_name_lines[line][i] = name[i];
         i++;
     }
-    if (count >= 2u && i < 17u) {
+    if (count >= 2u && i < 21u) {
         battle_enemy_name_lines[line][i++] = 'x';
         battle_enemy_name_lines[line][i++] = (char)('0' + count);
     }
@@ -1178,8 +1203,8 @@ static void draw_battle_enemy_names(void) {
     UINT8 count;
     UINT8 used[BATTLE_MAX_ENEMY_COUNT];
 
-    draw_bkg_box(0u, 13u, 9u, 5u);
-    battle_bkg_clear_area(1u, 14u, 7u, 3u);
+    draw_bkg_box(0u, 13u, 13u, 5u);
+    battle_bkg_clear_area(1u, 14u, 11u, 3u);
 
     for (i = 0u; i < BATTLE_MAX_ENEMY_COUNT; i++) used[i] = 0u;
 
@@ -1221,12 +1246,15 @@ static void show_party_icon_16(UINT8 sprite_base, UINT8 tile_base, UINT8 x, UINT
 }
 
 static void battle_place_party_icons(void) {
-    
+    /* rpg295: battle-side menus can temporarily switch OBJ size to 8x8.
+     * Reassert 8x16 before drawing the compact 16x16 party icons so the
+     * lower half does not disappear.
+     */
+    SPRITES_8x16;
     show_party_icon_16(BATTLE_PARTY_ICON0_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 0u),  40u, 16u);
     show_party_icon_16(BATTLE_PARTY_ICON1_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 8u),  88u, 16u);
     show_party_icon_16(BATTLE_PARTY_ICON2_SPRITE, (UINT8)(BATTLE_PARTY_ICON_TILE_BASE + 4u), 136u, 16u);
 }
-
 
 
 
@@ -1245,6 +1273,7 @@ static void battle_refresh_enemy_sprites_compact(UINT8 hide_first) {
 }
 
 
+
 static void battle_copy_enemy_from_data(UINT8 slot) {
     enemy_battles[slot].name = battle_enemy_data_slots[slot].name;
     enemy_battles[slot].max_hp = battle_enemy_data_slots[slot].max_hp;
@@ -1255,9 +1284,14 @@ static void battle_copy_enemy_from_data(UINT8 slot) {
     enemy_battles[slot].heal_power = 0u;
     enemy_battles[slot].agility = battle_enemy_data_slots[slot].agility;
     battle_enemy_sprite_kinds[slot] = battle_enemy_data_slots[slot].sprite_kind;
-    if (battle_enemy_sprite_kinds[slot] > 4u) battle_enemy_sprite_kinds[slot] = 0u;
     battle_enemy_size_kinds[slot] = battle_enemy_data_slots[slot].size_kind;
-    if (battle_enemy_size_kinds[slot] > BATTLE_ENEMY_SIZE_L) battle_enemy_size_kinds[slot] = BATTLE_ENEMY_SIZE_M;
+}
+
+static void battle_copy_all_enemies_from_data(void) {
+    UINT8 i;
+    for (i = 0u; i < battle_enemy_count; i++) {
+        battle_copy_enemy_from_data(i);
+    }
 }
 
 static UINT8 battle_select_first_alive(void) {
@@ -1374,6 +1408,11 @@ static void battle_hide_window_and_reset_scroll(void) {
     HIDE_WIN;
     move_win(JP_WIN_X, 144u);
     battle_reset_bg_origin();
+    /* rpg295: keep field-player OBJ slots hidden while battle owns the screen. */
+    move_sprite(PLAYER_SPRITE_BASE + 0u, 0u, 0u);
+    move_sprite(PLAYER_SPRITE_BASE + 1u, 0u, 0u);
+    move_sprite(PLAYER_SPRITE_BASE + 2u, 0u, 0u);
+    move_sprite(PLAYER_SPRITE_BASE + 3u, 0u, 0u);
     SHOW_BKG;
     SHOW_SPRITES;
 }
@@ -1394,13 +1433,19 @@ static void battle_update_dirty(void) {
     flags = battle_dirty_flags;
     battle_dirty_flags = BATTLE_DIRTY_NONE;
 
-    if (flags & (UINT8)(BATTLE_DIRTY_PARTY_HP | BATTLE_DIRTY_PARTY_MP)) {
+    if (flags != BATTLE_DIRTY_NONE) {
+        /* rpg295: redraw the top party-status box on every visible battle UI
+         * update. The JP glyph cache is shared with lower message/item text,
+         * so refreshing the status box each update keeps names / H / M / HP /
+         * MP labels stable after opening the battle item menu.
+         */
         battle_status_ui_runtime_draw_party_status_box();
         battle_place_party_icons();
     }
     if (flags & BATTLE_DIRTY_ENEMY_OAM) {
         if (battle_message_text == 0 || battle_message_text[0] == '\0') {
             draw_battle_enemy_names();
+            draw_battle_menu();
         }
         battle_refresh_enemy_sprites_compact(1u);
     }
@@ -1502,13 +1547,11 @@ static void init_battle_from_enemy(UINT8 enemy_index) {
     player_battle.agility = player_agility_stat;
 
     
-    battle_data_load_random((UINT8)(enemy_index + 5u), battle_enemy_data_slots, &battle_enemy_count);
+    battle_data_load_random_area((UINT8)(enemy_index + 5u), 0u, battle_enemy_data_slots, &battle_enemy_count);
     if (battle_enemy_count == 0u) battle_enemy_count = 1u;
     if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
 
-    for (i = 0u; i < battle_enemy_count; i++) {
-        battle_copy_enemy_from_data(i);
-    }
+    battle_copy_all_enemies_from_data();
 
     battle_prepare_enemy_rank();
 
@@ -1564,9 +1607,7 @@ static void init_random_battle_from_field(void) {
     if (battle_enemy_count == 0u) battle_enemy_count = 1u;
     if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
 
-    for (i = 0u; i < battle_enemy_count; i++) {
-        battle_copy_enemy_from_data(i);
-    }
+    battle_copy_all_enemies_from_data();
 
     battle_prepare_enemy_rank();
 

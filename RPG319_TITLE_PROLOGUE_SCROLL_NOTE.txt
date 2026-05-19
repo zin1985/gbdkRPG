@@ -1,0 +1,32 @@
+RPG319 TITLE PROLOGUE SCROLL NOTE
+
+User request:
+- When selecting はじめから, play a prologue before starting the game.
+- Text should rise slowly from the bottom, fade in, scroll upward, then fade out and disappear.
+- Holding A speeds up the scroll.
+- START opens a skip prompt: スキップしますか？ はい / いいえ.
+- The prologue should describe the hidden setting only as a vague legend.
+
+Implementation:
+- Added a banked prologue player inside save_runtime.c so Bank 0 impact is minimal.
+- save_runtime_title_load() now calls save_runtime_play_prologue() before returning SAVE_TITLE_NEW.
+- Prologue text is split into 10 short Japanese lines.
+- CGB row attributes use multiple BG palettes to simulate fade-in/fade-out by row: dim at top/bottom and normal near the center.
+- A held during scroll reduces frame delay.
+- START opens a framed confirmation prompt; A confirms, B/START cancels.
+
+Prologue text:
+はるかな地より
+魔王はあらわれた。
+獣も人も姿を変えられ
+古き都は灰となった。
+その力の源を
+知る者はいない。
+残された者は
+奪った秘術を魔法と呼び
+闇の支配に抗う火を
+ひそかに守っている。
+
+Files changed:
+- save_runtime.c
+- Makefile

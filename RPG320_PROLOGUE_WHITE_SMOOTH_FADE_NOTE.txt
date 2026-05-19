@@ -1,0 +1,18 @@
+RPG320 PROLOGUE WHITE SMOOTH FADE NOTE
+
+User feedback:
+- Previous prologue had black background, abrupt row movement, and a white band artifact.
+- Desired: white background, black text, 1-pixel slow upward movement, gradual fade-in and fade-out.
+
+Fix:
+- Reworked prologue palette to white background + black text.
+- Added progressively lighter CGB palettes for fade bands.
+- Changed scrolling from tile-row steps to 1-pixel movement using BG SCY.
+- Text rows are redrawn on BG tile rows, while move_bkg(0, scy) provides sub-tile smooth scrolling.
+- Removed the framed/dark prologue look during the scroll; the scene is now clean white.
+- START skip confirmation now resets BG scroll before showing the prompt.
+- A hold speed-up remains, now using shorter frame delays.
+
+Files changed:
+- save_runtime.c
+- Makefile

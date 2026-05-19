@@ -1,0 +1,17 @@
+Fixes for large Golem L battle sprite:
+
+- Previous version used a 144x56 area and enlarged the source slightly, which caused:
+  1) text/UI overlap
+  2) slight blur
+
+This version changes Golem L to a safer, sharper layout:
+- Draw size: 144x40 (18x5 tiles)
+- Position: x=1, y=BATTLE_ENEMY_BG_Y+2
+- Source image trimmed size: 105x52
+- Final art size in-canvas: 81x40
+- Scaling method: nearest-neighbor
+- Warmachine L remains 96x32
+
+Included previews:
+- golem_l_144x40_preview.png
+- golem_l_144x40_preview_x4.png

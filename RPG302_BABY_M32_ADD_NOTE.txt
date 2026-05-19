@@ -1,0 +1,26 @@
+RPG302 BABY M32 ADD NOTE
+
+User request:
+- Add an M-size monster named "ベビー" using the attached reference sprite.
+- Also construct colors based on the reference image.
+
+What changed:
+- Added a new M-size art kind using sprite_kind 1 (an unused 32x32 slot in battle_enemy_tiles).
+- Inserted a 32x32 Game Boy 2bpp sprite for ベビー, generated from the attached image and fitted to the project's 8x16-compatible M-size tile order.
+- Added a new BG attribute constant BATTLE_ENEMY_ATTR_BABY = 4 and mapped sprite_kind 1 to that palette in battle_enemy_bg_attr_for().
+- Replaced CGB BG palette 4 with a purple / pink palette based on the reference image.
+- Added a new enemy entry named ベビー in battle_data_bank.c with M-size stats.
+- Added two encounter examples: ベビー x1 and ベビー + けもの.
+- Shifted the cave boss enemy id from 8 to 9 and updated battle_data_load_boss_bank() accordingly.
+
+Files changed:
+- sprites.c
+- battle_data_bank.c
+- cgb_fx_runtime.c
+- Makefile
+- baby_32x32_preview.png
+
+Expected result:
+- ベビー is available as a new M-size monster.
+- It renders with a 32x32 octopus-like body based on the attached image.
+- On GBC, it uses a pale-purple / mauve palette close to the reference art.

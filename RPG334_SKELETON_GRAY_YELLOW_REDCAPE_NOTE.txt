@@ -1,0 +1,19 @@
+RPG334 SKELETON GRAY YELLOW REDCAPE NOTE
+
+User request:
+- Keep the corrected skeleton layout.
+- Make the skeleton base coloring gray in dark areas and yellow in bright areas.
+- Add a red cape as overlaid sprite(s).
+
+Implemented:
+- Updated CGB BG palette 7 to a neutral gray ramp for dark skeleton areas.
+- Kept palette 6 as the bright yellow/gold ramp.
+- Added a dedicated colored skeleton BG draw path using a 4x4 per-tile attribute map mixing palette 7 (gray) and palette 6 (yellow).
+- Expanded the skeleton overlay sprite set from 6 to 8 sprites.
+- Added 2 red cape OBJ sprites using OBJ palette 1.
+- Added full OBJ palette restore support (all 8 OBJ palettes), with palette 1 configured as red cape colors.
+
+Files changed:
+- cgb_fx_runtime.c
+- sprites.c
+- Makefile

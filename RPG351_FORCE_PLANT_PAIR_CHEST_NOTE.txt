@@ -1,0 +1,17 @@
+RPG351 FORCE PLANT PAIR CHEST NOTE
+
+Issue:
+- Field debug chest still showed only プラントアイ x1.
+- The previous implementation relied on seed=0 + area=7 selecting encounter 8 through the cave random branch.
+- In practice this was too fragile when encounter indexes changed or an older table was mixed in.
+
+Fix:
+- Added special area id 14 in battle_data_runtime.c.
+- area 14 directly forces encounter_id = 8.
+- Field plant debug chest now calls battle_data_load_random_area(0u, 14u, ...).
+- encounter 8 is the intended pair: プラントアイ + プラントゲイズ.
+
+Files changed:
+- battle_data_runtime.c
+- main.c
+- Makefile

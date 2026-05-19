@@ -1,0 +1,30 @@
+RPG348 ENEMY PER KIND PALETTES NOTE
+
+User request:
+- Enemy characters should have their own OBJ palettes and BG palettes.
+
+Implemented:
+- Added explicit per-enemy palette slot constants for plant-eye variants.
+- プラントアイ now uses its own BG palette group:
+  - leaf/body: BG palette 1
+  - iris/accent: BG palette 3
+  - wood/root: BG palette 5
+  - overlay leaf: OBJ palette 4
+  - overlay root: OBJ palette 3
+- プラントゲイズ now uses separate BG/OBJ palette slots:
+  - leaf/body: BG palette 4
+  - iris/accent: BG palette 7
+  - wood/root: BG palette 6
+  - overlay leaf: OBJ palette 2
+  - overlay root: OBJ palette 5
+- Added per-enemy BG attribute arrays and per-enemy OBJ prop arrays.
+- The plant pair overlay renderer now reads each enemy's OBJ palette table instead of sharing one root palette.
+
+Important note:
+- GB/GBC hardware still has only 8 global BG palettes and 8 global OBJ palettes.
+- This change reserves palette slots per enemy-kind for the plant variants so they can appear side-by-side without sharing OBJ or BG color maps.
+
+Files changed:
+- cgb_fx_runtime.c
+- sprites.c
+- Makefile

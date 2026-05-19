@@ -1,0 +1,12 @@
+Fixes three reported issues.
+1) Battle item menu return changed enemy sprite art:
+   - battle_enemy_bg_load_tiles_for_formation() remaps sprite_kind to runtime slots.
+   - Re-entering battle render after item menu reused the remapped values and could load different enemy art.
+   - main.c now restores original enemy art kinds from battle_enemy_data_slots before reloading enemy tiles.
+2) First next-page scroll in field inventory was heavy:
+   - inventory_precache_next_page() was invalidating row cache after initial draw.
+   - It is now a no-op warm-up hook, preserving the row cache for the first crawl.
+3) If next page had only one item, it did not scroll:
+   - inventory_clamp_page_top() now allows page_top=2 when visible_count=23.
+   - This lets the final odd item row scroll into view.
+Warmachine L-only art selection fix remains preserved.

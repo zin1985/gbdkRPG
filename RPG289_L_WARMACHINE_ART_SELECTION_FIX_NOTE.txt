@@ -1,0 +1,5 @@
+Fixes L-size warmachine art selection.
+- main.c no longer clamps sprite_kind 5 to 0 before L-size art selection.
+- sprites.c now explicitly checks the first L-size slot instead of reusing loop variable i.
+- Result: L-size warmachine encounter (enemy id 5) can load battle_enemy_tiles_warmachine_l.
+- M-size warmachine remains restored to original art.

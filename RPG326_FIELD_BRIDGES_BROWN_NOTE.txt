@@ -1,0 +1,23 @@
+RPG326 FIELD BRIDGES BROWN NOTE
+
+User request:
+- Use the attached horizontal and vertical bridge sprites.
+- Place them on the field sea-road path.
+- Use a brown-toned color palette.
+
+Implemented:
+- Added new field bridge graphics from the provided 16x16 references.
+- Horizontal bridge is loaded into the MAP_TILE_CHEST slot range (25-28) for field/port maps and mapped from object kind 9.
+- Vertical bridge is loaded into the MAP_TILE_DUNGEON_WALL slot range (17-20) for field/port maps and mapped from object kind 8 in those maps.
+- Field CGB attribute logic now colors those bridge tiles with the brown/orange town palette.
+- Placed bridge objects on the west field sea route:
+  - vertical bridge at (8,12) and (8,13)
+  - horizontal bridge on row 14 at x=4..7, 9..10, 12..13
+- Mimic chest remains at (11,14).
+
+Files changed:
+- sprites.h
+- sprites.c
+- field_map_render_runtime.c
+- map_data_bank.c
+- Makefile

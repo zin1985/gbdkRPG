@@ -1,0 +1,7 @@
+Bank0 final reduction after the linker still reported overflow around 0x4014.
+- Removed defensive sprite_kind and size_kind clamping from battle_copy_enemy_from_data().
+- battle_data_bank.c already owns enemy template values, and current values are valid:
+  sprite_kind is 0..5 and size_kind is S/M/L.
+- This removes actual Bank0 code instead of relying on optimizer-sensitive branch simplification.
+- L-size warmachine id 5 remains preserved.
+- Runtime art mapping in sprites.c still avoids mutating original enemy sprite ids.

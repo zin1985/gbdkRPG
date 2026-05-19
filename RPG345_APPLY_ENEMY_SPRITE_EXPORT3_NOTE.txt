@@ -1,0 +1,18 @@
+RPG345 APPLY ENEMY SPRITE EXPORT 3 NOTE
+
+Applied user-uploaded enemy_sprite_composite_export 3.txt to the current RPG source.
+
+Target:
+- battle_enemy_tiles_plant_eye
+- battle_enemy_overlay_tiles_plant_eye
+- cgb_normal_bg_palettes
+- cgb_normal_obj_palettes
+- plant eye tile attrs
+- plant eye overlay OBJ positions and palettes
+
+Files changed:
+- sprites.c
+- cgb_fx_runtime.c
+- Makefile
+
+The original export is included as enemy_sprite_composite_export3_applied.txt.

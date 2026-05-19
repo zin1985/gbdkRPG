@@ -1,0 +1,15 @@
+RPG304 FIELD PATHS TO TOWER NOTE
+
+User request:
+- The sea/blocked terrain made it impossible to reach the lower-left dungeon route and the ITIL tower route comfortably on the west field map.
+- Add paths to the ruins/dungeon side and also to the ITIL tower.
+
+What changed:
+- Edited field_west_complex_collision16_map in map_data_bank.c to open a clear walkable route in the lower field.
+- Opened tile (8,12) and (8,13) so the player can walk straight down toward the ITIL tower from the central field.
+- Opened tiles (4,14) through (7,14) to create a horizontal land path across the former sea barrier toward the ITIL tower.
+- Updated the corresponding field_west_complex_object16_map cells from sea tiles (kind 6) to normal floor (kind 0) where the new road is intended.
+
+Result:
+- ITIL tower at (8,14) is now reachable.
+- The lower-left route is more directly connected instead of being visually blocked by sea.

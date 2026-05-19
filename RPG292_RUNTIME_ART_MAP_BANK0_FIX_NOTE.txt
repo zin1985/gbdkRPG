@@ -1,0 +1,6 @@
+Bank0 fix and enemy art stability fix.
+- Removed the Bank0 loop added to player_battle_item().
+- sprites.c no longer mutates battle_enemy_sprite_kinds during formation tile loading.
+- Added a banked runtime art map inside sprites.c that maps original sprite_kind values to loaded VRAM slots.
+- This keeps original enemy art ids intact after battle item menu return, without adding Bank0 code.
+- L-size warmachine-only art selection, inventory first-scroll fix, and odd-last-item scroll fix remain preserved.

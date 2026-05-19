@@ -1,0 +1,25 @@
+RPG344 APPLY ENEMY SPRITE EXPORT NOTE
+
+User request:
+- Apply the uploaded enemy_sprite_composite_export.txt result.
+
+Applied target:
+- base_array=battle_enemy_tiles_plant_eye
+- overlay_array=battle_enemy_overlay_tiles_plant_eye
+- overlay_obj_count=8
+
+Changes applied:
+- Replaced battle_enemy_tiles_plant_eye[] with exported base sprite bytes.
+- Replaced battle_enemy_overlay_tiles_plant_eye[] with exported overlay OBJ bytes.
+- Replaced cgb_normal_bg_palettes[] with exported BG palettes.
+- Replaced cgb_normal_obj_palettes[] with exported OBJ palettes.
+- Reflected exported plant-eye tile attrs in battle_enemy_bg_draw_plant_eye_colored().
+- Reflected exported overlay OBJ positions/palette assignment in the plant-eye overlay draw/load code.
+- Kept the existing 8x16 OBJ management model: OAM 31-38, 8 overlay OBJ.
+
+Files changed:
+- sprites.c
+- cgb_fx_runtime.c
+- Makefile
+- enemy_sprite_composite_export_applied.txt
+- RPG344_APPLY_ENEMY_SPRITE_EXPORT_NOTE.txt

@@ -1,0 +1,19 @@
+RPG347 PLANT PAIR ENCOUNTER CHEST NOTE
+
+User request:
+- Make プラントゲイズ and プラントアイ appear side by side in battle.
+- Make the field debug chest also spawn that pair.
+- Keep the expanded enemy-name window behavior.
+
+Implemented:
+- encounter 8 is now プラントアイ + プラントゲイズ.
+- encounter 9 is now プラントゲイズ + プラントアイ.
+- Cave areas (area 7-10) still select encounter 8 or 9, so the plant pair appears in caves.
+- The existing field debug chest at (3,8) calls area 7 with seed 0, so it now spawns encounter 8 = プラントアイ + プラントゲイズ.
+- Added a paired plant overlay draw path: when two plant-type enemies are present, the 8 safe enemy overlay OBJ slots are split as 4 OBJ for each enemy.
+- Existing enemy-name window is kept at width 13, overlapping the command window by four BG blocks (x=9..12).
+
+Files changed:
+- battle_data_bank.c
+- sprites.c
+- Makefile

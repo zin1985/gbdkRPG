@@ -1,0 +1,25 @@
+RPG301 BEAST 32x32 REF PALETTE NOTE
+
+User request:
+- Replace the けもの (sprite_kind 2) battle sprite with a 32x32 version based on the attached reference image.
+- Also build a CGB palette based on the reference colors.
+
+What changed:
+- Rebuilt the sprite_kind 2 (beast) slot in battle_enemy_tiles using the uploaded reference art.
+- The image was cropped to its non-white content, resized with nearest-neighbor to fit a 32x32 canvas, and converted to Game Boy 2bpp tile data.
+- The tile order was generated to match the project's existing 8x16-OBJ-compatible 32x32 layout for M-size enemies.
+- Updated BG palette 5 (used by beast via BATTLE_ENEMY_ATTR_BEAST) to a fur-colored palette based on the reference image:
+  background = paper white
+  light fur = warm cream
+  mid fur = tan / ochre
+  dark fur = deep brown
+
+Files changed:
+- sprites.c
+- cgb_fx_runtime.c
+- Makefile
+- beast_32x32_preview.png (helper preview)
+
+Expected result:
+- けもの uses the new 32x32 body silhouette from the attached image.
+- On GBC, its battle colors should read as cream / tan / dark brown instead of the previous green beast palette.

@@ -317,6 +317,17 @@ void inventory_copy_from(const UINT8 *src) BANKED {
 
 
 
+static void inventory_battle_leave_screen(void) BANKED {
+    /* Hide the item menu before returning to the battle renderer.
+     * The menu uses its own BG tile cache / fixed item-name tiles; on slow
+     * devices the old BG can be visible for a moment and looks like many
+     * stray numbers.  The battle renderer immediately rebuilds the screen.
+     */
+    HIDE_BKG;
+    HIDE_SPRITES;
+    DISPLAY_OFF;
+}
+
 UINT8 inventory_battle_use_auto(UINT8 active_slot) BANKED {
     UINT8 item_id;
     item_id = ITEM_NONE;
@@ -405,6 +416,7 @@ UINT8 inventory_battle_select_use(UINT8 active_slot) BANKED {
             inventory_draw_full_screen_buffered(0u, 0u, menu_dict_message(MENU_DICT_MSG_EMPTY_USABLE));
             keys = inventory_wait_menu_keys(J_B | J_START | J_A);
             (void)keys;
+            inventory_battle_leave_screen();
             return 0u;
         }
         if (cursor_index >= visible_count) cursor_index = (UINT8)(visible_count - 1u);
@@ -413,7 +425,10 @@ UINT8 inventory_battle_select_use(UINT8 active_slot) BANKED {
         old_page = page_top;
 
         keys = inventory_wait_menu_keys(J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START | J_SELECT);
-        if (keys & (J_B | J_START)) return 0u;
+        if (keys & (J_B | J_START)) {
+            inventory_battle_leave_screen();
+            return 0u;
+        }
         if (keys & J_UP) cursor_index = inventory_cursor_up(cursor_index, &page_top, visible_count);
         else if (keys & J_DOWN) cursor_index = inventory_cursor_down(cursor_index, &page_top, visible_count);
         else if (keys & J_LEFT) {
@@ -444,6 +459,8 @@ UINT8 inventory_battle_select_use(UINT8 active_slot) BANKED {
                     if (result != 0u) {
                         inventory_remove(item_id, 1u);
                         msg = inventory_make_item_result_message(item_id);
+                        (void)msg;
+                        inventory_battle_leave_screen();
                         return 2u;
                     }
                     msg = menu_dict_message(MENU_DICT_MSG_NO_EFFECT);
@@ -700,7 +717,10 @@ static void inventory_precache_next_page(UINT8 page_top, const char *message) {
      */
     (void)page_top;
     (void)message;
-    inventory_invalidate_screen_cache();
+    /* rpg290: do not invalidate the row cache here.  Invalidating after the
+     * initial draw made the first next-page crawl rebuild all 11 rows, causing
+     * a heavy first scroll.  Counts/sort changes already invalidate explicitly.
+     */
 }
 
 
@@ -1110,7 +1130,10 @@ static UINT8 inventory_clamp_page_top(UINT8 page_top, UINT8 visible_count) BANKE
      */
     if (visible_count <= INVENTORY_GRID_PAGE_COUNT) return 0u;
 
-    max_top = (UINT8)(visible_count - INVENTORY_GRID_PAGE_COUNT);
+    /* rpg290: allow a final one-item row to scroll into view.
+     * With 11 rows x 2 columns, page_top=2 must be valid when visible_count=23.
+     */
+    max_top = (UINT8)(visible_count - (INVENTORY_GRID_PAGE_COUNT - 1u));
     if (max_top & 1u) max_top--;
     if (page_top > max_top) page_top = max_top;
     if (page_top & 1u) page_top--;

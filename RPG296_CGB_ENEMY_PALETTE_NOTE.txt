@@ -1,0 +1,45 @@
+RPG296 CGB敵パレット属性 実装メモ
+作成日: 2026-05-16
+
+目的:
+- 引き継ぎTXTの未完了事項「モンスターのカラー化」「モンスターごとパレット仕込み」への続き実装。
+- Bank 0を増やさず、sprites.cのbanked処理内で敵BGタイルにCGB BG属性を付ける。
+
+変更ファイル:
+1. sprites.c
+   - VBK_TILES / VBK_ATTRIBUTES の定義を追加。
+   - 敵用BG属性IDを追加。
+     - BATTLE_ENEMY_ATTR_DEFAULT = 0
+     - BATTLE_ENEMY_ATTR_BIT = 3
+     - BATTLE_ENEMY_ATTR_BEAST = 5
+     - BATTLE_ENEMY_ATTR_GOLEM_L = 6
+     - BATTLE_ENEMY_ATTR_WARMACHINE = 7
+   - battle_enemy_bg_attr_for() を追加。
+     - sprite_kind / size_kind から敵ごとのBGパレット属性を返す。
+     - Lゴーレムはpalette 6、Lウォーマシンはpalette 7。
+     - Mウォーマシンもpalette 7、けものはpalette 5、ビットはpalette 3。
+   - battle_enemy_bg_set_attr_rect() を追加。
+     - VBK_REG = VBK_ATTRIBUTES に切り替え、敵矩形だけ属性を書き込む。
+     - 書き込み後は必ず VBK_REG = VBK_TILES に戻す。
+   - battle_enemy_bg_clear_rect() でタイル消去後に属性もpalette 0へ戻すよう修正。
+   - battle_enemy_bg_draw_slot_sized() で敵タイル配置後に同じ矩形へ属性を設定。
+   - battle_enemy_bg_draw_all_sized() の全体クリアを 20x5 から 20x8 に拡大。
+     - 144x40ゴーレムは y=BATTLE_ENEMY_BG_Y+2 に描くため、従来の5行クリアだと下端のタイル/属性が残る可能性があった。
+
+2. Makefile
+   - 出力名を rpg296_cgb_enemy_palette.gbc に変更。
+
+設計意図:
+- 敵画像は2bppタイルのまま維持し、CGBでは属性マップで色を付ける。
+- まずは「1体につき1パレット」の安全な方式。
+- 青発光などの複数パレット敵は、次段階で敵専用attrmapを持たせる方針。
+- main.c / battle_data構造体へ変更を入れていないため、Bank 0増加リスクを避けている。
+
+ビルド確認:
+- make safe を実行したが、このsandboxには /opt/gbdk/bin/lcc が存在しないため、リンク前に停止。
+- prebank_check.py は通過。
+- sprites.c の簡易静的チェックでは括弧バランス問題なし。
+
+注意:
+- 実機/エミュで、Lゴーレムの色、文字領域との非干渉、敵撃破/再描画時の属性残りがないか確認すること。
+- ローカルのGBDK環境では make safe または make fast で rpg296_cgb_enemy_palette.gbc を出力する。

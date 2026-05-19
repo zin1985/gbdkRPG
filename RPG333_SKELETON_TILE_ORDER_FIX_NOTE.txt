@@ -1,0 +1,16 @@
+RPG333 SKELETON TILE ORDER FIX NOTE
+
+User request:
+- The skeleton block placement looks shifted. Fix it.
+- Also provide a preview of the intended arrangement.
+
+Implemented:
+- Fixed the 32x32 BG tile storage order for the skeleton base image.
+- The battle M-size draw routine does not consume row-major tiles directly; it draws in the order [0,2,4,6 / 1,3,5,7 / 8,10,12,14 / 9,11,13,15].
+- Reordered the skeleton base tile array to match that engine layout.
+- Overlay OBJ placement remains as in RPG332.
+- Preview images were exported separately in CAAS to show the intended arrangement.
+
+Files changed:
+- sprites.c
+- Makefile

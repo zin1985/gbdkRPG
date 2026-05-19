@@ -1,0 +1,6 @@
+Final Bank0 trim after linker still reported Possible overflow from Bank 0 into Bank 1 by roughly 0x15 bytes.
+- Simplified battle_copy_enemy_from_data() sprite_kind validation.
+- Removed size-dependent branch that allowed 5 only for L-size.
+- Now clamps only sprite_kind > 5 to 0.
+- This preserves L-size warmachine art id 5 while reducing Bank0 code.
+- The banked sprites.c runtime art map still handles non-L formations without mutating original sprite_kinds.

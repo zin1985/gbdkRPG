@@ -1,0 +1,18 @@
+RPG299 GOLEM 96x32 VRAM SAFE NOTE
+
+Root cause confirmed:
+- The 144x40 golem used 90 BG tiles loaded at BATTLE_ENEMY_BG_TILE_BASE = 80.
+- Tile range became 80..169.
+- The JP font dynamic cache uses JP_TILE_BASE = 128 through 223.
+- Therefore the enlarged golem overlapped the JP glyph cache in VRAM, causing parts of the golem to turn into text glyphs (and vice versa).
+
+Fix:
+- Replaced the oversized 144x40 golem with a new 96x32 version (12x4 tiles = 48 tiles), generated from golem_l_144x40_preview.png using nearest-neighbor downscale.
+- 48 tiles at base 80 stay within 80..127, which no longer collides with the JP font cache at 128..223.
+- Updated golem drawing, masked placement, and tile upload size to 12x4 / 48 tiles.
+- Kept CGB mask-style background handling so empty background tiles do not get enemy palette color.
+
+Result:
+- No VRAM overlap with JP text cache.
+- Golem text-glyph corruption should disappear.
+- Golem remains L-size but is now safely within the existing tile allocation scheme.

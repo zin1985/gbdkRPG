@@ -1,0 +1,14 @@
+RPG303 BABY RUINS ENCOUNTER NOTE
+
+Issue:
+- RPG302 added ベビー enemy data and encounter_table entries, but battle_data_load_random_area() did not select those new encounter indices.
+- Therefore ベビー was defined but not naturally reachable by random encounter.
+
+Fix:
+- Updated battle_data_runtime.c so AREA_RUINS (area == 4) selects encounter_id 10 or 11.
+- encounter_id 10 = ベビー x1
+- encounter_id 11 = ベビー + けもの
+
+Result:
+- ベビー can now be encountered in the ruins random encounter area.
+- Cave and field encounter selection remain unchanged.

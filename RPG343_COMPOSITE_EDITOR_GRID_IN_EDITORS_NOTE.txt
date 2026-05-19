@@ -1,0 +1,17 @@
+RPG343 COMPOSITE EDITOR GRID IN EDITORS NOTE
+
+User request:
+- Show boundary lines not only in the static preview, but also in the dot editing preview/editor.
+
+Implemented:
+- Added visible boundary classes to enemy_sprite_composite_editor.php dot editor cells.
+- Base BG dot editor:
+  - red thick lines show 8x8 BG tile boundaries.
+- OBJ dot editor:
+  - blue thick vertical/top lines show 8x16 real OBJ management blocks.
+  - red thick horizontal line shows the internal 8x8 tile split inside each 8x16 OBJ.
+- Added tooltip text to edited pixels showing tile/OBJ block information.
+- Added explanatory notes below the editor panels.
+
+Files changed:
+- tools/enemy_sprite_composite_editor.php

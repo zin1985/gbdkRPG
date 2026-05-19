@@ -1,0 +1,24 @@
+RPG316 SPRITE/CGB FILE LOADER + S/M/L EDITOR NOTE
+
+User request:
+- Add file selection + load buttons for both sprites and CGB palette files.
+- Support S, M, and L size sprites.
+
+What changed:
+- Reworked tools/mimic_palette_editor.php into a generic GB/GBC enemy sprite palette editor.
+- Added separate file inputs and buttons:
+  - スプライトを指定して読み込み
+  - CGBを指定して読み込み
+- The editor can still load default project files when no upload is provided.
+- Added size support:
+  - S 16x16 / 2x2 tiles
+  - M 32x32 / 4x4 tiles
+  - L 96x32 / 12x4 tiles
+  - L 144x40 / 18x5 tiles
+- Added editable array name and tile offset, so packed arrays such as battle_enemy_tiles can be previewed by offset.
+- Palette editing and tile-attribute editing now scale to the selected size.
+- The mimic reference preset remains available.
+
+Files changed:
+- tools/mimic_palette_editor.php
+- Makefile

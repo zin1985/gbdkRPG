@@ -1,0 +1,28 @@
+RPG342 COMPOSITE EDITOR UPGRADE NOTE
+
+User request:
+- Show OBJ block boundaries in enemy_sprite_composite_editor.php.
+- Explain OBJ management size / whether max is 8.
+- Add a button to output all modified result code as a TXT file.
+- Replace separate file loading with one two-file load button.
+- Add dot-edit undo, redo, and preview apply buttons.
+
+Implemented in tools/enemy_sprite_composite_editor.php:
+- OBJ preview now emphasizes 8x16 OBJ management blocks with blue boundary lines.
+- Target settings text now states the current safe overlay management area is OAM 31-38, i.e. 8 OBJ.
+- Added TXT export action: 修正結果をまとめてTXT出力.
+  It downloads enemy_sprite_composite_export.txt including base array, overlay array, BG palettes, OBJ palettes, tile attrs, and overlay position arrays.
+- File load UI now has two file selectors and one button: 2ファイルを一気に読み込み.
+- Added client-side undo / redo for dot edits.
+- Added explicit プレビュー反映 buttons for base and OBJ dot editors.
+- Loading action clears stale base/overlay pixel JSON so freshly loaded arrays are decoded.
+
+OBJ management note:
+- GB/GBC hardware max is 40 OBJ total, with a 10 OBJ per scanline limit.
+- This project currently reserves OAM 31-38 for enemy overlay pieces.
+- Therefore the practical safe maximum for the composite enemy editor is 8 overlay OBJ.
+- Each editor OBJ is handled as 8x16, consuming two 8x8 tiles.
+
+Files changed:
+- tools/enemy_sprite_composite_editor.php
+- Makefile

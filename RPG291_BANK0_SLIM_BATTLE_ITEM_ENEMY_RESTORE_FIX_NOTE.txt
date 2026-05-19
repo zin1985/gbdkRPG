@@ -1,0 +1,6 @@
+Fixes Bank0 overflow caused by the previous battle item enemy-art restoration helper.
+- Removed two static restore helper functions from main.c and the unconditional battle_enter_render_once() restore call.
+- Added a smaller local restore loop only in player_battle_item() before rebuilding the battle screen.
+- L-size tile loader no longer remaps sprite_kinds to 0; L drawing ignores sprite_kind anyway.
+- This should reduce Bank0 usage while still preventing enemy art from changing after returning from the battle item menu.
+- Inventory first-scroll and odd-last-row fixes remain preserved.

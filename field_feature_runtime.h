@@ -32,6 +32,8 @@
 #define MAP_EVENT_CAVE_BOSS 26u
 #define MAP_EVENT_SHOP_ITEM_STRONG 27u
 #define MAP_EVENT_SHOP_EQUIP_STRONG 28u
+#define MAP_EVENT_MIMIC_CHEST 29u
+#define MAP_EVENT_PLANT_EYE_CHEST 30u
 
 #define AREA_FIELD 0u
 #define AREA_TOWN 1u
@@ -52,6 +54,7 @@
 #define FLAG_TOWN_POT 23u
 #define FLAG_CAVE_CHEST 24u
 #define FLAG_CAVE_BOSS 25u
+#define FLAG_MIMIC_CHEST 26u
 
 UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED;
 UINT8 field_feature_encounter_rate(UINT8 area, UINT8 field_rate) BANKED;

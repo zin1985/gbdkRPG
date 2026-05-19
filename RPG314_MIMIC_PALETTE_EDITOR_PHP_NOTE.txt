@@ -1,0 +1,34 @@
+RPG314 MIMIC PALETTE EDITOR PHP NOTE
+
+User request:
+- Analyze the mimic reference image more closely.
+- Arms should be dark green.
+- Mimic chest rim should be bright yellow.
+- Dark chest parts should be red.
+- Tongue should be red.
+- Add a PHP tool that reads sprite data and color data, previews the sprite color settings, allows editing, and outputs source snippets.
+
+Changes:
+- Refined palette 1 for darker green arms:
+  CGB_RGB5(31,31,28), CGB_RGB5(16,21,10), CGB_RGB5(5,12,2), CGB_RGB5(1,6,0)
+- Refined palette 2 for bright yellow rim + red/dark-red chest/tongue:
+  CGB_RGB5(31,31,28), CGB_RGB5(30,25,8), CGB_RGB5(24,6,7), CGB_RGB5(8,1,2)
+- Fixed mimic's yellow/gold tile attribute to use palette 6 without the VRAM bank1 bit.
+  Previous use of BATTLE_ENEMY_ATTR_GOLEM_L was not safe for mimic because it includes the bank1 bit.
+- Added tools/mimic_palette_editor.php.
+
+PHP tool:
+- Reads sprites.c battle_enemy_tiles_mimic.
+- Reads cgb_fx_runtime.c cgb_normal_bg_palettes.
+- Reads mimic attrs[] from battle_enemy_bg_draw_mimic_colored().
+- Decodes Game Boy 2bpp 32x32 sprite data.
+- Previews the sprite using the selected CGB palette assignments.
+- Allows editing 8x8 tile palette assignments and BG palette colors.
+- Outputs replacement snippets for cgb_fx_runtime.c and sprites.c.
+
+Files changed/added:
+- cgb_fx_runtime.c
+- sprites.c
+- Makefile
+- tools/mimic_palette_editor.php
+- RPG314_MIMIC_PALETTE_EDITOR_PHP_NOTE.txt

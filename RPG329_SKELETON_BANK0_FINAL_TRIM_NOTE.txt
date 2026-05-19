@@ -1,0 +1,22 @@
+RPG329 SKELETON BANK0 FINAL TRIM NOTE
+
+Problem:
+- rpg328 still overflowed Bank 0 by only a few bytes.
+- The remaining Bank 0 growth came from AREA_RUINS encounter selection using an extra 3-way branch in battle_data_runtime.c.
+
+Fix:
+- Restored AREA_RUINS selection to the old compact 2-choice expression:
+  encounter_id = 10 + (seed % 2)
+- Moved skeleton into encounter slot 11, replacing the previous baby+beast pair for ruins encounters.
+- This keeps スケルトン naturally encounterable in ruins without adding extra NONBANKED branch code.
+
+Result:
+- Bank 0 should shrink back below the 0x4000 boundary.
+- Ruins encounters now alternate between:
+  10: ベビー x1
+  11: スケルトン x1
+
+Files changed:
+- battle_data_runtime.c
+- battle_data_bank.c
+- Makefile

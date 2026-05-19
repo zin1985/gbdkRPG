@@ -1,0 +1,18 @@
+RPG315 MIMIC EDITOR LOAD BUTTONS NOTE
+
+User feedback:
+- It was unclear where the PHP tool reads data from.
+- There was no explicit load button.
+
+What changed:
+- Updated tools/mimic_palette_editor.php to show the exact read paths:
+  - ../sprites.c
+  - ../cgb_fx_runtime.c
+- Added a visible 「ソースから読み込み直す」 button.
+- Added a visible 「プレビュー更新・出力コード生成」 button.
+- Added copy buttons for generated palette code and attrs code.
+- Clarified that the tool auto-loads on page open and outputs code for manual copy/paste rather than writing source files directly.
+
+Files changed:
+- tools/mimic_palette_editor.php
+- Makefile

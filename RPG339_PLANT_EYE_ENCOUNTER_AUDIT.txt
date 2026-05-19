@@ -1,0 +1,54 @@
+RPG339 PLANT EYE ENCOUNTER AUDIT
+
+Purpose:
+- Verify monster IDs, sprite kinds, encounter table, and area selection for プラントアイ.
+- Make プラントアイ easier to confirm in-game without adding Bank 0 runtime branches.
+
+Verified enemy_table IDs:
+0  ビット           sprite_kind=0  size=S
+1  ビット           sprite_kind=0  size=S
+2  けもの           sprite_kind=2  size=M
+3  ウォーマシン     sprite_kind=3  size=M
+4  ゴーレム         sprite_kind=4  size=L
+5  ウォーマシンL    sprite_kind=5  size=L
+6  どうくつオーガ   sprite_kind=3  size=M
+7  うみぼうず       sprite_kind=2  size=M
+8  ベビー           sprite_kind=1  size=M
+9  ミミック         sprite_kind=6  size=M
+10 スケルトン       sprite_kind=7  size=M
+11 プラントアイ     sprite_kind=8  size=M
+12 どうくつのぬし   sprite_kind=5  size=L
+
+Verified encounter_table IDs after RPG339:
+0  ビット x6
+1  ビット x4
+2  けもの + ウォーマシン + けもの
+3  けもの + ウォーマシン
+4  ゴーレム x1
+5  ウォーマシンL x1
+6  スケルトン x1
+7  プラントアイ x1
+8  どうくつオーガ + プラントアイ
+9  どうくつオーガ + プラントアイ + うみぼうず
+10 ベビー x1
+11 スケルトン x1
+12 どうくつのぬし x1
+13 ミミック x1
+
+Runtime area selection in battle_data_runtime.c:
+- area == 12: encounter 13 = ミミック
+- area == 13: encounter 12 = どうくつのぬし
+- area >= 7 && area <= 10: encounter 8 or 9 = プラントアイ included 100%
+- area == 6: encounter 2 or 3 = けもの/ウォーマシン
+- other random areas: encounter seed % 8 = 0..7, so プラントアイ x1 can now appear via encounter 7
+
+Important fix in RPG339:
+- Previously プラントアイ existed only in encounter 8/9, which are selected only in AREA_CAVE_1..4.
+- RPG339 also places プラントアイ x1 in encounter 7.
+- This means normal random areas can also confirm プラントアイ without changing NONBANKED battle_data_runtime.c.
+- This avoids increasing Bank 0.
+
+Files changed:
+- battle_data_bank.c
+- Makefile
+- RPG339_PLANT_EYE_ENCOUNTER_AUDIT.txt

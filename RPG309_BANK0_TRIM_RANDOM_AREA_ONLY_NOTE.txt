@@ -1,0 +1,20 @@
+RPG309 BANK0 TRIM RANDOM AREA ONLY NOTE
+
+Build issue:
+- rpg308 still overflowed Bank 0 slightly: 0x3fb7 -> 0x4012.
+- The remaining overflow was around 90 bytes, so another Bank 0 reduction pass was needed.
+
+Changes:
+- Removed battle_data_load_boss() from the NONBANKED battle_data_runtime.c path.
+- Cave boss loading now reuses battle_data_load_random_area(0, 13, ...).
+- Mimic loading still uses battle_data_load_random_area(0, 12, ...).
+- Removed battle_data_encounter_count_bank() call from battle_data_load_random_area(); encounter table is static and non-empty.
+- Removed the dedicated mimic-only check from try_interact(); try_interact now checks map_event_at_tile() first, then falls back to normal object-kind chest handling.
+
+Intent:
+- Keep the mimic chest behavior from rpg306/rpg308 while removing enough NONBANKED code to fit Bank 0.
+
+Expected behavior:
+- Field chest at (11,14) still starts the ミミック battle.
+- Cave boss still starts correctly through the same random-area loader special case.
+- Normal chests still use MAP_EVENT_CHEST when there is no special map event on that tile.

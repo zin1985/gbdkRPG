@@ -1,0 +1,26 @@
+RPG325 FIELD PALETTE / ITEM MENU / PROLOGUE FIX NOTE
+
+User reports:
+- After the first battle, the field color palette changes.
+- Opening prologue should scroll a little slower.
+- Immediately after selecting an item during battle, many numeric-looking tiles appear on the original screen.
+
+Fixes:
+1) Field palette after battle
+- field_map_render_runtime.c now rewrites the CGB field palettes every time the field map is rebuilt.
+- The old cgb_field_palette_ready guard prevented palette restoration after battle/prologue screens overwrote BG palettes.
+- CPU double-speed setup is still guarded so it only runs once.
+
+2) Prologue speed
+- Normal prologue scroll speed slowed from 1px / 10 frames to 1px / 16 frames.
+- A-button fast-forward remains 3px / 1 frame.
+
+3) Battle item menu return artifact
+- inventory_battle_select_use() now hides BG/sprites and turns display off before returning to the battle renderer.
+- This prevents the inventory menu BG/name/number tiles from being visible during the transition back to battle.
+
+Files changed:
+- field_map_render_runtime.c
+- save_runtime.c
+- inventory.c
+- Makefile

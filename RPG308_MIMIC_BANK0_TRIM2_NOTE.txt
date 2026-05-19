@@ -1,0 +1,22 @@
+RPG308 MIMIC BANK0 TRIM2 NOTE
+
+Problem:
+- rpg307 still overflowed Bank 0 by a small amount.
+- The remaining Bank 0 cost came mainly from tracking mimic_chest_battle_pending and applying the flag after battle.
+
+Fix:
+- Removed mimic_chest_battle_pending from main.c.
+- The mimic chest now sets FLAG_MIMIC_CHEST immediately when the battle starts.
+- This means the chest becomes empty after the first trigger, even if the party loses or resets during the battle. This is acceptable as a Bank 0 saving tradeoff for now.
+- Kept cave_boss_battle_pending unchanged for the real cave boss reward flow.
+- Also fixed the banked enemy art runtime map to support sprite_kind 6 by changing the map size from 6 to 7 entries and allowing sprite_kind < 7. This is in sprites.c banked code and should not increase Bank 0.
+
+Files changed:
+- main.c
+- sprites.c
+- Makefile
+
+Expected result:
+- Bank 0 should be smaller than rpg307.
+- ミミック still appears from the field chest at (11,14).
+- ミミック sprite_kind 6 is mapped correctly in the runtime art loader.

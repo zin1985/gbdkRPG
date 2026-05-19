@@ -1,4 +1,4 @@
-override OUT := rpg263_backbuffer_banked_gbc.gbc
+override OUT := rpg353_special_battle_recursion_fix.gbc
 MAP = $(basename $(OUT)).map
 SRCS = main.c audio.c sprites.c dialogue.c jpfont.c jp_backbuffer_runtime.c misakiUTF16.c messages_bank.c messages_runtime.c banked_graphics.c cgb_fx_runtime.c menu_text_dict.c map_data_bank.c map_data_runtime.c font_data_bank.c font_data_runtime.c battle_data_bank.c battle_data_runtime.c battle_text.c game_flags.c quest.c inventory.c ui_icons.c party_runtime.c party_equipment_runtime.c party_item_runtime.c actor_runtime.c menu_runtime.c shop_runtime.c save_runtime.c save_bridge_runtime.c revive_runtime.c itil_tower_runtime.c itil_quiz_bank.c map_event_runtime.c battle_skill_runtime.c battle_skill_meta_runtime.c battle_reward_runtime.c battle_command_ui_runtime.c battle_status_ui_runtime.c battle_growth_runtime.c field_overlay_runtime.c field_feature_runtime.c field_map_render_runtime.c heavy_metal_celtic_battle_bgm.c sunset_ruins_field_bgm.c sunset_strings_adventure_field_bgm.c peaceful_balanced_town_bgm.c deep_eerie_motif_dungeon_bgm.c boss_hope_despair_7part_finale_soft6_sad7_bgm.c equip_runtime.c
 OBJS = $(SRCS:.c=.rel)

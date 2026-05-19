@@ -1,0 +1,28 @@
+RPG300 GIANT GOLEM VRAM BANK1 NOTE
+
+Goal:
+- Restore the 144x40 giant golem without JP glyph corruption.
+
+Root cause from RPG299 analysis:
+- 144x40 golem uses 90 BG tiles.
+- Loaded in VRAM bank 0 at tile 80, that overlaps the JP font cache at tile 128..223.
+
+Fix approach:
+- Keep the giant 144x40 golem art (18x5 tiles).
+- Load the golem tile graphics into VRAM bank 1 instead of VRAM bank 0.
+- Set the golem BG attribute to palette 6 + VRAM bank 1 bit.
+- The BG map tile numbers remain the same, but CGB attributes make them fetch tile pixels from VRAM bank 1.
+- Blank golem tiles still write the normal blank tile with default attribute, so the yellow rectangle background stays masked away.
+
+Files changed:
+- sprites.c
+- Makefile
+
+Expected result:
+- Giant 144x40 golem returns.
+- No collision with JP glyph cache in VRAM bank 0.
+- No text-glyph corruption inside the golem body.
+- Masked background remains intact.
+
+Notes:
+- This solution depends on GBC VRAM bank support. The project is currently emitting .gbc, so this is the correct path for oversized boss enemies.

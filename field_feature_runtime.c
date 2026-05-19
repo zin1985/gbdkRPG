@@ -11,11 +11,13 @@ BANKREF(field_feature_runtime_bank)
 UINT8 field_feature_map_event(UINT8 area, UINT8 tx, UINT8 ty) BANKED {
     if (area == AREA_FIELD) {
         if (tx == 14u && ty == 2u) return MAP_EVENT_TOWN;
-        if (tx == 14u && ty == 14u) return MAP_EVENT_PORT_TOWN;
+        if (tx == 14u && ty == 14u) return MAP_EVENT_RUINS;
         if (tx == 1u && ty == 14u) return MAP_EVENT_DUNGEON;
         if (tx == 1u && ty == 2u) return MAP_EVENT_RUINS;
         if (tx == 8u && ty == 8u) return MAP_EVENT_HEAL_SPRING;
         if (tx == 8u && ty == 14u) return MAP_EVENT_ITIL_TOWER;
+        if (tx == 11u && ty == 14u) return MAP_EVENT_MIMIC_CHEST;
+        if (tx == 3u && ty == 8u) return MAP_EVENT_PLANT_EYE_CHEST;
         if (tx == 14u && ty == 8u) return MAP_EVENT_CAVE_DOWN;
     } else if (area == AREA_FIELD_EAST) {
         if (tx == 14u && ty == 2u) return MAP_EVENT_EAST_TOWN;

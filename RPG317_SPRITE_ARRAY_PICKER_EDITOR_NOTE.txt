@@ -1,0 +1,27 @@
+RPG317 SPRITE ARRAY PICKER EDITOR NOTE
+
+User request:
+- Add explicit sprites.c file selection/loading.
+- After loading sprites.c, refresh the list of sprite names found inside it.
+- Let the user select the target sprite from that list.
+- Add explicit CGB palette file selection/loading.
+- Clarify where sprites.c is located.
+
+What changed:
+- tools/mimic_palette_editor.php now scans the loaded sprites.c text for all `const unsigned char ...[]` arrays.
+- The sprite target field is now a dropdown populated from the detected array names.
+- Each dropdown entry shows tile count and a guessed size/type such as S, M, L96, L144, or packed M.
+- Loading a new sprites.c file refreshes the dropdown list.
+- The file loading panel now explicitly says:
+  - sprites.c指定読み込み
+  - cgb_fx_runtime.c指定読み込み
+- The UI now explains that when this PHP file is placed in `tools/`, the default sprites.c path is `../sprites.c`.
+
+Default project paths:
+- tools/mimic_palette_editor.php
+- ../sprites.c
+- ../cgb_fx_runtime.c
+
+Files changed:
+- tools/mimic_palette_editor.php
+- Makefile

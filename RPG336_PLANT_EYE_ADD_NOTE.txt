@@ -1,0 +1,24 @@
+RPG336 PLANT EYE ADD NOTE
+
+User request:
+- Add a new monster using the same BG + OBJ overflow method as the skeleton.
+- Use the attached image as the basis.
+- Monster name: プラントアイ
+
+Implemented:
+- Added a new M-size enemy sprite kind 8: プラントアイ.
+- Built a 32x32 BG base from the central eye/body area.
+- Built 8 overflow OBJ sprites from the outer leaves and lower root tips, using the same composite method used for the skeleton.
+- Added a colored BG draw path for plant eye:
+  - green leaf tiles
+  - blue eye tile
+  - brown wood/root tiles
+- Added OBJ palette 2 (leaf green) and OBJ palette 3 (wood/root brown) for overflow pieces.
+- Updated battle data to include プラントアイ as a new M enemy template.
+- Updated cave-area random formations to include プラントアイ so it can be encountered in play.
+
+Files changed:
+- sprites.c
+- cgb_fx_runtime.c
+- battle_data_bank.c
+- Makefile

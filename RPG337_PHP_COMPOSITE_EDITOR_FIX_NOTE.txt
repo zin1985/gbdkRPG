@@ -1,0 +1,29 @@
+RPG337 PHP COMPOSITE EDITOR FIX NOTE
+
+User report:
+- In the PHP enemy tool, selecting スケルトン from the dropdown and refreshing still shows ミミック.
+- Additional OBJ preview does not appear.
+
+Cause:
+- The composite editor submitted hidden base_pixel_json / overlay_pixel_json from the previous selection.
+- When the selected body array changed, the server applied the stale pixel JSON after loading the new array, so the preview stayed on the old monster.
+- The overlay dropdown could also remain pointed at the body array instead of the matching overlay array.
+
+Implemented:
+- Added target context tracking for base and overlay selections.
+- If body array / size / tile offset changes, stale edit pixel cache is ignored.
+- If overlay array changes, stale overlay pixel cache is ignored.
+- Added automatic pairing:
+  - battle_enemy_tiles_skeleton -> battle_enemy_overlay_tiles_skeleton
+  - battle_enemy_tiles_plant_eye -> battle_enemy_overlay_tiles_plant_eye
+- Added automatic overlay count calculation from overlay array tile count.
+- Added default overlay positions / palettes for skeleton and plant eye.
+- Added attr parsing for plant eye colored draw function.
+- Added UI notice when cached edits are discarded / overlay auto selected.
+- Added JS behavior to auto-switch overlay array and clear hidden edit JSON when body array changes.
+- Added the composite editor back into tools/ for the latest source package.
+- Added a link from mimic_palette_editor.php to enemy_sprite_composite_editor.php for OBJ overlay use.
+
+Files changed:
+- tools/enemy_sprite_composite_editor.php
+- tools/mimic_palette_editor.php

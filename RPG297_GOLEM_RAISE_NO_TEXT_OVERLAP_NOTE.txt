@@ -1,0 +1,17 @@
+RPG297 GOLEM RAISE / NO TEXT OVERLAP NOTE
+
+- User requested the 144x40 L-size golem be moved about 2 tile blocks upward.
+- Previous placement used y = BATTLE_ENEMY_BG_Y + 2, which let the lower part of the golem overlap the battle message text rows.
+- This caused parts of the golem to appear as if they were replaced by text glyphs.
+
+Fix:
+- In sprites.c, inside battle_enemy_bg_draw_slot_sized() for the L-size golem path, changed:
+    y = (UINT8)(BATTLE_ENEMY_BG_Y + 2u);
+  to:
+    y = BATTLE_ENEMY_BG_Y;
+
+Expected effect:
+- Golem shifts upward by 2 tile rows.
+- Lower text rows no longer draw over the golem graphic area.
+- Existing 18x5 tile size is kept.
+- Full enemy arena clear (20x8 starting at row 5) already covers both old and new positions, so stale tiles should also be avoided.

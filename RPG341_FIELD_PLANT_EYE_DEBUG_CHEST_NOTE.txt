@@ -1,0 +1,19 @@
+RPG341 FIELD PLANT EYE DEBUG CHEST NOTE
+
+User request:
+- Plant Eye still does not appear.
+- Add a field chest event for checking Plant Eye encounter directly.
+
+Implemented:
+- Added a visible chest object on the west field at tile (3,8).
+- Added MAP_EVENT_PLANT_EYE_CHEST = 30.
+- Interacting with the chest starts a Plant Eye check battle immediately.
+- The debug chest is repeatable so Plant Eye can be checked multiple times without resetting save flags.
+- The battle uses battle_data_load_random_area(0, AREA_CAVE_1=7), which selects encounter 8 in the current table. In rpg340, encounter 8 is Plant Eye x1.
+
+Files changed:
+- Makefile
+- field_feature_runtime.h
+- field_feature_runtime.c
+- main.c
+- map_data_bank.c

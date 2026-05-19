@@ -1,0 +1,21 @@
+RPG323 PROLOGUE SLOW CENTER GAP NOTE
+
+User request:
+- Make normal prologue scrolling slower.
+- Add one blank line between each prologue line.
+- Center-align the text.
+- Replace unsupported kanji for 失う and 抗う with hiragana.
+
+Changes:
+- Reduced prologue text to 7 lines so the whole block fits in the offscreen BG rows even with one blank row between lines.
+- Added PROLOGUE_LINE_SPACING_ROWS = 2.
+- Changed the offscreen start row to 18, giving rows 18/20/22/24/26/28/30.
+- Added simple UTF-8 character counting and center X calculation for jp_put_bkg_text().
+- Replaced 抗う with あらがう. No 失う glyph is used.
+- Slowed normal scroll to 1px per 10 frames.
+- Kept max_scroll within 8-bit BG scroll range at 248 while accounting for the wider line spacing.
+- A-button speed-up remains fast.
+
+Files changed:
+- save_runtime.c
+- Makefile

@@ -1,0 +1,21 @@
+RPG330 SKELETON NO RUINS BRANCH NOTE
+
+User report:
+- rpg329 still overflowed Bank 0 by 11 bytes.
+
+Fix:
+- Removed the special AREA_RUINS branch from battle_data_runtime.c entirely.
+- スケルトン is now placed in the existing general encounter table slot 7, so no extra HOME/Bank0 branching is needed.
+- Fixed encounter IDs after inserting スケルトン:
+  - enemy id 10 = スケルトン
+  - enemy id 11 = どうくつのぬし
+  - cave boss encounter points to enemy id 11 again.
+
+Trade-off:
+- To protect Bank 0, ruins no longer has a special baby/skeleton selector in HOME code.
+- スケルトン can still appear through the existing general random encounter path.
+
+Files changed:
+- battle_data_runtime.c
+- battle_data_bank.c
+- Makefile

@@ -1,0 +1,19 @@
+RPG310 MIMIC SPRITE SOURCE FIX NOTE
+
+Issue:
+- ミミック existed as sprite_kind 6 and its palette/attribute were assigned, but battle_enemy_tile_source() did not return battle_enemy_tiles_mimic for kind 6.
+- The function only handled kind 0 and kind 3 specially, then mapped kind > 2 back to 0.
+- As a result, sprite_kind 6 was loaded from kind 0 art, so ミミック appeared as the slime/bit base art.
+
+Fix:
+- Added:
+    if (kind == 6u) return battle_enemy_tiles_mimic;
+  before the kind > 2 fallback in sprites.c.
+
+Files changed:
+- sprites.c
+- Makefile
+
+Expected result:
+- The field mimic chest battle now loads the 32x32 mimic art instead of the slime/base art.
+- Existing palette assignment BATTLE_ENEMY_ATTR_MIMIC remains unchanged.

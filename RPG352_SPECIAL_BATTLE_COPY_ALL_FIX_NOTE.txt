@@ -1,0 +1,16 @@
+RPG352 SPECIAL BATTLE COPY ALL FIX
+
+Issue:
+- Field debug chest loaded a two-enemy encounter (Plant Eye + Plant Gaze), but the battle screen still showed only Plant Eye.
+
+Root cause:
+- begin_preloaded_special_battle() copied only slot 0 from battle_enemy_data_slots into the active enemy_battles array.
+- Random field battles already copied every enemy slot, so this bug only affected preloaded special battles such as mimic/plant debug chest/cave boss.
+
+Fix:
+- Added battle_copy_all_enemies_from_data().
+- begin_preloaded_special_battle() now clamps battle_enemy_count and copies every preloaded enemy.
+- Existing random battle initializers also call the helper to avoid duplicated copy-loop code.
+
+Result:
+- The field chest at (3,8) that uses area 14 / encounter 8 should now display both Plant Eye and Plant Gaze.

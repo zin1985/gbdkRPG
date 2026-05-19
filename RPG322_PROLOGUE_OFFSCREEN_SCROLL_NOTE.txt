@@ -1,0 +1,22 @@
+RPG322 PROLOGUE OFFSCREEN SCROLL NOTE
+
+User feedback:
+- Normal speed became too fast.
+- Text should stay transparent longer so the moment of glyph generation is not visible.
+- Text placement jittered up/down when new glyph rows were drawn.
+- Proposed approach: render everything offscreen, then scroll slowly while changing darkness.
+
+Implemented:
+- Reworked the prologue renderer to draw all prologue lines once, offscreen, into BG rows 20-29 before the scroll starts.
+- The visible motion now uses only move_bkg()/SCY, so the text no longer gets re-generated horizontally while visible.
+- Removed per-scroll text row clearing/redrawing from the visible pass.
+- CGB fade is now handled by updating only BG attributes for the already-rendered offscreen line rows.
+- Palette 3 is now fully paper-white, giving a longer invisible band at top/bottom.
+- Normal speed slowed down to 1px every 6 frames.
+- A-button speed increased to 3px every 1 frame.
+
+Expected result:
+- Less flicker.
+- No visible left-to-right glyph generation.
+- No vertical row jitter caused by redraw timing.
+- Slower normal crawl with a much faster A-button fast-forward.
