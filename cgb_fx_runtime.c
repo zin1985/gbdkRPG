@@ -13,19 +13,19 @@ BANKREF(cgb_fx_runtime_bank)
 static const UINT16 cgb_normal_bg_palettes[8u * 4u] = {
     /* 0: neutral/default */
     CGB_RGB5(31,31,28), CGB_RGB5(23,22,18), CGB_RGB5(13,13,12), CGB_RGB5(2,2,2),
-    /* 1: PLANT_EYE leaf/body from export 3 */
+    /* 1: PLANT_EYE leaf green */
     CGB_RGB5(31,31,28), CGB_RGB5(16,21,10), CGB_RGB5(4,15,0), CGB_RGB5(1,6,0),
-    /* 2: mimic red/yellow */
-    CGB_RGB5(31,31,28), CGB_RGB5(30,25,8), CGB_RGB5(24,6,7), CGB_RGB5(8,1,2),
-    /* 3: PLANT_EYE iris/accent from export 3 palette 7 */
+    /* 2: EVIL_EYE aqua leaf */
+    CGB_RGB5(31,31,28), CGB_RGB5(18,29,31), CGB_RGB5(5,20,26), CGB_RGB5(0,9,12),
+    /* 3: PLANT_EYE iris/accent */
     CGB_RGB5(31,31,28), CGB_RGB5(28,26,19), CGB_RGB5(24,8,0), CGB_RGB5(9,6,2),
-    /* 4: PLANT_GAZE leaf purple from export 4 */
+    /* 4: PLANT_GAZE leaf purple */
     CGB_RGB5(31,31,28), CGB_RGB5(15,0,23), CGB_RGB5(20,0,24), CGB_RGB5(7,0,9),
-    /* 5: PLANT_EYE wood/root from export 3 */
-    CGB_RGB5(31,31,28), CGB_RGB5(28,26,19), CGB_RGB5(20,17,10), CGB_RGB5(9,6,2),
-    /* 6: PLANT_GAZE wood/root from export 4 */
+    /* 5: warm orange / wood */
+    CGB_RGB5(31,31,28), CGB_RGB5(28,26,19), CGB_RGB5(24,13,0), CGB_RGB5(10,5,0),
+    /* 6: PLANT_GAZE wood/root */
     CGB_RGB5(31,31,28), CGB_RGB5(31,29,25), CGB_RGB5(22,15,0), CGB_RGB5(13,6,0),
-    /* 7: PLANT_GAZE iris/green accent from export 4 */
+    /* 7: PLANT_GAZE iris/green accent */
     CGB_RGB5(31,31,28), CGB_RGB5(28,26,19), CGB_RGB5(0,22,1), CGB_RGB5(9,6,2)
 };
 
@@ -34,18 +34,18 @@ static const UINT16 cgb_normal_obj_palettes[8u * 4u] = {
     CGB_RGB5(31,31,31), CGB_RGB5(24,23,21), CGB_RGB5(12,11,10), CGB_RGB5(0,0,0),
     /* 1: skeleton red cape */
     CGB_RGB5(31,31,31), CGB_RGB5(29,14,14), CGB_RGB5(19,5,6), CGB_RGB5(7,0,1),
-    /* 2: PLANT_GAZE leaf purple from export 4 */
+    /* 2: PLANT_GAZE leaf purple */
     CGB_RGB5(31,31,31), CGB_RGB5(16,0,24), CGB_RGB5(20,0,24), CGB_RGB5(6,0,8),
-    /* 3: PLANT_EYE wood/root from export 3 */
+    /* 3: PLANT_EYE root brown */
     CGB_RGB5(31,31,31), CGB_RGB5(28,26,19), CGB_RGB5(18,13,7), CGB_RGB5(8,5,2),
-    /* 4: PLANT_EYE leaf green from export 3 */
+    /* 4: PLANT_EYE leaf green */
     CGB_RGB5(31,31,31), CGB_RGB5(15,23,9), CGB_RGB5(4,15,0), CGB_RGB5(1,7,1),
-    /* 5: PLANT_GAZE wood/root from export 4 */
+    /* 5: PLANT_GAZE root brown */
     CGB_RGB5(31,31,31), CGB_RGB5(28,26,19), CGB_RGB5(18,13,7), CGB_RGB5(8,5,2),
-    /* 6: spare enemy OBJ palette */
-    CGB_RGB5(31,31,31), CGB_RGB5(24,23,21), CGB_RGB5(12,11,10), CGB_RGB5(0,0,0),
-    /* 7: spare enemy OBJ palette */
-    CGB_RGB5(31,31,31), CGB_RGB5(24,23,21), CGB_RGB5(12,11,10), CGB_RGB5(0,0,0)
+    /* 6: EVIL_EYE aqua leaf */
+    CGB_RGB5(31,31,31), CGB_RGB5(18,29,31), CGB_RGB5(5,20,26), CGB_RGB5(0,9,12),
+    /* 7: EVIL_EYE orange root */
+    CGB_RGB5(31,31,31), CGB_RGB5(29,20,8), CGB_RGB5(22,11,0), CGB_RGB5(9,4,0)
 };
 
 static void cgb_write_all_bg(UINT16 color) {

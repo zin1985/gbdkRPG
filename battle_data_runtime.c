@@ -16,8 +16,10 @@ void battle_data_load_random_area(UINT8 seed, UINT8 area, BattleEnemyData *out, 
         encounter_id = 13u;
     } else if (area == 13u) { /* special: cave boss */
         encounter_id = 12u;
-    } else if (area == 14u) { /* special: plant pair debug chest */
-        encounter_id = 8u;
+    } else if (area == 14u) { /* special: plant trio debug chest */
+        encounter_id = 10u;
+    } else if (area == 15u) { /* special: dragon chest */
+        encounter_id = 15u;
     } else if (area >= 7u && area <= 10u) {
         encounter_id = (UINT8)(8u + (seed % 2u));
     } else if (area == 6u) {

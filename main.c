@@ -887,8 +887,9 @@ static void begin_preloaded_special_battle(void) {
     game_mode = MODE_BATTLE;
     player_moving = 0u;
     current_enemy_index = 0xFFu;
-    if (battle_enemy_count == 0u) battle_enemy_count = 1u;
-    if (battle_enemy_count > BATTLE_MAX_ENEMY_COUNT) battle_enemy_count = BATTLE_MAX_ENEMY_COUNT;
+    /* rpg359: special encounters are generated from fixed valid tables,
+     * so avoid extra Bank0 clamp code here.
+     */
     battle_copy_all_enemies_from_data();
     battle_prepare_enemy_rank();
     battle_target_index = 0u;
@@ -924,10 +925,10 @@ static void inspect_map_event(UINT8 event_id) {
         }
     } else if (event_id == MAP_EVENT_PLANT_EYE_CHEST) {
         /* debug field chest: use special area 14 to force encounter 8
-         * = プラントアイ + プラントゲイズ.
+         * = プラントアイ + プラントゲイズ + エビルアイ.
          * Do not rely on seed/area random selection here.
          */
-        battle_data_load_random_area(0u, 14u, battle_enemy_data_slots, &battle_enemy_count);
+        battle_data_load_random_area(0u, 15u, battle_enemy_data_slots, &battle_enemy_count);
         begin_preloaded_special_battle();
     } else if (event_id == MAP_EVENT_CAVE_BOSS) {
         if (check_event_flag(FLAG_CAVE_BOSS)) {
@@ -1529,8 +1530,6 @@ static void update_battle_status(void) {
 }
 
 static void init_battle_from_enemy(UINT8 enemy_index) {
-    UINT8 i;
-
     current_enemy_index = enemy_index;
     battle_guard_flags = 0u;
     battle_party_turn_slot = 0u;
@@ -1587,8 +1586,6 @@ static void enter_battle_screen(void) {
 
 
 static void init_random_battle_from_field(void) {
-    UINT8 i;
-
     current_enemy_index = 0xFFu;
 
     player_battle.name = "ゆうしゃ";

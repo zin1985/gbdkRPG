@@ -32,6 +32,8 @@ static const char name_cave_lord[] = "どうくつのぬし";
 static const char name_skeleton[] = "スケルトン";
 static const char name_plant_eye[] = "プラントアイ";
 static const char name_plant_gaze[] = "プラントゲイズ";
+static const char name_evil_eye[] = "エビルアイ";
+static const char name_red_dragon[] = "レッドドラゴン";
 
 static const BattleEnemyTemplate enemy_table[] = {
     /* name,            hp,  atk, def, agi, art, size */
@@ -49,7 +51,9 @@ static const BattleEnemyTemplate enemy_table[] = {
     {name_skeleton,     54u, 14u, 6u, 8u, 7u, BATTLE_ENEMY_SIZE_M},
     {name_plant_eye,   48u, 12u, 5u, 9u, 8u, BATTLE_ENEMY_SIZE_M},
     {name_cave_lord,   180u, 24u, 14u, 6u, 5u, BATTLE_ENEMY_SIZE_L},
-    {name_plant_gaze,  56u, 13u, 6u, 9u, 9u, BATTLE_ENEMY_SIZE_M}
+    {name_plant_gaze,  56u, 13u, 6u, 9u, 9u, BATTLE_ENEMY_SIZE_M},
+    {name_evil_eye,    60u, 14u, 7u, 10u, 10u, BATTLE_ENEMY_SIZE_M},
+    {name_red_dragon, 220u, 24u, 12u, 8u, 11u, BATTLE_ENEMY_SIZE_L}
 };
 
 static const BattleEncounterTemplate encounter_table[] = {
@@ -67,10 +71,12 @@ static const BattleEncounterTemplate encounter_table[] = {
     {1u, {11u, 0u, 0u, 0u, 0u, 0u}}, /* plant eye x1 */
     {2u, {11u, 13u, 0u, 0u, 0u, 0u}}, /* plant eye + plant gaze */
     {2u, {13u, 11u, 0u, 0u, 0u, 0u}}, /* plant gaze + plant eye */
+    {3u, {11u, 13u, 14u, 0u, 0u, 0u}}, /* plant eye + plant gaze + evil eye */
     {1u, {8u, 0u, 0u, 0u, 0u, 0u}}, /* baby x1 */
     {1u, {10u, 0u, 0u, 0u, 0u, 0u}}, /* skeleton x1 */
     {1u, {12u, 0u, 0u, 0u, 0u, 0u}}, /* cave boss */
-    {1u, {9u, 0u, 0u, 0u, 0u, 0u}}   /* mimic x1 */
+    {1u, {9u, 0u, 0u, 0u, 0u, 0u}},  /* mimic x1 */
+    {1u, {15u, 0u, 0u, 0u, 0u, 0u}}  /* red dragon x1 */
 };
 
 #define ENEMY_TABLE_COUNT ((UINT8)(sizeof(enemy_table) / sizeof(enemy_table[0])))

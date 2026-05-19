@@ -1,0 +1,16 @@
+rpg358_red_dragon_bank0_trim
+
+Purpose:
+- Fix Bank 0 overflow introduced by rpg356/rpg357 red dragon flame animation.
+
+Change:
+- Removed the Bank0-side per-frame battle_tick_enemy_animation() helper and MODE_BATTLE loop call.
+- Dragon body remains BG 144x48 via banked sprites.c.
+- Dragon flame remains OBJ and is shown as the initial flame frame during enemy redraw.
+
+Reason:
+- safe build showed Bank0 overflow around 0x4000-0x4077.
+- The helper built alive_flags in main.c every battle loop and pushed Bank0 over the limit.
+
+Next step:
+- Reintroduce true flame animation later via a banked runtime module or an existing banked frame hook, not by adding loops to main.c.

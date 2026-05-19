@@ -96,6 +96,7 @@ void battle_enemy_bg_draw_all(UINT8 count, const UINT8 *sprite_kinds, const UINT
 void battle_enemy_bg_draw_slot(UINT8 count, UINT8 slot, UINT8 sprite_kind, UINT8 alive) BANKED;
 void battle_enemy_bg_draw_all_sized(UINT8 count, const UINT8 *sprite_kinds, const UINT8 *size_kinds, const UINT8 *alive_flags) BANKED;
 void battle_enemy_bg_draw_slot_sized(UINT8 count, UINT8 slot, UINT8 sprite_kind, UINT8 size_kind, UINT8 alive) BANKED;
+void battle_enemy_overlay_tick(UINT8 count, const UINT8 *sprite_kinds, const UINT8 *size_kinds, const UINT8 *alive_flags) BANKED;
 extern const unsigned char battle_party_display_tiles[12u * 16u];
 extern const unsigned char battle_cursor_tiles[32u];
 
